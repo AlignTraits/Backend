@@ -14,8 +14,8 @@ const transporter = createTransport(emailConfig);
 const mailGenerator = new Mailgen({
     theme: 'default',
     product: {
-        name: 'Mailgen',
-        link: 'https://mailgen.js/',
+        name: 'LearnConnect',
+        link: 'https://link-to-website.com/',
     },
 });
 
@@ -27,8 +27,8 @@ export async function sendMail({
     const mailOptions = {
         from: process.env.EMAIL_USER,
         to: recipient,
-        subject,
-        html: mailGenerator.generate(email),
+        subject,  
+        html: mailGenerator.generate({...email, signature: "Best regards"}),
     };
 
     try {

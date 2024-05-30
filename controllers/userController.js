@@ -4,7 +4,7 @@ import { db } from "../helpers/db.js";
 import { sendMail } from "../helpers/mailers.js";
 import bcrypt  from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
+import { generateOtp } from "../helpers/auth.js";
 
 const authUser = (req, res) => {
     res.status(200).json({ message: 'Auth User' })
@@ -60,56 +60,150 @@ const requestReset = async (req, res) => {
     const user = await db.user.findUnique({ where: { email } });
     if (!user) return res.status(404).send('User not found');
 
-    const otp = crypto.randomBytes(3).toString('hex'); // Generate a 6-character OTP
+    const otp = generateOtp()
     const otpHash = await bcrypt.hash(otp, 10);
-    await db.verificationToken.create({
+    const savedToken = await db.verificationToken.create({
         data: {
             email,
             otp: otpHash,
             createdAt: new Date(),
-            expiresAt: new Date(Date.now() + 3600000) // 1 hour TTL
+            expiresAt: new Date(Date.now() + 15 * 60 * 1000) // 15 minutes from creation
         }
     });
 
     const sent = await sendMail({
         recipient: user.email,
-        subject: 'Password Reset OTP',
+        subject: 'Password Reset Request for Your LearnConnect Account',
         email: {
             body: {
-                name: user.email.split('@')[0],
-                intro: 'Welcome to Learn Fit! We’re very excited to have you on board.',
+                name: user.username??user.email.split('@')[0],
+                intro: `We received a request to reset the password for your LearnConnect account associated with this email address: ${user.email}.`,
                 action: {
-                    instructions: 'To continue with changing your password, please click here:',
+                    instructions: 'To reset your password, please click the button below:',
                     button: {
-                        color: '#22BC66', // Optional action button color
-                        text: 'Confirm your account',
-                        link: 'lmu.edu.ng' // Link to dynamically authorized frontend route - with OTP as query param,
-                    },
+                        color: '#DC4D2F', // Optional action button color
+                        text: 'Reset Password',
+                        link: `resetLink?opt=${otp}email=${user.email}`
+                    }
                 },
-                outro: 'Need help, or have questions? Just reply to this email, we\'d love to help.',
+                outro: ['If you did not request a password reset, please ignore this email. Your password will remain unchanged, and no further action is required.', "If you have any questions or need further assistance, please don't hesitate to contact our support team at samueltobi032@gmail.com.\n\nThank you for being a part of the LearnConnect community!"]
             }
         }
     });
 
     if(sent.error) return res.status(500).json({ message: 'Server error '})
-    if(!sent.response.includes('OK')) return res.status(400).json({ message: 'Something went wrong, try again' })
+    if(!(!!sent?.res?.includes('OK'))) return res.status(400).json({ message: 'Something went wrong. Unable to send email. Try again' })
     
-    return res.status(200).json({ message: 'Reset Link Mail sent successfully', otp})
+    return res.status(200).json({ 
+        message: 'Reset Link Mail sent successfully', 
+        otp: { 
+            token: otp,
+            createdAt: savedToken.createdAt, 
+            expiresAt: savedToken.expiresAt
+        }
+     })
 }
 
-const validateOtp = async (req, res) => {
-    const { email, otp } = req.body;
-    const otpRecord = await db.verificationToken.findFirst({ where: { email } });
-    if (!otpRecord || !(await bcrypt.compare(otp, otpRecord.otp))) {
-        return res.status(400).send('Invalid OTP or OTP expired');
-    }
+// ~
+const requestOtp = async (req, res) => {
+    try {
+        const { email } = req.body;
 
-    res.send('OTP is valid');
+        // Generate and hash the OTP
+        const otp = generateOtp();
+        const hashedOtp = await bcrypt.hash(otp, 10);
+
+        // Store the OTP in the database
+        const savedToken = await db.verificationToken.create({
+            data: {
+                email,
+                otp: hashedOtp,
+                createdAt: new Date(),
+                expiresAt: new Date(Date.now() + 15 * 60 * 1000) // 15 minutes from creation
+            }
+        });
+
+        const sent = await sendMail({
+            recipient: email,
+            subject: 'Welcome to LearnConnect! Verify Your Account',
+            email: {
+                body: {
+                    name: email.split('@')[0],
+                    intro: 'Welcome to LearnConnect!',
+                    outro: [`<strong style="display: block; text-align: center; font-size: 48px; padding: 25px 0;">${otp}</strong>`, "Simply enter this code on the verification page to complete your registration. If you didn't request this email, please ignore it.", "Here are some features you can look forward to:", "- Personalized Learning Paths: Recommendations to help you achieve your goals.", "- Interactive Courses and Resources: Access high-quality content from top educators.", "- Community Engagement: Connect and collaborate with peers.", "- Career Path Suggestions: Discover career options that match your skills and interests.", "If you have any questions or need assistance, feel free to reach out to our support team at samueltobi032@gmail.com.", "Once again, welcome to LearnConnect! We're thrilled to have you with us."]
+                }
+            }
+        });
+
+        if(sent.error) return res.status(500).json({ message: 'Server error '})
+        if(!(!!sent?.res?.includes('OK'))) return res.status(400).json({ message: 'Something went wrong, Unable to send email. Try again' })
+        
+        return res.status(200).json({
+            message: 'OTP sent to your email address',        
+            otp: { 
+                token: otp,
+                createdAt: savedToken.createdAt, 
+                expiresAt: savedToken.expiresAt
+            }
+        });
+    } catch (error) {
+        console.error('Error requesting OTP:', error);
+        return res.status(500).send('Internal Server Error');
+    }
 };
 
+// ~
+const validateOtp = async (req, res) => {
+    try {
+        const { email, otp } = req.body;
+
+        // Fetch the latest OTP record for the email
+        const otpRecord = await db.verificationToken.findFirst({
+            where: {
+                email,
+                expiresAt: {
+                    gt: new Date() // Check if the OTP has not expired
+                }
+            },
+            orderBy: {
+                createdAt: 'desc' // Get the latest OTP
+            }
+        });
+
+        if (!otpRecord) {
+            return res.status(400).send('Invalid OTP or OTP expired');
+        }
+
+        // Compare the provided OTP with the stored OTP
+        const isMatch = await bcrypt.compare(otp.toString(), otpRecord.otp);
+
+        if (!isMatch) {
+            return res.status(400).send('Invalid OTP or OTP expired');
+        }
+
+        await db.verificationToken.deleteMany({ where: { email } });
+
+        return res.status(200).json({ valid: true, message: 'OTP is valid' });
+    } catch (error) {
+        console.error('Error validating OTP:', error);
+        return res.status(500).json({message: 'Internal Server Error'});
+    }
+};
+
+// ~
 const resetPassword = async (req, res) => {
     const { email, otp, newPassword } = req.body;
-    const otpRecord = await db.verificationToken.findFirst({ where: { email } });
+    const otpRecord = await db.verificationToken.findFirst({
+        where: {
+            email: email,
+            expiresAt: {
+                gt: new Date()
+            }
+        },
+        orderBy: {
+            createdAt: 'desc'
+        }
+    });
     if (!otpRecord || !(await bcrypt.compare(otp, otpRecord.otp))) {
         return res.status(400).send('Invalid OTP or OTP expired');
     }
@@ -125,12 +219,12 @@ const resetPassword = async (req, res) => {
 
     await db.verificationToken.deleteMany({ where: { email } });
 
-    res.send('Password reset successfully');
+    res.status(200).json({message: 'Password reset successfully', email});
 };
 
 
 export {
     login, register, authUser,
     requestReset, validateOtp,
-    resetPassword,
+    resetPassword, requestOtp
 }

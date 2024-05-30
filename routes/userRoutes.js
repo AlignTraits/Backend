@@ -1,5 +1,5 @@
 import express from 'express';
-import { login, requestReset, validateOtp, resetPassword, register } from '../controllers/userController.js';
+import { login, requestReset, validateOtp, resetPassword, register, requestOtp } from '../controllers/userController.js';
 
 const router = express.Router();
 
@@ -59,6 +59,9 @@ router.post('/login', login);
 
 // send an email with an otp
 router.post('/request-reset', requestReset);
+
+// once you write in that otp into that form
+router.post('/request-otp', requestOtp);
 
 // once you write in that otp into that form
 router.post('/validate-otp', validateOtp);
