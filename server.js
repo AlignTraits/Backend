@@ -4,6 +4,7 @@ import bodyParser from 'body-parser';
 import dotenv from 'dotenv';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJSDoc from 'swagger-jsdoc';
+
 import userRoutes from './routes/userRoutes.js';
 
 dotenv.config();
@@ -33,10 +34,13 @@ const options = {
 };
 
 const swaggerSpec = swaggerJSDoc(options);
-app.use('/', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.get('/', (req, res) => res.redirect('/docs')); // Redirect to API docs if GET route
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Routes
 app.use('/api/users', userRoutes);
+app.use((req, res) => res.status(404).json({ message: 'Resource not found' })); // 404 Route
+
 
 // Start the server
 const PORT = process.env.PORT || 3000;
