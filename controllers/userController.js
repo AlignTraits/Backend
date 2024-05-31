@@ -1,14 +1,15 @@
 // Authenticate a user
 // POST /api/users/auth
-import { db } from "../helpers/db.js";
-import { sendMail } from "../helpers/mailers.js";
 import bcrypt  from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { db } from "../helpers/db.js";
+import { sendMail } from "../helpers/mailers.js";
 import { generateOtp } from "../helpers/auth.js";
 
 const authUser = (req, res) => {
     res.status(200).json({ message: 'Auth User' })
 }
+
 // ~
 const login = async (req, res) => {
     const { email, password } = req.body;

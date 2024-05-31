@@ -28,7 +28,10 @@ export async function sendMail({
         from: process.env.EMAIL_USER,
         to: recipient,
         subject,  
-        html: mailGenerator.generate({...email, signature: "Best regards"}),
+        html: mailGenerator.generate({
+            ...email, 
+            body: { ...email.body, signature: "Best regards" }
+        }),
     };
 
     try {
