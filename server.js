@@ -9,7 +9,7 @@ import userRoutes from './routes/userRoutes.js';
 
 dotenv.config();
 
-const whitelist = ['http://localhost:4200', ''];
+const whitelist = ['http://localhost:4200', 'https://learn-connect-7c84a.web.app/'];
 
 const corsOptions = {
   origin: function (origin, callback) {
