@@ -15,7 +15,7 @@ const login = async (req, res) => {
     const { email, password } = req.body;
 
     // Find the user by email
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await db.user.findUnique({ where: { email } });
     if (!user) return res.status(404).send('User not found');
 
     // Check if the password is correct
@@ -35,7 +35,7 @@ const register = async (req, res) => {
     const { email, password } = req.body;
 
     // Check if user already exists
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    const existingUser = await db.user.findUnique({ where: { email } });
     if (existingUser) return res.status(400).send('User already exists');
 
     // Hash the password

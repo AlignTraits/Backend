@@ -1,10 +1,10 @@
 // app.js
+import cors from 'cors';
+import dotenv from 'dotenv';
 import express from 'express';
 import bodyParser from 'body-parser';
-import dotenv from 'dotenv';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJSDoc from 'swagger-jsdoc';
-import cors from 'cors';
 import userRoutes from './routes/userRoutes.js';
 
 dotenv.config();
@@ -13,7 +13,7 @@ const frontendLinks = process.env['FRONTEND_URLS'].split(',');
 
 console.log(frontendLinks)
 
-const whitelist = ['http://localhost:4200', 'https://learn-connect-7c84a.web.app/', ...frontendLinks];
+const whitelist = [...frontendLinks];
 
 const corsOptions = {
   origin: function (origin, callback) {
