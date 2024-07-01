@@ -131,7 +131,17 @@ const requestOtp = async (req, res) => {
                 body: {
                     name: email.split('@')[0],
                     intro: 'Welcome to LearnConnect!',
-                    outro: [`<strong style="display: block; text-align: center; font-size: 48px; padding: 25px 0;">${otp}</strong>`, "Simply enter this code on the verification page to complete your registration. If you didn't request this email, please ignore it.", "Here are some features you can look forward to:", "- Personalized Learning Paths: Recommendations to help you achieve your goals.", "- Interactive Courses and Resources: Access high-quality content from top educators.", "- Community Engagement: Connect and collaborate with peers.", "- Career Path Suggestions: Discover career options that match your skills and interests.", "If you have any questions or need assistance, feel free to reach out to our support team at samueltobi032@gmail.com.", "Once again, welcome to LearnConnect! We're thrilled to have you with us."]
+                    outro: [
+                        `<strong style="display: block; text-align: center; font-size: 48px; padding: 25px 0;">${otp}</strong>`, 
+                        "Simply enter this code on the verification page to complete your registration. If you didn't request this email, please ignore it.", 
+                        "Here are some features you can look forward to:", 
+                        "- Personalized Learning Paths: Recommendations to help you achieve your goals.", 
+                        "- Interactive Courses and Resources: Access high-quality content from top educators.", 
+                        "- Community Engagement: Connect and collaborate with peers.", 
+                        "- Career Path Suggestions: Discover career options that match your skills and interests.", 
+                        "If you have any questions or need assistance, feel free to reach out to our support team at samueltobi032@gmail.com.", 
+                        "Once again, welcome to LearnConnect! We're thrilled to have you with us."
+                    ]
                 }
             }
         });

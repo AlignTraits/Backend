@@ -64,5 +64,5 @@ app.use((req, res) => res.status(404).json({ message: 'Resource not found' })); 
 
 // Start the server
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}, LINK: ${CURRENTURL}`);
+  console.log(`Server is running on port ${PORT}, BACKENDLINK: ${CURRENTURL}, FRONTENDLINK: ${whitelist}`);
 });
