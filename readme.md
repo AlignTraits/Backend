@@ -32,4 +32,4 @@ Step-by-step instructions on how to install the project.
 npm install
 
 # Run the project
-npm start
+npx prisma db push && npm start
