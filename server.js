@@ -12,15 +12,13 @@ dotenv.config();
 const PORT = process.env.PORT || 3000; 
 const CURRENTURL = process.env.BACKEND_URL || `http://localhost:${PORT || 3000}`
 
-const whitelist = [...process.env['FRONTEND_URLS'].split(',')];
+const whitelist = process.env['FRONTEND_URLS'].split(',');
+console.log("CORS allowed for this links: ", whitelist);
 
 const corsOptions = {
   origin: function (origin, callback) {
-    if (whitelist.indexOf(origin) !== -1 || !origin) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
+    if (whitelist.indexOf(origin) !== -1 || !origin) callback(null, true);
+    else callback(new Error('Not allowed by CORS'));
   }
 };
 
@@ -64,5 +62,5 @@ app.use((req, res) => res.status(404).json({ message: 'Resource not found' })); 
 
 // Start the server
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}, BACKENDLINK: ${CURRENTURL}, FRONTENDLINK: ${whitelist}`);
+  console.log(`Server is running on port ${PORT}, BACKENDLINK: ${CURRENTURL}, FRONTENDLINKS: ${[whitelist]}`);
 });
