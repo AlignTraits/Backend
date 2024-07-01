@@ -9,11 +9,10 @@ import userRoutes from './routes/userRoutes.js';
 
 dotenv.config();
 
-const frontendLinks = process.env['FRONTEND_URLS'].split(',');
+const PORT = process.env.PORT || 3000; 
+const CURRENTURL = process.env.BACKEND_URL || `http://localhost:${PORT || 3000}`
 
-console.log(frontendLinks)
-
-const whitelist = [...frontendLinks];
+const whitelist = [...process.env['FRONTEND_URLS'].split(',')];
 
 const corsOptions = {
   origin: function (origin, callback) {
@@ -39,8 +38,12 @@ const swaggerDefinition = {
   },
   servers: [
     {
-      url: `http://localhost:${process.env.PORT || 3000}`,
-      description: 'Development server',
+      url: CURRENTURL,
+      description: 'Online development server',
+    },
+    {
+      url: `http://localhost:${PORT || 3000}`,
+      description: 'Localhost development server',
     },
   ],
 };
@@ -60,7 +63,6 @@ app.use((req, res) => res.status(404).json({ message: 'Resource not found' })); 
 
 
 // Start the server
-const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`Server is running on port ${PORT}, LINK: ${}`);
 });
