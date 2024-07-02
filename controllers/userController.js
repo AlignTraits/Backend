@@ -1,21 +1,20 @@
 // Authenticate a user
 // POST /api/users/auth
-import bcrypt  from 'bcryptjs';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { db } from "../helpers/db.js";
 import { sendMail } from "../helpers/mailers.js";
 import { generateOtp } from "../helpers/auth.js";
+import User from '../models/User';
 
 const authUser = (req, res) => {
-    res.status(200).json({ message: 'Auth User' })
-}
+    res.status(200).json({ message: 'Auth User' });
+};
 
-// ~
 const login = async (req, res) => {
     const { email, password } = req.body;
 
     // Find the user by email
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await User.getUserByEmail(email);
     if (!user) return res.status(404).send('User not found');
 
     // Check if the password is correct
@@ -30,46 +29,61 @@ const login = async (req, res) => {
     res.status(200).json({ token });
 };
 
-// ~
 const register = async (req, res) => {
+
     const { email, password } = req.body;
 
+
+
     // Check if user already exists
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+
+    const existingUser = await User.getUserByEmail(email);
+
     if (existingUser) return res.status(400).send('User already exists');
 
+
+
     // Hash the password
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
+
+
     // Create new user
-    const user = await db.user.create({
-        data: {
-            email,
-            password: hashedPassword,
-        },
+
+    const user = await User.createUser({
+
+        email,
+
+        password: hashedPassword,
+
     });
+
+
 
     res.status(201).json({
+
         message: 'User created successfully',
+
         user: { email: user.email },
+
     });
+
 };
 
-// ~
+
 const requestReset = async (req, res) => {
     const { email } = req.body;
-    const user = await db.user.findUnique({ where: { email } });
+    const user = await User.getUserByEmail(email);
     if (!user) return res.status(404).send('User not found');
 
-    const otp = generateOtp()
+    const otp = generateOtp();
     const otpHash = await bcrypt.hash(otp, 10);
-    const savedToken = await db.verificationToken.create({
-        data: {
-            email,
-            otp: otpHash,
-            createdAt: new Date(),
-            expiresAt: new Date(Date.now() + 15 * 60 * 1000) // 15 minutes from creation
-        }
+    const savedToken = await User.createVerificationToken({
+        email,
+        otp: otpHash,
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 15 * 60 * 1000) // 15 minutes from creation
     });
 
     const sent = await sendMail({
@@ -77,7 +91,7 @@ const requestReset = async (req, res) => {
         subject: 'Password Reset Request for Your LearnConnect Account',
         email: {
             body: {
-                name: user.username??user.email.split('@')[0],
+                name: user.username ?? user.email.split('@')[0],
                 intro: `We received a request to reset the password for your LearnConnect account associated with this email address: ${user.email}.`,
                 action: {
                     instructions: 'To reset your password, please click the button below:',
@@ -92,20 +106,19 @@ const requestReset = async (req, res) => {
         }
     });
 
-    if(sent.error) return res.status(500).json({ message: 'Server error '})
-    if(!(!!sent?.res?.includes('OK'))) return res.status(400).json({ message: 'Something went wrong. Unable to send email. Try again' })
-    
-    return res.status(200).json({ 
-        message: 'Reset Link Mail sent successfully', 
-        otp: { 
+    if (sent.error) return res.status(500).json({ message: 'Server error ' });
+    if (!(!!sent?.res?.includes('OK'))) return res.status(400).json({ message: 'Something went wrong. Unable to send email. Try again' });
+
+    return res.status(200).json({
+        message: 'Reset Link Mail sent successfully',
+        otp: {
             token: otp,
-            createdAt: savedToken.createdAt, 
+            createdAt: savedToken.createdAt,
             expiresAt: savedToken.expiresAt
         }
-     })
-}
+    });
+};
 
-// ~
 const requestOtp = async (req, res) => {
     try {
         const { email } = req.body;
@@ -115,13 +128,11 @@ const requestOtp = async (req, res) => {
         const hashedOtp = await bcrypt.hash(otp, 10);
 
         // Store the OTP in the database
-        const savedToken = await db.verificationToken.create({
-            data: {
-                email,
-                otp: hashedOtp,
-                createdAt: new Date(),
-                expiresAt: new Date(Date.now() + 15 * 60 * 1000) // 15 minutes from creation
-            }
+        const savedToken = await User.createVerificationToken({
+            email,
+            otp: hashedOtp,
+            createdAt: new Date(),
+            expiresAt: new Date(Date.now() + 15 * 60 * 1000) // 15 minutes from creation
         });
 
         const sent = await sendMail({
@@ -136,14 +147,14 @@ const requestOtp = async (req, res) => {
             }
         });
 
-        if(sent.error) return res.status(500).json({ message: 'Server error '})
-        if(!(!!sent?.res?.includes('OK'))) return res.status(400).json({ message: 'Something went wrong, Unable to send email. Try again' })
-        
+        if (sent.error) return res.status(500).json({ message: 'Server error ' });
+        if (!(!!sent?.res?.includes('OK'))) return res.status(400).json({ message: 'Something went wrong, Unable to send email. Try again' });
+
         return res.status(200).json({
-            message: 'OTP sent to your email address',        
-            otp: { 
+            message: 'OTP sent to your email address',
+            otp: {
                 token: otp,
-                createdAt: savedToken.createdAt, 
+                createdAt: savedToken.createdAt,
                 expiresAt: savedToken.expiresAt
             }
         });
@@ -153,76 +164,48 @@ const requestOtp = async (req, res) => {
     }
 };
 
-// ~
 const validateOtp = async (req, res) => {
     try {
         const { email, otp } = req.body;
 
         // Fetch the latest OTP record for the email
-        const otpRecord = await db.verificationToken.findFirst({
-            where: {
-                email,
-                expiresAt: {
-                    gt: new Date() // Check if the OTP has not expired
-                }
-            },
-            orderBy: {
-                createdAt: 'desc' // Get the latest OTP
-            }
-        });
-
+        const otpRecord = await User.getLatestVerificationToken(email);
         if (!otpRecord) {
             return res.status(400).send('Invalid OTP or OTP expired');
         }
 
         // Compare the provided OTP with the stored OTP
         const isMatch = await bcrypt.compare(otp.toString(), otpRecord.otp);
-
         if (!isMatch) {
             return res.status(400).send('Invalid OTP or OTP expired');
         }
 
-        await db.verificationToken.deleteMany({ where: { email } });
+        await User.deleteVerificationTokens(email);
 
         return res.status(200).json({ valid: true, message: 'OTP is valid' });
     } catch (error) {
         console.error('Error validating OTP:', error);
-        return res.status(500).json({message: 'Internal Server Error'});
+        return res.status(500).json({ message: 'Internal Server Error' });
     }
 };
 
-// ~
 const resetPassword = async (req, res) => {
     const { email, otp, newPassword } = req.body;
-    const otpRecord = await db.verificationToken.findFirst({
-        where: {
-            email: email,
-            expiresAt: {
-                gt: new Date()
-            }
-        },
-        orderBy: {
-            createdAt: 'desc'
-        }
-    });
+    const otpRecord = await User.getLatestVerificationToken(email);
     if (!otpRecord || !(await bcrypt.compare(otp, otpRecord.otp))) {
         return res.status(400).send('Invalid OTP or OTP expired');
     }
 
-    const user = await db.user.findUnique({ where: { email } });
+    const user = await User.getUserByEmail(email);
     if (!user) return res.status(404).send('User not found');
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await db.user.update({
-        where: { email },
-        data: { password: hashedPassword }
-    });
+    await User.updateUserPassword(email, hashedPassword);
 
-    await db.verificationToken.deleteMany({ where: { email } });
+    await User.deleteVerificationTokens(email);
 
-    res.status(200).json({message: 'Password reset successfully', email});
+    res.status(200).json({ message: 'Password reset successfully', email });
 };
-
 
 export {
     login, register, authUser,

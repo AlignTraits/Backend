@@ -9,12 +9,19 @@ datasource db {
 }
 
 model User {
+
   id        String   @id @default(cuid())
+
   username  String?
+
   email     String   @unique
+
   password  String
+
   createdAt DateTime @default(now())
+
 }
+
 
 model VerificationToken {
   id        String   @id @default(cuid())
