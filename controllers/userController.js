@@ -1,16 +1,10 @@
-// Authenticate a user
-// POST /api/users/auth
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { sendMail } from "../helpers/mailers.js";
 import { generateOtp } from "../helpers/auth.js";
 import User from '../models/User';
 
-const authUser = (req, res) => {
-    res.status(200).json({ message: 'Auth User' });
-};
-
-const login = async (req, res) => {
+const login = async ( req, res) => {
     const { email, password } = req.body;
 
     // Find the user by email
@@ -30,45 +24,26 @@ const login = async (req, res) => {
 };
 
 const register = async (req, res) => {
-
     const { email, password } = req.body;
 
-
-
     // Check if user already exists
-
     const existingUser = await User.getUserByEmail(email);
-
     if (existingUser) return res.status(400).send('User already exists');
 
-
-
     // Hash the password
-
     const hashedPassword = await bcrypt.hash(password, 10);
 
-
-
     // Create new user
-
     const user = await User.createUser({
-
         email,
-
         password: hashedPassword,
-
     });
-
 
 
     res.status(201).json({
-
         message: 'User created successfully',
-
         user: { email: user.email },
-
     });
-
 };
 
 
@@ -83,7 +58,7 @@ const requestReset = async (req, res) => {
         email,
         otp: otpHash,
         createdAt: new Date(),
-        expiresAt: new Date(Date.now() + 15 * 60 * 1000) // 15 minutes from creation
+        expiresAt: new Date(Date.now() + 7 * 60 * 1000) // 7 minutes from creation
     });
 
     const sent = await sendMail({
