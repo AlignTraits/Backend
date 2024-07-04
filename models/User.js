@@ -1,10 +1,10 @@
 import { db } from "../helpers/db.js";
 
-const createUser = async ({firstName, lastName, email, password, role}) => {
+
+const createUser = async ({username, email, password, role}) => {
     return await db.user.create({
         data: {
-            firstName, lastName, email, password, 
-            role: role,
+            username, email, password, role,
             dateJoined: new Date()
         }
     });
@@ -41,11 +41,7 @@ const deleteUser = async (id) => {
     });
 };
 
-module.exports = {
-    createUser,
-    getUserById,
-    getUserByName,
-    getUserByEmail,
-    updateUser,
-    deleteUser
+export {
+    createUser, updateUser, deleteUser,
+    getUserById, getUserByName, getUserByEmail,
 };

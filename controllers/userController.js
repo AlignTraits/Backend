@@ -1,15 +1,20 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { sendMail } from "../helpers/mailers.js";
-import { generateOtp } from "../helpers/auth.js";
-import User from '../models/User';
+import { createUser, getUserByEmail, updateUser } from '../models/User.js';
+import { 
+    generateEmailVerificationToken, 
+    getEmailVerificationToken,
+    deleteEmailVerificationToken
+} from '../models/Token.js'
 
-const login = async ( req, res) => {
+
+const login = async ( req, res ) => {
     const { email, password } = req.body;
 
     // Find the user by email
-    const user = await User.getUserByEmail(email);
-    if (!user) return res.status(404).send('User not found');
+    const user = await getUserByEmail(email);
+    if (!user) return res.status(404).json({message: 'User not found'});
 
     // Check if the password is correct
     const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -27,14 +32,14 @@ const register = async (req, res) => {
     const { email, password } = req.body;
 
     // Check if user already exists
-    const existingUser = await User.getUserByEmail(email);
-    if (existingUser) return res.status(400).send('User already exists');
+    const existingUser = await getUserByEmail(email);
+    if (existingUser) return res.status(400).json({message: 'User already exists'});
 
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create new user
-    const user = await User.createUser({
+    const user = await createUser({
         email,
         password: hashedPassword,
     });
@@ -46,20 +51,12 @@ const register = async (req, res) => {
     });
 };
 
-
 const requestReset = async (req, res) => {
     const { email } = req.body;
-    const user = await User.getUserByEmail(email);
-    if (!user) return res.status(404).send('User not found');
+    const user = await getUserByEmail(email);
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
-    const otp = generateOtp();
-    const otpHash = await bcrypt.hash(otp, 10);
-    const savedToken = await User.createVerificationToken({
-        email,
-        otp: otpHash,
-        createdAt: new Date(),
-        expiresAt: new Date(Date.now() + 7 * 60 * 1000) // 7 minutes from creation
-    });
+    const savedToken = await generateEmailVerificationToken({ email });
 
     const sent = await sendMail({
         recipient: user.email,
@@ -73,10 +70,13 @@ const requestReset = async (req, res) => {
                     button: {
                         color: '#DC4D2F', // Optional action button color
                         text: 'Reset Password',
-                        link: `resetLink?otp=${otp}&email=${user.email}` // Fixed typo here
+                        link: `resetLink?otp=${savedToken.otp}&email=${user.email}` // Fixed typo here
                     }
                 },
-                outro: ['If you did not request a password reset, please ignore this email. Your password will remain unchanged, and no further action is required.', "If you have any questions or need further assistance, please don't hesitate to contact our support team at samueltobi032@gmail.com.\n\nThank you for being a part of the LearnConnect community!"]
+                outro: [
+                    'If you did not request a password reset, please ignore this email. Your password will remain unchanged, and no further action is required.', 
+                    "If you have any questions or need further assistance, please don't hesitate to contact our support team at samueltobi032@gmail.com.\n\nThank you for being a part of the LearnConnect community!"
+                ]
             }
         }
     });
@@ -96,29 +96,20 @@ const requestReset = async (req, res) => {
 
 const requestOtp = async (req, res) => {
     try {
-        const { email } = req.body;
-
-        // Generate and hash the OTP
-        const otp = generateOtp();
-        const hashedOtp = await bcrypt.hash(otp, 10);
-
+        const { username, email } = req.body;
+        
         // Store the OTP in the database
-        const savedToken = await User.createVerificationToken({
-            email,
-            otp: hashedOtp,
-            createdAt: new Date(),
-            expiresAt: new Date(Date.now() + 15 * 60 * 1000) // 15 minutes from creation
-        });
+        const savedToken = await generateEmailVerificationToken({ email });
 
         const sent = await sendMail({
             recipient: email,
             subject: 'Welcome to LearnConnect! Verify Your Account',
             email: {
                 body: {
-                    name: email.split('@')[0],
+                    name: username,
                     intro: 'Welcome to LearnConnect!',
                     outro: [
-                        `<strong style="display: block; text-align: center; font-size: 48px; padding: 25px 0;">${otp}</strong>`, 
+                        `<strong style="display: block; text-align: center; font-size: 48px; padding: 25px 0;">${savedToken?.otp}</strong>`, 
                         "Simply enter this code on the verification page to complete your registration. If you didn't request this email, please ignore it.", 
                         "Here are some features you can look forward to:", 
                         "- Personalized Learning Paths: Recommendations to help you achieve your goals.", 
@@ -154,7 +145,7 @@ const validateOtp = async (req, res) => {
         const { email, otp } = req.body;
 
         // Fetch the latest OTP record for the email
-        const otpRecord = await User.getLatestVerificationToken(email);
+        const otpRecord = await getEmailVerificationToken(email);
         if (!otpRecord) {
             return res.status(400).json({ message: 'Invalid OTP or OTP expired' });
         }
@@ -165,7 +156,7 @@ const validateOtp = async (req, res) => {
             return res.status(400).json({ message: 'Invalid OTP or OTP expired' });
         }
 
-        await User.deleteVerificationTokens(email);
+        await deleteEmailVerificationToken(email);
 
         return res.status(200).json({ valid: true, message: 'OTP is valid' });
     } catch (error) {
@@ -176,24 +167,27 @@ const validateOtp = async (req, res) => {
 
 const resetPassword = async (req, res) => {
     const { email, otp, newPassword } = req.body;
-    const otpRecord = await User.getLatestVerificationToken(email);
+    const otpRecord = await getEmailVerificationToken(email);
     if (!otpRecord || !(await bcrypt.compare(otp, otpRecord.otp))) {
         return res.status(400).json({ message: 'Invalid OTP or OTP expired' });
     }
 
-    const user = await User.getUserByEmail(email);
-    if (!user) return res.status(404).send('User not found');
+    const user = await getUserByEmail(email);
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await User.updateUserPassword(email, hashedPassword);
+    const existingUser = getUserByEmail(email);
+    await updateUser(existingUser?.id, { 
+        password: hashedPassword 
+    });
 
-    await User.deleteVerificationTokens(email);
+    await deleteEmailVerificationToken(email);
 
     res.status(200).json({ message: 'Password reset successfully', email });
 };
 
 export {
-    login, register, authUser,
+    login, register,
     requestReset, validateOtp,
     resetPassword, requestOtp
 }

@@ -16,7 +16,7 @@ model User {
   createdAt DateTime @default(now())
 }
 
-model VerificationToken {
+model EmailVerificationToken {
   id        String   @id @default(cuid())
   email     String
   otp       String
