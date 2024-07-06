@@ -1,15 +1,17 @@
 import { createTransport } from 'nodemailer';
 import Mailgen from 'mailgen';
+import dotenv from 'dotenv';
 
-const emailConfig = {
+dotenv.config();
+
+const transporter = createTransport({
     service: 'gmail',
     auth: {
+        default: 'login',
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS, // Change to app email
     },
-};
-
-const transporter = createTransport(emailConfig);
+});
 
 const mailGenerator = new Mailgen({
     theme: 'default',
@@ -34,9 +36,10 @@ export async function sendMail({
         }),
     };
 
+    
     try {
         const info = await transporter.sendMail(mailOptions);
-        return {res: info.response};
+        return { res: info.response };
     } catch (error) {
         return { error };
     }

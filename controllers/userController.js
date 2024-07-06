@@ -7,7 +7,9 @@ import {
     getEmailVerificationToken,
     deleteEmailVerificationToken
 } from '../models/Token.js'
+import dotenv from 'dotenv';
 
+dotenv.config();
 
 const login = async ( req, res ) => {
     const { email, password } = req.body;
@@ -59,22 +61,24 @@ const requestReset = async (req, res) => {
     
         const savedToken = await generateEmailVerificationToken({ email });
         const { username } = await getUserByEmail(savedToken?.email);
-    
+
         if(!username) return res.status(400).json({ message: 'Unknown user' }); 
+
+        const verificationHash = bcrypt.hash(savedToken?.otp, 5);
     
         const sent = await sendMail({
             recipient: savedToken?.email,
             subject: 'Password Reset Request for Your LearnConnect Account',
             email: {
                 body: {
-                    name: username ?? user.email.split('@')[0],
+                    name: username,
                     intro: `We received a request to reset the password for your LearnConnect account associated with this email address: ${user.email}.`,
                     action: {
                         instructions: 'To reset your password, please click the button below:',
                         button: {
                             color: '#DC4D2F', // Optional action button color
                             text: 'Reset Password',
-                            link: `resetLink?otp=${savedToken.otp}&email=${user.email}` // Fixed typo here
+                            link: new URL(`${process.env.WEBSITE_URL}/resetpage?hverfication=${verificationHash}&email=${user?.email}`) // Fixed typo here
                         }
                     },
                     outro: [
@@ -84,7 +88,7 @@ const requestReset = async (req, res) => {
                 }
             }
         });
-    
+
         if (sent.error) return res.status(500).json({ message: 'Server error' });
         if (!(!!sent?.res?.includes('OK'))) return res.status(400).json({ message: 'Something went wrong. Unable to send email. Try again' });
     
@@ -108,16 +112,16 @@ const requestOtp = async (req, res) => {
         
         // Store the OTP in the database
         const savedToken = await generateEmailVerificationToken({ email });
-        const { username } = await getUserByEmail(savedToken?.email);
+        const existingUser = await getUserByEmail(savedToken?.email);
 
-        if(!username) return res.status(400).json({ message: 'Unknown user' }); 
+        if(!existingUser?.username) return res.status(400).json({ message: 'Unknown user' }); 
 
         const sent = await sendMail({
             recipient: email,
             subject: 'Welcome to LearnConnect! Verify Your Account',
             email: {
                 body: {
-                    name: username,
+                    name: existingUser?.username,
                     intro: 'Welcome to LearnConnect!',
                     outro: [
                         `<strong style="display: block; text-align: center; font-size: 48px; padding: 25px 0;">${savedToken?.otp}</strong>`, 
@@ -179,7 +183,7 @@ const validateOtp = async (req, res) => {
 const resetPassword = async (req, res) => {
     const { email, otp, newPassword } = req.body;
     const otpRecord = await getEmailVerificationToken(email);
-    if (!otpRecord || !(await bcrypt.compare(otp, otpRecord.otp))) {
+    if (!otpRecord || !(await bcrypt.compare(otpRecord.otp, otp))) {
         return res.status(400).json({ message: 'Invalid OTP or OTP expired' });
     }
 

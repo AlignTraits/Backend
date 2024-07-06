@@ -2,43 +2,67 @@ import { db } from "../helpers/db.js";
 
 
 const createUser = async ({username, email, password, role = "USER"}) => {
-    return await db.user.create({
-        data: {
-            username, email, password, role,
-            dateJoined: new Date()
-        }
-    });
+    try{
+        return await db.user.create({
+            data: {
+                username, email, password, role,
+                dateJoined: new Date()
+            }
+        });
+    } catch (error) {
+        return null;
+    }
 };
 
 const getUserById = async (id) => {
-    return await db.user.findUnique({
-        where: { id }
-    });
+    try {
+        return await db.user.findUnique({
+            where: { id }
+        });
+    } catch (error) {
+        return null;
+    }
 };
 
 const getUserByName = async (username) => {
-    return await db.user.findFirst({
-        where: { username }
-    });
+    try {
+        return await db.user.findFirst({
+            where: { username }
+        });
+    } catch (error) {
+        return null;
+    }
 };
 
 const getUserByEmail = async (email) => {
-    return await db.user.findUnique({
-        where: { email }
-    });
+    try {
+        return await db.user.findUnique({
+            where: { email }
+        });
+    } catch (error) {
+        return null;
+    }
 };
 
 const updateUser = async (id, data) => {
-    return await db.user.update({
-        where: { id },
-        data: data
-    });
+    try{
+        return await db.user.update({
+            where: { id },
+            data: data
+        });
+    } catch (error) {
+        return null;
+    }
 };
 
 const deleteUser = async (id) => {
-    return await db.user.delete({
-        where: { id }
-    });
+    try {
+        return await db.user.delete({
+            where: { id }
+        });
+    } catch (error) {
+        return null;
+    }
 };
 
 export {
