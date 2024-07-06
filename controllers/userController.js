@@ -29,77 +29,88 @@ const login = async ( req, res ) => {
 };
 
 const register = async (req, res) => {
-    const { email, password } = req.body;
+    const { username, email, password } = req.body;
 
     // Check if user already exists
     const existingUser = await getUserByEmail(email);
-    if (existingUser) return res.status(400).json({message: 'User already exists'});
+    if(existingUser) return res.status(400).json({ message: 'User already exists' });
 
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create new user
-    const user = await createUser({
-        email,
+    const newUser = await createUser({
+        username, email,
         password: hashedPassword,
     });
 
-
     res.status(201).json({
         message: 'User created successfully',
-        user: { email: user.email },
+        user: { email: newUser?.email },
     });
 };
 
 const requestReset = async (req, res) => {
-    const { email } = req.body;
-    const user = await getUserByEmail(email);
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    try {
+        const { email } = req.body;
 
-    const savedToken = await generateEmailVerificationToken({ email });
-
-    const sent = await sendMail({
-        recipient: user.email,
-        subject: 'Password Reset Request for Your LearnConnect Account',
-        email: {
-            body: {
-                name: user.username ?? user.email.split('@')[0],
-                intro: `We received a request to reset the password for your LearnConnect account associated with this email address: ${user.email}.`,
-                action: {
-                    instructions: 'To reset your password, please click the button below:',
-                    button: {
-                        color: '#DC4D2F', // Optional action button color
-                        text: 'Reset Password',
-                        link: `resetLink?otp=${savedToken.otp}&email=${user.email}` // Fixed typo here
-                    }
-                },
-                outro: [
-                    'If you did not request a password reset, please ignore this email. Your password will remain unchanged, and no further action is required.', 
-                    "If you have any questions or need further assistance, please don't hesitate to contact our support team at samueltobi032@gmail.com.\n\nThank you for being a part of the LearnConnect community!"
-                ]
+        const user = await getUserByEmail(email);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+    
+        const savedToken = await generateEmailVerificationToken({ email });
+        const { username } = await getUserByEmail(savedToken?.email);
+    
+        if(!username) return res.status(400).json({ message: 'Unknown user' }); 
+    
+        const sent = await sendMail({
+            recipient: savedToken?.email,
+            subject: 'Password Reset Request for Your LearnConnect Account',
+            email: {
+                body: {
+                    name: username ?? user.email.split('@')[0],
+                    intro: `We received a request to reset the password for your LearnConnect account associated with this email address: ${user.email}.`,
+                    action: {
+                        instructions: 'To reset your password, please click the button below:',
+                        button: {
+                            color: '#DC4D2F', // Optional action button color
+                            text: 'Reset Password',
+                            link: `resetLink?otp=${savedToken.otp}&email=${user.email}` // Fixed typo here
+                        }
+                    },
+                    outro: [
+                        'If you did not request a password reset, please ignore this email. Your password will remain unchanged, and no further action is required.', 
+                        "If you have any questions or need further assistance, please don't hesitate to contact our support team at samueltobi032@gmail.com.\n\nThank you for being a part of the LearnConnect community!"
+                    ]
+                }
             }
-        }
-    });
-
-    if (sent.error) return res.status(500).json({ message: 'Server error ' });
-    if (!(!!sent?.res?.includes('OK'))) return res.status(400).json({ message: 'Something went wrong. Unable to send email. Try again' });
-
-    return res.status(200).json({
-        message: 'Reset Link Mail sent successfully',
-        otp: {
-            token: otp,
-            createdAt: savedToken.createdAt,
-            expiresAt: savedToken.expiresAt
-        }
-    });
+        });
+    
+        if (sent.error) return res.status(500).json({ message: 'Server error' });
+        if (!(!!sent?.res?.includes('OK'))) return res.status(400).json({ message: 'Something went wrong. Unable to send email. Try again' });
+    
+        return res.status(200).json({
+            message: 'Reset Link Mail sent successfully',
+            otp: {
+                token: savedToken?.otp,
+                createdAt: savedToken.createdAt,
+                expiresAt: savedToken.expiresAt
+            }
+        });    
+    } catch (error) {
+        console.error('Error requesting OTP: ', error);
+        return res.status(500).json({ message: 'Internal Server Error' });
+    }
 };
 
 const requestOtp = async (req, res) => {
     try {
-        const { username, email } = req.body;
+        const { email } = req.body;
         
         // Store the OTP in the database
         const savedToken = await generateEmailVerificationToken({ email });
+        const { username } = await getUserByEmail(savedToken?.email);
+
+        if(!username) return res.status(400).json({ message: 'Unknown user' }); 
 
         const sent = await sendMail({
             recipient: email,
@@ -123,19 +134,19 @@ const requestOtp = async (req, res) => {
             }
         });
 
-        if (sent.error) return res.status(500).json({ message: 'Server error ' });
+        if (sent.error) return res.status(500).json({ message: 'Server error' });
         if (!(!!sent?.res?.includes('OK'))) return res.status(400).json({ message: 'Something went wrong, Unable to send email. Try again' });
 
         return res.status(200).json({
             message: 'OTP sent to your email address',
             otp: {
-                token: otp,
+                token: savedToken?.otp,
                 createdAt: savedToken.createdAt,
                 expiresAt: savedToken.expiresAt
             }
         });
     } catch (error) {
-        console.error('Error requesting OTP:', error);
+        console.error('Error requesting OTP: ', error);
         return res.status(500).json({ message: 'Internal Server Error' });
     }
 };

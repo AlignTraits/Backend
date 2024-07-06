@@ -1,7 +1,7 @@
 import { db } from "../helpers/db.js";
 
 
-const createUser = async ({username, email, password, role}) => {
+const createUser = async ({username, email, password, role = "USER"}) => {
     return await db.user.create({
         data: {
             username, email, password, role,
@@ -17,7 +17,7 @@ const getUserById = async (id) => {
 };
 
 const getUserByName = async (username) => {
-    return await db.user.findOne({
+    return await db.user.findFirst({
         where: { username }
     });
 };

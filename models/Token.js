@@ -7,41 +7,35 @@ const generateEmailVerificationToken = async ({ email }) => {
     // Generate and hash the OTP
     const otp = generateOtp();
     const hashedOtp = await bcrypt.hash(otp, 10);
+    const expirationTime = new Date(Date.now() + 7 * 60 * 1000); // 7 minutes from creation
 
-    const prevToken = db.emailVerificationToken.findOne(email);
+    const existingToken = await db.emailVerificationToken.findFirst({ where: { email } });
+    if(!existingToken) return null;
     
-    // extend time
-    if(prevToken) return db.emailVerificationToken.update({
-        where: { email },
-        data: { 
+    const savedToken = await db.emailVerificationToken.upsert({
+        where: { id: existingToken?.id },
+        update: { 
             otp: hashedOtp,
-            expiresAt: new Date(Date.now() + 7 * 60 * 1000) 
-        }
-    })
-
-
-    // Store the OTP in the database
-    const savedToken = await db.emailVerificationToken.create({
-        data: {
+            expiresAt: expirationTime 
+        },
+        create: {
             email,
             otp: hashedOtp,
             createdAt: new Date(),
-            expiresAt: new Date(Date.now() + 7 * 60 * 1000) // 7 minutes from creation
+            expiresAt: expirationTime 
         }
     });
-
+    
     return savedToken;
 }
 
 const getEmailVerificationToken = async ({ email }) => {
     // Fetch the latest OTP record for the email
-    return await db.emailVerificationToken.findFirst({
-        where: { email }
-    });
+    return await db.emailVerificationToken.findFirst({ where: { email } });
 }
 
 const deleteEmailVerificationToken = async ({ email }) => {
-    return await db.verificationToken.deleteMany({ where: { email } });
+    return await db.emailVerificationToken.deleteMany({ where: { email } });
 }
 
 
