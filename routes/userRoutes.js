@@ -2,7 +2,6 @@ import express from 'express';
 import { login, requestReset, validateOtp, resetPassword, register, requestOtp } from '../controllers/userController.js';
 import { preventLoggedUser } from "../helpers/auth.js";
 
-
 const router = express.Router();
 
 /**

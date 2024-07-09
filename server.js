@@ -6,6 +6,7 @@ import bodyParser from 'body-parser';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJSDoc from 'swagger-jsdoc';
 import userRoutes from './routes/userRoutes.js';
+import communityRoutes from './routes/communityRoutes.js';
 
 dotenv.config();
 
@@ -57,6 +58,7 @@ app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Routes
 app.use('/api/users', userRoutes);
+app.use('/api/', communityRoutes);
 app.use((req, res) => res.status(404).json({ message: 'Resource not found' })); // 404 Route
 
 
