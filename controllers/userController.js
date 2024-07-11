@@ -78,7 +78,7 @@ const requestReset = async (req, res) => {
                         button: {
                             color: '#DC4D2F', // Optional action button color
                             text: 'Reset Password',
-                            link: new URL(`${process.env.WEBSITE_URL}/resetpage?hverfication=${verificationHash}&email=${user?.email}`) // Fixed typo here
+                            link: new URL(`${process.env.WEBSITE_URL}/reset-password?hverfication=${verificationHash}&email=${user?.email}`) // Fixed typo here
                         }
                     },
                     outro: [

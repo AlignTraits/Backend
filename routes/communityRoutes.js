@@ -3,10 +3,10 @@ import { createCommunity, getCommunities, createPost, getPosts } from '../contro
 
 const router = express.Router();
 
-router.post('/communities', createCommunity);
-router.get('/communities', getCommunities);
-router.post('/communities/:communityId/posts', createPost);
-router.get('/communities/:communityId/posts', getPosts);
+router.post('/', createCommunity);
+router.get('/', getCommunities);
+router.post('/:communityId/posts', createPost);
+router.get('/:communityId/posts', getPosts);
 
 /**
  * @swagger
