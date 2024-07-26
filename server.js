@@ -7,6 +7,7 @@ import swaggerUi from 'swagger-ui-express';
 import swaggerJSDoc from 'swagger-jsdoc';
 import userRoutes from './routes/userRoutes.js';
 import communityRoutes from './routes/communityRoutes.js';
+import waitistRoutes from './routes/waitistRoutes.js';
 
 dotenv.config();
 
@@ -59,6 +60,7 @@ app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // Routes
 app.use('/api/users', userRoutes);
 app.use('/api/communities', communityRoutes);
+app.use('/api/waitlist', waitistRoutes);
 app.use((req, res) => res.status(404).json({ message: 'Resource not found' })); // 404 Route
 
 
