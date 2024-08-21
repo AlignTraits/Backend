@@ -59,8 +59,8 @@ app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Routes
 app.use('/api/users', userRoutes);
-app.use('/api/communities', communityRoutes);
-app.use('/api/waitlist', waitistRoutes);
+// app.use('/api/communities', communityRoutes);
+// app.use('/api/waitlist', waitistRoutes);
 app.use((req, res) => res.status(404).json({ message: 'Resource not found' })); // 404 Route
 
 

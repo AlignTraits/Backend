@@ -5,7 +5,7 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
-    "start": "node app.js",
+    "start": "npx prisma db push && node app.js",
     "dev": "nodemon app.js"
   },
   "author": "",
