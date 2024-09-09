@@ -5,7 +5,7 @@ import { preventLoggedUser } from '../helpers/auth.js';
 const router = express.Router();
 
 /**
- * @swagger
+ * //@swagger
  * components:
  *   schemas:
  *     WaitlistRequest:

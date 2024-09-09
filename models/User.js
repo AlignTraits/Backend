@@ -1,24 +1,34 @@
 import { db } from "../helpers/db.js";
 
 
-const createUser = async ({username, email, password, role = "USER"}) => {
+const createUser = async ({firstname, lastname, email, password, role = "USER"}) => {
     try{
-        return await db.user.create({
+        const {password, ...dbRes} =  await db.user.create({
             data: {
-                username, email, password, role,
-                dateJoined: new Date()
+                firstname, 
+                lastname, 
+                email, 
+                password, 
+                role
             }
         });
+
+        return dbRes;
     } catch (error) {
+        console.log(error)
         return null;
     }
 };
 
 const getUserById = async (id) => {
     try {
-        return await db.user.findUnique({
-            where: { id }
+        const {password, ...dbRes} = await db.user.findUnique({
+            where: { id },
+            // select: {}
         });
+
+        return dbRes; 
+        
     } catch (error) {
         return null;
     }
@@ -26,9 +36,12 @@ const getUserById = async (id) => {
 
 const getUserByName = async (username) => {
     try {
-        return await db.user.findFirst({
+        const {password, ...dbRes} = await db.user.findFirst({
             where: { username }
         });
+
+        return dbRes; 
+        
     } catch (error) {
         return null;
     }
@@ -36,24 +49,31 @@ const getUserByName = async (username) => {
 
 const getUserByEmail = async (email) => {
     try {
-        return await db.user.findUnique({
+        const {password, ...dbRes} = await db.user.findUnique({
             where: { email }
         });
+6
+        return dbRes; 
+        
     } catch (error) {
+        console.log('Error from getUserByEmail: ', error, 9876)
         return null;
     }
 };
 
 const updateUser = async (id, data) => {
     try{
-        return await db.user.update({
+        const {password, ...dbRes} = await db.user.update({
             where: { id },
-            data: data
+            data
         });
+
+        return dbRes;
     } catch (error) {
+        console.log('error at updateUser: ', error);
         return null;
     }
-};
+}
 
 const deleteUser = async (id) => {
     try {

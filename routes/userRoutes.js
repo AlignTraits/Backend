@@ -1,360 +1,192 @@
 import express from 'express';
-import { login, requestReset, validateOtp, resetPassword, register, requestOtp } from '../controllers/userController.js';
-import { preventLoggedUser } from "../helpers/auth.js";
-
+import { loginRequired } from "../helpers/auth.js";
+import { 
+  getUserData,
+  updateUserProfile,
+  uploadUserPicture
+} from '../controllers/userController.js';
+import { upload } from '../helpers/upload.js';
 const router = express.Router();
 
-/**
- * @swagger
- * components:
- *   schemas:
- *     RegisterRequest:
- *       type: object
- *       required:
- *         - email
- *         - password
- *       properties:
- *         email:
- *           type: string
- *           description: The user's email address
- *         password:
- *           type: string
- *           description: The user's password
- *       example:
- *         email: user@example.com
- *         password: userPassword123
- *
- *     RegisterResponse:
- *       type: object
- *       properties:
- *         message:
- *           type: string
- *           description: Response message
- *         user:
- *           type: object
- *           properties:
- *             email:
- *               type: string
- *               description: The registered user's email address
- *
- * /api/users/register:
- *   post:
- *     summary: Register a new user
- *     description: Creates a new user account with the provided email and password
- *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/RegisterRequest'
- *     responses:
- *       201:
- *         description: User created successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/RegisterResponse'
- *       400:
- *         description: User already exists
- *       500:
- *         description: Internal server error
- */
-router.post('/register', preventLoggedUser, register);
 
 /**
  * @swagger
- * components:
- *   schemas:
- *     LoginRequest:
- *       type: object
- *       required:
- *         - email
- *         - password
- *       properties:
- *         email:
- *           type: string
- *           description: The user's email address
- *         password:
- *           type: string
- *           description: The user's password
- *       example:
- *         email: user@example.com
- *         password: userPassword123
- *
- *     LoginResponse:
- *       type: object
- *       properties:
- *         token:
- *           type: string
- *           description: The JWT token for authenticating the user
- *
- * /api/users/login:
- *   post:
- *     summary: Log in a user
- *     description: Authenticates a user and returns a JWT token
- *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/LoginRequest'
+ * api/user/:
+ *   get:
+ *     summary: Get user data
+ *     description: Retrieve user data by providing the user ID as a path parameter. Additional details can be passed as query parameters.
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: User logged in successfully
+ *         description: User found
  *         content:
  *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/LoginResponse'
- *       400:
- *         description: Invalid password
+ *             example:
+ *               status: success
+ *               message: User found
+ *               data:
+ *                 user: 
+ *                   id: 1
+ *                   firstname: John
+ *                   lastname: Doe
+ *                   email: johndoe@example.com
+ *                   role: user
+ *                   createdAt: 2024-08-31T00:00:00.000Z
+ *       401:
+ *         description: Access denied
+ *         content:
+ *           application/json:
+ *             example:
+ *               status: error
+ *               message: Access denied
  *       404:
  *         description: User not found
- *       500:
- *         description: Internal server error
- */
-router.post('/login', preventLoggedUser, login);
-
-/**
- * @swagger
- * components:
- *   schemas:
- *     RequestReset:
- *       type: object
- *       required:
- *         - email
- *       properties:
- *         email:
- *           type: string
- *           description: The email of the user requesting the password reset
- *       example:
- *         email: user@example.com
- *
- *     RequestResetResponse:
- *       type: object
- *       properties:
- *         message:
- *           type: string
- *           description: Response message
- *         otp:
- *           type: object
- *           properties:
- *             token:
- *               type: string
- *               description: OTP token
- *             createdAt:
- *               type: string
- *               format: date-time
- *               description: Token creation time
- *             expiresAt:
- *               type: string
- *               format: date-time
- *               description: Token expiration time
- *
- * /api/users/request-reset:
- *   post:
- *     summary: Request password reset
- *     description: Sends a password reset OTP to the user's email
- *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/RequestReset'
- *     responses:
- *       200:
- *         description: Reset link mail sent successfully
  *         content:
  *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/RequestResetResponse'
- *       400:
- *         description: Bad request
- *       404:
- *         description: User not found
- *       500:
- *         description: Internal server error
+ *             example:
+ *               status: error
+ *               message: User not found
+ *               errors:
+ *                 - message: User does not exist
  */
-router.post('/request-reset', preventLoggedUser, requestReset);
+router.get('/:id', loginRequired, getUserData);
 
 /**
  * @swagger
- * components:
- *   schemas:
- *     RequestOtp:
- *       type: object
- *       required:
- *         - email
- *       properties:
- *         email:
- *           type: string
- *           description: The email address to send the OTP to
- *       example:
- *         email: user@example.com
- *
- *     RequestOtpResponse:
- *       type: object
- *       properties:
- *         message:
- *           type: string
- *           description: Response message
- *         otp:
- *           type: object
- *           properties:
- *             token:
- *               type: string
- *               description: OTP token
- *             createdAt:
- *               type: string
- *               format: date-time
- *               description: Token creation time
- *             expiresAt:
- *               type: string
- *               format: date-time
- *               description: Token expiration time
- *
- * /api/users/request-otp:
- *   post:
- *     summary: Request an OTP
- *     description: Generates and sends an OTP to the specified email address
- *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/RequestOtp'
- *     responses:
- *       200:
- *         description: OTP sent to your email address
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/RequestOtpResponse'
- *       400:
- *         description: Bad request, unable to send email
- *       500:
- *         description: Internal server error
- */
-router.post('/request-otp', preventLoggedUser, requestOtp);
-
-/**
- * @swagger
- * components:
- *   schemas:
- *     ValidateOtp:
- *       type: object
- *       required:
- *         - email
- *         - otp
- *       properties:
- *         email:
- *           type: string
- *           description: The email address associated with the OTP
- *         otp:
- *           type: string
- *           description: The OTP to validate
- *       example:
- *         email: user@example.com
- *         otp: 123456
- *
- *     ValidateOtpResponse:
- *       type: object
- *       properties:
- *         valid:
- *           type: boolean
- *           description: Indicates whether the OTP is valid
- *         message:
- *           type: string
- *           description: Response message
- *
- * /api/users/validate-otp:
- *   post:
- *     summary: Validate an OTP
- *     description: Validates the provided OTP for the given email address
- *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/ValidateOtp'
- *     responses:
- *       200:
- *         description: OTP is valid
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ValidateOtpResponse'
- *       400:
- *         description: Invalid OTP or OTP expired
- *       500:
- *         description: Internal server error
- */
-router.post('/validate-otp', preventLoggedUser, validateOtp);
-
-/**
- * @swagger
- * components:
- *   schemas:
- *     ResetPasswordRequest:
- *       type: object
- *       required:
- *         - email
- *         - otp
- *         - newPassword
- *       properties:
- *         email:
- *           type: string
- *           description: The email address associated with the account
- *         otp:
- *           type: string
- *           description: The OTP for verifying the password reset request
- *         newPassword:
- *           type: string
- *           description: The new password to set for the account
- *       example:
- *         email: user@example.com
- *         otp: 123456
- *         newPassword: newStrongPassword123
- *
- *     ResetPasswordResponse:
- *       type: object
- *       properties:
- *         message:
- *           type: string
- *           description: Response message
- *         email:
- *           type: string
- *           description: The email address associated with the account
- *
- * /api/users/reset-password:
+ * /api/user/:
  *   put:
- *     summary: Reset user password
- *     description: Resets the password for the user associated with the provided email and OTP
- *     tags: [Auth]
+ *     summary: Update user profile
+ *     description: Update a user's profile by providing the user ID and new data.
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/ResetPasswordRequest'
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 example: 1
+ *               data:
+ *                 type: object
+ *                 example: 
+ *                   firstname: Jane
+ *                   lastname: Smith
+ *                   email: janesmith@example.com
  *     responses:
  *       200:
- *         description: Password reset successfully
+ *         description: User updated successfully
  *         content:
  *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ResetPasswordResponse'
+ *             example:
+ *               status: success
+ *               message: User updated successfully
+ *               data:
+ *                 updatedUser:
+ *                   id: 1
+ *                   firstname: Jane
+ *                   lastname: Smith
+ *                   email: janesmith@example.com
+ *                   role: user
+ *                   updatedAt: 2024-08-31T00:00:00.000Z
+ *       401:
+ *         description: Access denied
+ *         content:
+ *           application/json:
+ *             example:
+ *               status: error
+ *               message: Access denied
+ *       500:
+ *         description: Update failed due to server error
+ *         content:
+ *           application/json:
+ *             example:
+ *               status: error
+ *               message: Update failed
+ *               errors:
+ *                 - message: Server error. Something went wrong at updateUserProfile
+ */
+router.put('/', loginRequired, updateUserProfile);
+
+/**
+ * @swagger
+ * /api/user/upload-picture:
+ *   put:
+ *     summary: Upload user profile picture
+ *     description: Upload a profile picture for a user by providing the user ID and the image file.
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 example: 1
+ *               profile:
+ *                 type: string
+ *                 format: binary
+ *                 description: The profile picture file to upload
+ *     responses:
+ *       200:
+ *         description: User picture uploaded successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               status: success
+ *               message: User picture uploaded successfully
+ *               data:
+ *                 updatedUser:
+ *                   id: 1
+ *                   firstname: John
+ *                   lastname: Doe
+ *                   email: johndoe@example.com
+ *                   profilePicture: https://storage.googleapis.com/bucket_name/profile_picture.png
+ *                   updatedAt: 2024-08-31T00:00:00.000Z
  *       400:
- *         description: Invalid OTP or OTP expired
+ *         description: File upload failed
+ *         content:
+ *           application/json:
+ *             example:
+ *               status: error
+ *               message: File upload failed
+ *               errors:
+ *                 - message: No file uploaded
+ *       401:
+ *         description: Access denied
+ *         content:
+ *           application/json:
+ *             example:
+ *               status: error
+ *               message: Access denied
  *       404:
  *         description: User not found
+ *         content:
+ *           application/json:
+ *             example:
+ *               status: error
+ *               message: User not found
+ *               errors:
+ *                 - message: User does not exist
  *       500:
- *         description: Internal server error
+ *         description: Update failed due to server error
+ *         content:
+ *           application/json:
+ *             example:
+ *               status: error
+ *               message: Update failed
+ *               errors:
+ *                 - message: Server error. Something went wrong at uploadUserPicture
  */
-router.put('/reset-password', preventLoggedUser, resetPassword);
+router.put('/upload-picture', loginRequired, upload.single('profile'), uploadUserPicture);
 
 export default router;
