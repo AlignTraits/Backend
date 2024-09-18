@@ -11,7 +11,6 @@ const generateEmailVerificationToken = async ({ email }) => {
         if(!existingUser) return null; 
 
         // Generate and hash the OTP
-        console.log('Generating OTP for: ', email)
         const otp = generateOtp(12);
         const expirationTime = new Date(Date.now() + 7 * 60 * 1000); // 7 minutes from creation
     

@@ -46,7 +46,7 @@ export const sendMail = async ({ recipient, emailName, emailData, subject }) => 
 export const sendWelcomeEmail = async ({ name, email }) => {
     const { otp } = await generateEmailVerificationToken({ email });
 
-    const url = new URL(`/api/users/verification`, process.env.BACKEND_URL);
+    const url = new URL(`/api/auth/verification`, process.env.BACKEND_URL);
 
     url.searchParams.append("email", email);
     url.searchParams.append("token", otp ?? '');

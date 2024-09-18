@@ -8,6 +8,16 @@ const upload = multer({
   storage: multer.memoryStorage()
 })
 
+const formKeyUpload = (req, res, next, key) => {
+  try {
+    const ress = upload.single(key);
+    console.log(ress)
+    next()
+  } catch (error) {
+    
+  }
+}
+
 function removeBucketBaseUrl(url) {
   const baseUrl = `https://storage.googleapis.com/${process.env.GCP_BUCKET_NAME}/`;
   if (url.startsWith(baseUrl)) {
@@ -70,4 +80,4 @@ const uploadProfilePic = async (userId, file) => {
   return updatedUser;
 }
 
-export { upload, uploadProfilePic };
+export { upload, uploadProfilePic,formKeyUpload };

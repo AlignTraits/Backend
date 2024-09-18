@@ -8,14 +8,17 @@ import {
     getEmailVerificationToken,
     deleteEmailVerificationToken
 } from '../models/Token.js'
-import { uploadProfilePic } from '../helpers/upload.js';
-import sharp from 'sharp';
-import path from 'path';
 
 dotenv.config();
 
 const login = async ( req, res ) => {
     const { email, password } = req.body;
+
+    if(!email || !password) return res.status(400).json({
+        status: 'error',
+        message: 'Login failed',
+        errors: [{ message: 'Email and password are required' }]
+    });
 
     // Find the user by email
     const user = await getUserByEmail(email);
@@ -166,6 +169,8 @@ const requestReset = async (req, res) => {
             message: 'Change Password Request failed',
             errors: [{ message: 'Server failed to send email' }]
         })
+
+        console.log(emailRes)
 
         return res.status(201).json({
             status: 'success',

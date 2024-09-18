@@ -3,10 +3,12 @@ import { loginRequired } from "../helpers/auth.js";
 import { 
   getUserData,
   updateUserProfile,
-  uploadUserPicture
+  uploadUserPicture,
+  updateUserPassword
 } from '../controllers/userController.js';
 import { upload } from '../helpers/upload.js';
 const router = express.Router();
+
 
 
 /**
@@ -51,6 +53,7 @@ const router = express.Router();
  *               errors:
  *                 - message: User does not exist
  */
+// router.get('/', loginRequired, getUserData);
 router.get('/:id', loginRequired, getUserData);
 
 /**
@@ -121,7 +124,7 @@ router.put('/', loginRequired, updateUserProfile);
  *     description: Upload a profile picture for a user by providing the user ID and the image file.
  *     tags: [User]
  *     security:
- *       - bearerAuth: []
+ *       - api_key: []
  *     requestBody:
  *       required: true
  *       content:
@@ -186,7 +189,14 @@ router.put('/', loginRequired, updateUserProfile);
  *               message: Update failed
  *               errors:
  *                 - message: Server error. Something went wrong at uploadUserPicture
+ *       securitySchemes:
+ *         api_key:
+ *           type: apiKey
+ *           name: api_key
+ *           in: header
  */
 router.put('/upload-picture', loginRequired, upload.single('profile'), uploadUserPicture);
+
+router.put('/password', loginRequired, updateUserPassword);
 
 export default router;

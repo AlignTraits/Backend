@@ -1,15 +1,17 @@
 import otpGenerator from 'otp-generator';
+import jwt from 'jsonwebtoken';
 
 export const loginRequired = (req, res, next) => {
     const authHeader = req.headers['authorization'];
+    if (!authHeader) return res.status(401).send('Access denied, empty token');
     const token = authHeader.split(' ')[1] ?? '';
-    if (!token) return res.status(401).send('Access denied, empty token');
 
     try {
         const verified = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = {verified, ...req.user};
+        req.user = {id: verified?.userId, ...req.user};
         next();
     } catch (err) {
+        console.log(err)
         res.status(400).send('Invalid token');
     }
 };
