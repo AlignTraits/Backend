@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgres"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -23,53 +23,54 @@ enum Gender {
 // }
 
 model User {
-  id             String   @id @default(cuid())
+  id             String           @id @default(cuid())
   firstname      String
   lastname       String
-  email          String   @unique
+  email          String           @unique
   emailVerified  DateTime?
   password       String
-  role           Roles    @default(USER)
-  createdAt      DateTime @default(now())
+  role           Roles            @default(USER)
+  createdAt      DateTime         @default(now())
   gender         Gender?
   dob            DateTime?
   ageRange       String?
   region         String?
   bio            String?
   image          String?
-  updatedAt      DateTime?  @updatedAt
+  updatedAt      DateTime?        @updatedAt
   // cityId         String?
   // city           City?     @relation(fields: [cityId], references: [id])
-  skills         Skill[]   @relation("UserSkills")
-  interests      Interest[] @relation("UserInterests")
+  skills         Skill[]          @relation("UserSkills")
+  interests      Interest[]       @relation("UserInterests")
+  ResultDocument ResultDocument[]
+  UserResponse   UserResponse[]
 }
 
 model City {
-  id       String   @id @default(uuid())
-  name     String
-  country  Country  @relation(fields: [countryId], references: [id])
+  id        String  @id @default(uuid())
+  name      String
+  country   Country @relation(fields: [countryId], references: [id])
   countryId String
   // users    User[]
 }
 
 model Country {
-  id    String   @id @default(uuid())
-  name  String
+  id     String @id @default(uuid())
+  name   String
   cities City[]
 }
 
 model Skill {
-  id    String   @id @default(uuid())
+  id    String @id @default(uuid())
   name  String
-  users User[]   @relation("UserSkills")
+  users User[] @relation("UserSkills")
 }
 
 model Interest {
-  id    String   @id @default(uuid())
+  id    String @id @default(uuid())
   name  String
-  users User[]   @relation("UserInterests")
+  users User[] @relation("UserInterests")
 }
-
 
 model EmailVerificationToken {
   id        String   @id @default(cuid())
@@ -77,4 +78,63 @@ model EmailVerificationToken {
   otp       String
   createdAt DateTime @default(now())
   expiresAt DateTime
+}
+
+model ResultDocument {
+  id        String   @id @default(cuid())
+  userId    String // Foreign key to User
+  user      User     @relation(fields: [userId], references: [id])
+  fileName  String // e.g., 'Akinola Oluwatosin WAEC 2023 Result.PDF'
+  fileUrl   String // URL pointing to the uploaded file
+  fileSize  Int // Size of the file in KB
+  fileType  String   @default("PDF") // Type of the uploaded file, defaulted to 'PDF'
+  createdAt DateTime @default(now())
+}
+
+model Survey {
+  id          String          @id @default(uuid())
+  name        String
+  description String?
+  sections    SurveySection[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model SurveySection {
+  id        Int     @id @default(autoincrement())
+  name      String
+  survey    Survey     @relation(fields: [surveyId], references: [id])
+  surveyId  String
+  questions Question[]
+  createdAt DateTime   @default(now())
+}
+
+model Question {
+  id           String         @id @default(uuid())
+  text         String
+  section      SurveySection  @relation(fields: [sectionId], references: [id])
+  sectionId    Int
+  createdAt    DateTime       @default(now())
+  AnswerOption AnswerOption[]
+  UserResponse UserResponse[]
+}
+
+model AnswerOption {
+  id           String         @id @default(uuid())
+  questionId   String         @unique
+  text         String
+  isNotSure    Boolean        @default(false)
+  UserResponse UserResponse[]
+  question     Question       @relation(fields: [questionId], references: [id])
+}
+
+model UserResponse {
+  id               String       @id @default(uuid())
+  user             User         @relation(fields: [userId], references: [id])
+  userId           String
+  question         Question     @relation(fields: [questionId], references: [id])
+  questionId       String
+  selectedOption   AnswerOption @relation(fields: [selectedOptionId], references: [id])
+  selectedOptionId String
+  createdAt        DateTime     @default(now())
 }
