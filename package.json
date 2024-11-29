@@ -12,7 +12,7 @@
     "test": "jest",
     "format": "prettier --write 'src/**/*.{js,ts}'",
     "typecheck": "tsc --noEmit",
-    "postinstall": "prisma db push --force && prisma generate"
+    "postinstall": "prisma db push --accept-data-loss"
   },
   "keywords": [],
   "author": "",
