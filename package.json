@@ -6,13 +6,13 @@
   "scripts": {
     "start": "ts-node src/index.ts",
     "dev": "nodemon src/index.ts",
-    "build": "npx prisma db push --force && tsc",
+    "build": "tsc",
     "start:dist": "node dist/src/index.js",
     "lint": "eslint --fix src test",
     "test": "jest",
     "format": "prettier --write 'src/**/*.{js,ts}'",
     "typecheck": "tsc --noEmit",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma db push --force && prisma generate"
   },
   "keywords": [],
   "author": "",
