@@ -31,7 +31,7 @@ export const sendMail = async ({
       from,
       subject,
       html,
-      to: ['taiwo.emmanuel@lmu.edu.ng', 'ttaiwo4910@gmail.com'], // recipients,
+      to: recipients, // recipients,
     });
 
     if (error) {
