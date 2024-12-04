@@ -107,8 +107,9 @@ const registerService = async ({
 
     // save into database
     const newUser = await createUser({
-      data: { firstname, email, lastname, password: hashedPassword },
+      data: { firstname: firstname, email, lastname: lastname, password: hashedPassword },
     });
+
 
     // send verification email
     const response = await emailVerificationService(newUser.email);
@@ -122,10 +123,11 @@ const registerService = async ({
         email: newUser.email,
         role: newUser.role,
         createdAt: newUser.createdAt,
-        emailSent: response?.data.didEmailSend,
+        emailSent: response?.didEmailSend,
       },
     };
   } catch (e) {
+    console.log(e, 3239)
     throw e;
   }
 };
@@ -303,11 +305,11 @@ const resetPasswordService = async ({
 
 const emailVerificationService = async (email: string) => {
   try {
+    console.log('starting...')
     const existingUser = await getUserByEmail(email);
     if (!existingUser) return null;
 
     const existingToken = await getEmailVerificationTokenByEmail(email);
-    if (!existingToken) return null;
 
     // Generate and hash the OTP
     const otp = generateOTP(12);
@@ -316,12 +318,13 @@ const emailVerificationService = async (email: string) => {
     const encryptedToken = await bcrypt.hash(otp, 10);
 
     const savedToken = await saveEmailVerificationToken({
-      id: existingToken?.id,
+      id: existingToken?.id ?? '',
       otp: encryptedToken,
       email,
       expirationTime,
     });
 
+    console.log('start sen confirmd email');
     const emailRes = await sendConfirmationEmail({
       name: existingUser.firstname,
       email: existingUser.email,
@@ -331,7 +334,9 @@ const emailVerificationService = async (email: string) => {
     return {
       ok: true,
       status: 200,
-      data: { otp, token: { ...savedToken }, didEmailSend: emailRes.ok },
+      didEmailSend: emailRes.ok,
+      data: { otp, token: { ...savedToken }, 
+    },
     };
   } catch (e) {
     throw e;

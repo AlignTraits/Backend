@@ -20,9 +20,10 @@ export const sendMail = async ({
   recipients: [string];
 }) => {
   try {
+    console.log('Sending an email...');
     // Read and render the EJS template
     const template = fs.readFileSync(
-      path.join('views', 'email', `${templateName}.ejs`),
+      path.join('src', 'views', 'email', `${templateName}.ejs`),
       'utf8',
     );
     const html = render(template, { ...templateInfo });
@@ -63,7 +64,7 @@ export const sendConfirmationEmail = async ({
   otp: string;
 }) => {
   try {
-    const url = new URL('/api/auth/verification', process.env.BACKEND_URL);
+    const url = new URL('/api/v1/auth/verification', process.env.BACKEND_URL);
 
     url.searchParams.append('email', email);
     url.searchParams.append('token', otp ?? '');

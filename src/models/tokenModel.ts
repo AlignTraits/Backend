@@ -6,7 +6,7 @@ export const saveEmailVerificationToken = async ({
   otp,
   expirationTime,
 }: {
-  id: string;
+  id: string | null;
   email: string;
   otp: string;
   expirationTime: Date;

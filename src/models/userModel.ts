@@ -7,7 +7,9 @@ const createUser = async (userData: Prisma.UserCreateArgs<DefaultArgs>) => {
 };
 
 const getUserByEmail = async (email: string) => {
-  return db.user.findUnique({ where: { email } });
+  const a = await db.user.findUnique({ where: { email } });
+  console.log(a);
+  return a
 };
 
 const getUserById = async (email: string) => {
