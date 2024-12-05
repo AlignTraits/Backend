@@ -9,11 +9,12 @@ const createUser = async (userData: Prisma.UserCreateArgs<DefaultArgs>) => {
 const getUserByEmail = async (email: string) => {
   const a = await db.user.findUnique({ where: { email } });
   console.log(a);
-  return a
+  return a;
 };
 
-const getUserById = async (email: string) => {
-  return db.user.findUnique({ where: { email } });
+const getUserById = async (userId: string) => {
+  return db.user.findUnique({ where: { id: userId } });
+  // console.log(userId);
 };
 
 const safeGetUserById = async (email: string) => {
@@ -25,13 +26,13 @@ const safeGetUserById = async (email: string) => {
 const updateUser = async (
   id: string,
   updateData: Prisma.XOR<
-  Prisma.UserUpdateInput,
-  Prisma.UserUncheckedUpdateInput
-  >,
+    Prisma.UserUpdateInput,
+    Prisma.UserUncheckedUpdateInput
+  >
 ) => {
   return db.user.update({
     where: { id },
-    data: updateData,
+    data: updateData, // pass the update details to data to replicate on the schema
   });
 };
 

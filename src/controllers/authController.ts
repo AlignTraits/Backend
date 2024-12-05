@@ -30,11 +30,11 @@ const register = async (req: Request, res: Response, next: NextFunction) => {
 const validateToken = async (
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) => {
   try {
     const result = await validateTokenService(
-      req.query as { email: string; token: string },
+      req.query as { email: string; token: string }
     );
     res.status(result.status).json(result);
   } catch (error) {
@@ -45,10 +45,13 @@ const validateToken = async (
 const requestReset = async (
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) => {
   try {
-    const result = await requestResetService(req.body);
+    const { email } = req.body;
+    console.log(email);
+
+    const result = await requestResetService(email);
     res.status(result.status).json(result);
   } catch (error) {
     next(error);
@@ -58,7 +61,7 @@ const requestReset = async (
 const resetPassword = async (
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) => {
   try {
     const result = await resetPasswordService(req.body);

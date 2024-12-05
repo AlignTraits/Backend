@@ -19,13 +19,13 @@ router.patch<{}, MessageResponse>(
   '/picture',
   loginRequired,
   upload.single('profile'),
-  uploadUserPicture,
+  uploadUserPicture
 );
 
 router.patch<{}, MessageResponse>(
   '/password',
   loginRequired,
-  updateUserPassword,
+  updateUserPassword
 );
 
 export default router;

@@ -24,7 +24,7 @@ export const sendMail = async ({
     // Read and render the EJS template
     const template = fs.readFileSync(
       path.join('src', 'views', 'email', `${templateName}.ejs`),
-      'utf8',
+      'utf8'
     );
     const html = render(template, { ...templateInfo });
 

@@ -1,8 +1,8 @@
 import { Prisma } from '@prisma/client';
-import { db } from '../config/db.js';
+import { db } from '../config/db';
 
 export const createAnswerOption = async (
-  data: Prisma.AnswerOptionCreateArgs,
+  data: Prisma.AnswerOptionCreateArgs
 ) => {
   const response = await db.answerOption.create(data);
   return response;
@@ -13,7 +13,7 @@ export const getAnswerOptions = async () => {
 };
 
 export const createUserResponse = async (
-  data: Prisma.UserResponseCreateArgs,
+  data: Prisma.UserResponseCreateArgs
 ) => {
   return db.userResponse.create(data);
 };

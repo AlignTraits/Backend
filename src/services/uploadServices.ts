@@ -32,7 +32,7 @@ const uploadToCloudinary = async ({
             return reject(error);
           }
           resolve(result);
-        },
+        }
       );
       stream.end(file.buffer);
     });
@@ -43,7 +43,7 @@ const uploadToCloudinary = async ({
 
 export const uploadProfilePicService = async (
   userId: string,
-  file: Express.Multer.File | undefined,
+  file: Express.Multer.File | undefined
 ) => {
   try {
     const existingUser = await getUserById(userId);
