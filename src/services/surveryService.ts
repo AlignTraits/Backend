@@ -80,7 +80,7 @@ export const createQuestionService = async ({
   sectionId,
 }: {
   text: string;
-  sectionId: string;
+  sectionId: number;
 }) => {
   try {
     const res = await createQuestion({ data: { text, sectionId } });

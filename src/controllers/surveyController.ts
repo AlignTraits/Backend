@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import * as surveyModel from '../models/surveyModel';
-import { SessionRequest } from '../types/sessionRequest.js';
+import { SessionRequest } from '../types/sessionRequest';
 import {
   createAnswerOptionService,
   createQuestionService,
@@ -14,7 +14,7 @@ import {
 export const createAnswerOption = async (
   req: SessionRequest,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) => {
   try {
     const result = createAnswerOptionService(req.body);
@@ -28,7 +28,7 @@ export const createAnswerOption = async (
 export const getAnswerOptions = async (
   req: SessionRequest,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) => {
   try {
     const result = await getAnswerOptionsService();
@@ -42,7 +42,7 @@ export const getAnswerOptions = async (
 export const createUserResponse = async (
   req: SessionRequest,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) => {
   try {
     const result = await createUserResponseService(req.body);
@@ -56,7 +56,7 @@ export const createUserResponse = async (
 export const getUserResponses = async (
   req: SessionRequest,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) => {
   try {
     const result = await getUserResponseService();
@@ -70,7 +70,7 @@ export const getUserResponses = async (
 export const createQuestion = async (
   req: SessionRequest,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) => {
   try {
     const { text, sectionId } = req.body;
@@ -85,7 +85,7 @@ export const createQuestion = async (
 export const getQuestions = async (
   req: SessionRequest,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) => {
   try {
     const questions = await surveyModel.getQuestions();

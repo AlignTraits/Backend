@@ -67,7 +67,7 @@ const loginService = async ({
     const token = jwt.sign(
       { userId: user.id },
       process.env.JWT_SECRET as string,
-      { expiresIn: '1h' },
+      { expiresIn: '1h' }
     );
     return {
       ok: true,
@@ -107,9 +107,13 @@ const registerService = async ({
 
     // save into database
     const newUser = await createUser({
-      data: { firstname: firstname, email, lastname: lastname, password: hashedPassword },
+      data: {
+        firstname: firstname,
+        email,
+        lastname: lastname,
+        password: hashedPassword,
+      },
     });
-
 
     // send verification email
     const response = await emailVerificationService(newUser.email);
@@ -127,7 +131,7 @@ const registerService = async ({
       },
     };
   } catch (e) {
-    console.log(e, 3239)
+    console.log(e, 3239);
     throw e;
   }
 };
@@ -199,7 +203,6 @@ const requestResetService = async (email: string) => {
         errors: [{ message: 'User does not exist' }],
       };
     }
-
     // Generate and hash the OTP
     const otp = generateOTP(12);
     const expirationTime = new Date(Date.now() + 7 * 60 * 1000); // 7 minutes from creation
@@ -248,6 +251,61 @@ const requestResetService = async (email: string) => {
   }
 };
 
+// const resetPasswordService = async ({
+//   email,
+//   token,
+//   newPassword,
+// }: {
+//   email: string;
+//   token: string;
+//   newPassword: string;
+// }) => {
+//   try {
+//     const otpRecord = await getEmailVerificationTokenByToken(token);
+//     if (!otpRecord || !(await bcrypt.compare(token, otpRecord?.otp))) {
+//       return {
+//         status: 400,
+//         message: 'Password Reset failed',
+//         errors: [{ message: 'Invalid OTP or OTP expired' }],
+//       };
+//     }
+
+//     const user = await getUserByEmail(email);
+//     if (!user) {
+//       return {
+//         status: 404,
+//         message: 'Password Reset failed',
+//         errors: [{ message: 'User not found' }],
+//       };
+//     }
+
+//     const hashedPassword = await bcrypt.hash(newPassword, 10);
+//     // const existingUser = await getUserByEmail(email);
+
+//     const [updatedData] = await Promise.all([
+//       updateUser(user?.id, { password: hashedPassword }),
+//       deleteEmailVerificationToken(email),
+//     ]);
+//     if (!updatedData) {
+//       return {
+//         status: 500,
+//         message: 'Password Reset failed',
+//         errors: [
+//           { message: 'Server error. Something went wrong at updateUser' },
+//         ],
+//       };
+//     }
+
+//     return {
+//       status: 200,
+//       message: 'Password Reset successful',
+//       data: { email },
+//     };
+//   } catch (e) {
+//     throw e;
+//   }
+// };
+
 const resetPasswordService = async ({
   email,
   token,
@@ -259,7 +317,9 @@ const resetPasswordService = async ({
 }) => {
   try {
     const otpRecord = await getEmailVerificationTokenByToken(token);
-    if (!otpRecord || !(await bcrypt.compare(token, otpRecord?.otp))) {
+    console.log('OTP Record:', otpRecord); // Debugging
+
+    if (!otpRecord || !(await bcrypt.compare(token, otpRecord.otp))) {
       return {
         status: 400,
         message: 'Password Reset failed',
@@ -277,12 +337,11 @@ const resetPasswordService = async ({
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    // const existingUser = await getUserByEmail(email);
-
     const [updatedData] = await Promise.all([
-      updateUser(user?.id, { password: hashedPassword }),
+      updateUser(user.id, { password: hashedPassword }),
       deleteEmailVerificationToken(email),
     ]);
+
     if (!updatedData) {
       return {
         status: 500,
@@ -305,7 +364,7 @@ const resetPasswordService = async ({
 
 const emailVerificationService = async (email: string) => {
   try {
-    console.log('starting...')
+    console.log('starting...');
     const existingUser = await getUserByEmail(email);
     if (!existingUser) return null;
 
@@ -335,8 +394,7 @@ const emailVerificationService = async (email: string) => {
       ok: true,
       status: 200,
       didEmailSend: emailRes.ok,
-      data: { otp, token: { ...savedToken }, 
-    },
+      data: { otp, token: { ...savedToken } },
     };
   } catch (e) {
     throw e;

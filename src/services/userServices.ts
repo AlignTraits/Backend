@@ -34,7 +34,7 @@ export const getUserDataService = async (userId: string) => {
 
 export const updateUserProfileService = async (
   userId: string,
-  filteredData: Record<string, any>,
+  filteredData: Record<string, any>
 ) => {
   try {
     if (!userId)
@@ -94,7 +94,7 @@ export const updateUserProfileService = async (
 
 export const updatePasswordService = async (
   userId: string,
-  password: string,
+  password: string
 ) => {
   try {
     const existingUser = await getUserById(userId);

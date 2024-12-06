@@ -6,9 +6,9 @@ import {
   getUserResponses,
   createQuestion,
   getQuestions,
-} from '../controllers/surveyController.js';
-import MessageResponse from '../types/messageResponse.js';
-import { loginRequired } from '../middlewares/auth.js';
+} from '../controllers/surveyController';
+import MessageResponse from '../types/messageResponse';
+import { loginRequired } from '../middlewares/auth';
 
 const router = express.Router();
 
@@ -16,24 +16,24 @@ const router = express.Router();
 router.post<{}, MessageResponse>(
   '/answer-options',
   loginRequired,
-  createAnswerOption,
+  createAnswerOption
 );
 router.get<{}, MessageResponse>(
   '/answer-options',
   loginRequired,
-  getAnswerOptions,
+  getAnswerOptions
 );
 
 // UserResponse routes
 router.post<{}, MessageResponse>(
   '/user-responses',
   loginRequired,
-  createUserResponse,
+  createUserResponse
 );
 router.get<{}, MessageResponse>(
   '/user-responses',
   loginRequired,
-  getUserResponses,
+  getUserResponses
 );
 
 // Question routes
