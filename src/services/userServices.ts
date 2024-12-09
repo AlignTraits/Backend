@@ -3,6 +3,36 @@ import cloudinary from '../config/cloudinary';
 import bcrypt from 'bcryptjs';
 import { getUserById, updateUser } from '../models/userModel';
 
+export const getAdminDataService = async (userId: string) => {
+  try {
+    const user = await getUserById(userId);
+    if (!user)
+      return {
+        ok: false,
+        status: 404,
+        message: 'User not found',
+        errors: [{ message: 'User does not exist' }],
+      };
+
+    return {
+      ok: true,
+      status: 200,
+      message: 'Admin found',
+      data: {
+        id: user.id,
+        username: user.firstname,
+        email: user.email,
+        image: user.image,
+        role: user.role,
+      },
+    };
+  } catch (e) {
+    throw e;
+  }
+};
+
+//Admin end
+
 export const getUserDataService = async (userId: string) => {
   try {
     const user = await getUserById(userId);
@@ -34,7 +64,7 @@ export const getUserDataService = async (userId: string) => {
 
 export const updateUserProfileService = async (
   userId: string,
-  filteredData: Record<string, any>,
+  filteredData: Record<string, any>
 ) => {
   try {
     if (!userId)
@@ -94,7 +124,7 @@ export const updateUserProfileService = async (
 
 export const updatePasswordService = async (
   userId: string,
-  password: string,
+  password: string
 ) => {
   try {
     const existingUser = await getUserById(userId);

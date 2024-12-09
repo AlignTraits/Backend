@@ -1,3 +1,4 @@
+// import { sendAdminSetupEmail } from './mailService'; // Import your email service
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
@@ -12,6 +13,172 @@ import { generateOTP } from '../lib/utils';
 import { sendConfirmationEmail, sendResetPasswordEmail } from './mailServices';
 
 dotenv.config();
+
+const loginAdminService = async ({
+  email,
+  password,
+}: {
+  email: string;
+  password: string;
+}) => {
+  try {
+    if (!email || !password) {
+      return {
+        status: 400,
+        message: 'Login failed',
+        errors: [{ message: 'Email and password are required' }],
+      };
+    }
+
+    const user = await getUserByEmail(email);
+    if (!user) {
+      return {
+        ok: false,
+        status: 404,
+        message: 'Login failed',
+        errors: [{ message: 'Admin does not exist' }],
+      };
+    }
+
+    // Check if the user has an admin role
+    if (user.role !== 'ADMIN') {
+      return {
+        ok: false,
+        status: 403,
+        message: 'Login failed',
+        errors: [{ message: 'You are not authorized to log in as an admin' }],
+      };
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return {
+        ok: false,
+        status: 400,
+        message: 'Login failed',
+        errors: [{ message: 'Invalid password' }],
+      };
+    }
+
+    const token = jwt.sign(
+      { userId: user.id },
+      process.env.JWT_SECRET as string,
+      { expiresIn: '1h' }
+    );
+    return {
+      ok: true,
+      status: 200,
+      message: 'Login successful',
+      data: { token },
+    };
+  } catch (e) {
+    throw e;
+  }
+};
+
+const registerAdminService = async ({
+  username, // firstname i couldn't add username to d db, i had to convert username to first and send back
+  email,
+}: {
+  username: string;
+  email: string;
+}) => {
+  try {
+    // Validate fields
+    const existingUser = await getUserByEmail(email);
+    if (existingUser) {
+      return {
+        status: 400,
+        message: 'Registration failed',
+        errors: [{ message: 'User already exists' }],
+      };
+    }
+
+    // Set a secure default password from environment variable
+    const defaultPassword = process.env.JWT_SECRET;
+    if (!defaultPassword) {
+      throw new Error('Environment variable JWT_SECRET is not set');
+    }
+
+    // Hash the default password
+    const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+
+    const newUser = await createUser({
+      data: {
+        username: username,
+        firstname: 'admin name',
+        lastname: 'admin user',
+        email: email,
+        role: 'ADMIN',
+        password: hashedPassword,
+      },
+    });
+
+    // Send setup email with link to create password
+    // await sendAdminSetupEmail(newUser);
+
+    return {
+      status: 201,
+      message:
+        'Admin created successfully. An email has been sent to set up the password.',
+      data: {
+        id: newUser.id,
+        username: newUser.username,
+        lastname: newUser.lastname,
+        email: newUser.email,
+        role: newUser.role,
+        createdAt: newUser.createdAt,
+      },
+    };
+  } catch (e) {
+    console.log(e);
+    throw e;
+  }
+};
+
+const addAdminPasswordService = async ({
+  email,
+  newPassword,
+}: {
+  email: string;
+  newPassword: string;
+}) => {
+  try {
+    const user = await getUserByEmail(email);
+    if (!user) {
+      return {
+        status: 404,
+        message: 'Failed To Add Admin Password',
+        errors: [{ message: 'User not found' }],
+      };
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const [updatedData] = await Promise.all([
+      updateUser(user.id, { password: hashedPassword }),
+    ]);
+
+    if (!updatedData) {
+      return {
+        status: 500,
+        message: 'Failed To Add Admin Password',
+        errors: [
+          { message: 'Server error. Something went wrong at admin Update' },
+        ],
+      };
+    }
+
+    return {
+      status: 200,
+      message: 'Password Added successfully',
+      data: { email },
+    };
+  } catch (e) {
+    throw e;
+  }
+};
+
+//admin service ends
 
 const loginService = async ({
   email,
@@ -54,6 +221,15 @@ const loginService = async ({
       };
     }
 
+    if (!user.password) {
+      return {
+        ok: false,
+        status: 400,
+        message: 'Login failed',
+        errors: [{ message: 'Password not set. Please set your password.' }],
+      };
+    }
+
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return {
@@ -67,7 +243,7 @@ const loginService = async ({
     const token = jwt.sign(
       { userId: user.id },
       process.env.JWT_SECRET as string,
-      { expiresIn: '1h' },
+      { expiresIn: '1h' }
     );
     return {
       ok: true,
@@ -91,6 +267,8 @@ const registerService = async ({
   email: string;
   password: string;
 }) => {
+  // Validate fields if (!password) { return { status: 400, message: 'Registration failed', errors: [{ message: 'Password is required' }], }; }
+
   try {
     // validate fields
     const existingUser = await getUserByEmail(email);
@@ -107,9 +285,13 @@ const registerService = async ({
 
     // save into database
     const newUser = await createUser({
-      data: { firstname: firstname, email, lastname: lastname, password: hashedPassword },
+      data: {
+        firstname: firstname,
+        email,
+        lastname: lastname,
+        password: hashedPassword,
+      },
     });
-
 
     // send verification email
     const response = await emailVerificationService(newUser.email);
@@ -127,7 +309,7 @@ const registerService = async ({
       },
     };
   } catch (e) {
-    console.log(e, 3239)
+    console.log(e, 3239);
     throw e;
   }
 };
@@ -199,7 +381,6 @@ const requestResetService = async (email: string) => {
         errors: [{ message: 'User does not exist' }],
       };
     }
-
     // Generate and hash the OTP
     const otp = generateOTP(12);
     const expirationTime = new Date(Date.now() + 7 * 60 * 1000); // 7 minutes from creation
@@ -248,6 +429,61 @@ const requestResetService = async (email: string) => {
   }
 };
 
+// const resetPasswordService = async ({
+//   email,
+//   token,
+//   newPassword,
+// }: {
+//   email: string;
+//   token: string;
+//   newPassword: string;
+// }) => {
+//   try {
+//     const otpRecord = await getEmailVerificationTokenByToken(token);
+//     if (!otpRecord || !(await bcrypt.compare(token, otpRecord?.otp))) {
+//       return {
+//         status: 400,
+//         message: 'Password Reset failed',
+//         errors: [{ message: 'Invalid OTP or OTP expired' }],
+//       };
+//     }
+
+//     const user = await getUserByEmail(email);
+//     if (!user) {
+//       return {
+//         status: 404,
+//         message: 'Password Reset failed',
+//         errors: [{ message: 'User not found' }],
+//       };
+//     }
+
+//     const hashedPassword = await bcrypt.hash(newPassword, 10);
+//     // const existingUser = await getUserByEmail(email);
+
+//     const [updatedData] = await Promise.all([
+//       updateUser(user?.id, { password: hashedPassword }),
+//       deleteEmailVerificationToken(email),
+//     ]);
+//     if (!updatedData) {
+//       return {
+//         status: 500,
+//         message: 'Password Reset failed',
+//         errors: [
+//           { message: 'Server error. Something went wrong at updateUser' },
+//         ],
+//       };
+//     }
+
+//     return {
+//       status: 200,
+//       message: 'Password Reset successful',
+//       data: { email },
+//     };
+//   } catch (e) {
+//     throw e;
+//   }
+// };
+
 const resetPasswordService = async ({
   email,
   token,
@@ -259,7 +495,9 @@ const resetPasswordService = async ({
 }) => {
   try {
     const otpRecord = await getEmailVerificationTokenByToken(token);
-    if (!otpRecord || !(await bcrypt.compare(token, otpRecord?.otp))) {
+    console.log('OTP Record:', otpRecord); // Debugging
+
+    if (!otpRecord || !(await bcrypt.compare(token, otpRecord.otp))) {
       return {
         status: 400,
         message: 'Password Reset failed',
@@ -277,12 +515,11 @@ const resetPasswordService = async ({
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    // const existingUser = await getUserByEmail(email);
-
     const [updatedData] = await Promise.all([
-      updateUser(user?.id, { password: hashedPassword }),
+      updateUser(user.id, { password: hashedPassword }),
       deleteEmailVerificationToken(email),
     ]);
+
     if (!updatedData) {
       return {
         status: 500,
@@ -305,7 +542,7 @@ const resetPasswordService = async ({
 
 const emailVerificationService = async (email: string) => {
   try {
-    console.log('starting...')
+    console.log('starting...');
     const existingUser = await getUserByEmail(email);
     if (!existingUser) return null;
 
@@ -335,8 +572,7 @@ const emailVerificationService = async (email: string) => {
       ok: true,
       status: 200,
       didEmailSend: emailRes.ok,
-      data: { otp, token: { ...savedToken }, 
-    },
+      data: { otp, token: { ...savedToken } },
     };
   } catch (e) {
     throw e;
@@ -350,4 +586,8 @@ export {
   requestResetService,
   resetPasswordService,
   emailVerificationService,
+  // admin auth service
+  loginAdminService,
+  registerAdminService,
+  addAdminPasswordService,
 };

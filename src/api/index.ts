@@ -3,6 +3,7 @@ import express from 'express';
 import MessageResponse from '../types/messageResponse';
 import UserRoutes from '../routes/userRoutes';
 import AuthRoutes from '../routes/authRoutes';
+import surveyRoutes from '../routes/surveryRoutes';
 // import WaitlistRoutes from '../routes/waitlistRoutes'
 
 const router = express.Router();
@@ -16,6 +17,7 @@ router.get<{}, MessageResponse>('/', (req, res) => {
 
 router.use('/users', UserRoutes);
 router.use('/auth', AuthRoutes);
+router.use('/survey', surveyRoutes);
 // router.use('/waitlist', WaitlistRoutes)
 
 export default router;
