@@ -105,7 +105,7 @@ const registerAdminService = async ({
 
     const newUser = await createUser({
       data: {
-        firstname: username,
+        username: username,
         lastname: 'admin user',
         email: email,
         role: 'ADMIN',
@@ -122,7 +122,7 @@ const registerAdminService = async ({
         'Admin created successfully. An email has been sent to set up the password.',
       data: {
         id: newUser.id,
-        username: newUser.firstname,
+        username: newUser.username,
         // lastname: newUser.lastname,
         email: newUser.email,
         role: newUser.role,
