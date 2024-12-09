@@ -1,3 +1,4 @@
+// import { sendAdminSetupEmail } from './mailService'; // Import your email service
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
@@ -12,6 +13,171 @@ import { generateOTP } from '../lib/utils';
 import { sendConfirmationEmail, sendResetPasswordEmail } from './mailServices';
 
 dotenv.config();
+
+const loginAdminService = async ({
+  email,
+  password,
+}: {
+  email: string;
+  password: string;
+}) => {
+  try {
+    if (!email || !password) {
+      return {
+        status: 400,
+        message: 'Login failed',
+        errors: [{ message: 'Email and password are required' }],
+      };
+    }
+
+    const user = await getUserByEmail(email);
+    if (!user) {
+      return {
+        ok: false,
+        status: 404,
+        message: 'Login failed',
+        errors: [{ message: 'Admin does not exist' }],
+      };
+    }
+
+    // Check if the user has an admin role
+    if (user.role !== 'ADMIN') {
+      return {
+        ok: false,
+        status: 403,
+        message: 'Login failed',
+        errors: [{ message: 'You are not authorized to log in as an admin' }],
+      };
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return {
+        ok: false,
+        status: 400,
+        message: 'Login failed',
+        errors: [{ message: 'Invalid password' }],
+      };
+    }
+
+    const token = jwt.sign(
+      { userId: user.id },
+      process.env.JWT_SECRET as string,
+      { expiresIn: '1h' }
+    );
+    return {
+      ok: true,
+      status: 200,
+      message: 'Login successful',
+      data: { token },
+    };
+  } catch (e) {
+    throw e;
+  }
+};
+
+const registerAdminService = async ({
+  username, // firstname i couldn't add username to d db, i had to convert username to first and send back
+  email,
+}: {
+  username: string;
+  email: string;
+}) => {
+  try {
+    // Validate fields
+    const existingUser = await getUserByEmail(email);
+    if (existingUser) {
+      return {
+        status: 400,
+        message: 'Registration failed',
+        errors: [{ message: 'User already exists' }],
+      };
+    }
+
+    // Set a secure default password from environment variable
+    const defaultPassword = process.env.JWT_SECRET;
+    if (!defaultPassword) {
+      throw new Error('Environment variable JWT_SECRET is not set');
+    }
+
+    // Hash the default password
+    const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+
+    const newUser = await createUser({
+      data: {
+        firstname: username,
+        lastname: 'admin user',
+        email: email,
+        role: 'ADMIN',
+        password: hashedPassword,
+      },
+    });
+
+    // Send setup email with link to create password
+    // await sendAdminSetupEmail(newUser);
+
+    return {
+      status: 201,
+      message:
+        'Admin created successfully. An email has been sent to set up the password.',
+      data: {
+        id: newUser.id,
+        username: newUser.firstname,
+        // lastname: newUser.lastname,
+        email: newUser.email,
+        role: newUser.role,
+        createdAt: newUser.createdAt,
+      },
+    };
+  } catch (e) {
+    console.log(e);
+    throw e;
+  }
+};
+
+const addAdminPasswordService = async ({
+  email,
+  newPassword,
+}: {
+  email: string;
+  newPassword: string;
+}) => {
+  try {
+    const user = await getUserByEmail(email);
+    if (!user) {
+      return {
+        status: 404,
+        message: 'Failed To Add Admin Password',
+        errors: [{ message: 'User not found' }],
+      };
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const [updatedData] = await Promise.all([
+      updateUser(user.id, { password: hashedPassword }),
+    ]);
+
+    if (!updatedData) {
+      return {
+        status: 500,
+        message: 'Failed To Add Admin Password',
+        errors: [
+          { message: 'Server error. Something went wrong at admin Update' },
+        ],
+      };
+    }
+
+    return {
+      status: 200,
+      message: 'Password Added successfully',
+      data: { email },
+    };
+  } catch (e) {
+    throw e;
+  }
+};
+
+//admin service ends
 
 const loginService = async ({
   email,
@@ -54,6 +220,15 @@ const loginService = async ({
       };
     }
 
+    if (!user.password) {
+      return {
+        ok: false,
+        status: 400,
+        message: 'Login failed',
+        errors: [{ message: 'Password not set. Please set your password.' }],
+      };
+    }
+
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return {
@@ -91,6 +266,8 @@ const registerService = async ({
   email: string;
   password: string;
 }) => {
+  // Validate fields if (!password) { return { status: 400, message: 'Registration failed', errors: [{ message: 'Password is required' }], }; }
+
   try {
     // validate fields
     const existingUser = await getUserByEmail(email);
@@ -408,4 +585,8 @@ export {
   requestResetService,
   resetPasswordService,
   emailVerificationService,
+  // admin auth service
+  loginAdminService,
+  registerAdminService,
+  addAdminPasswordService,
 };
