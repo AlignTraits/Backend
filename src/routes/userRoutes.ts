@@ -11,7 +11,7 @@ import { upload } from '../services/uploadServices';
 
 const router = express.Router();
 
-router.get<{}, MessageResponse>('/:id', loginRequired, getUserData);
+router.get<{}, MessageResponse>('/', loginRequired, getUserData);
 
 router.patch<{}, MessageResponse>('/', loginRequired, updateUserProfile);
 
