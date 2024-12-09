@@ -1,5 +1,5 @@
 import express from 'express';
-import { preventLoggedUser } from '../middlewares/auth';
+import { adminLoginRequired, preventLoggedUser } from '../middlewares/auth';
 import authController from '../controllers/authController';
 import MessageResponse from '../types/messageResponse';
 import { NextFunction, Request, Response } from 'express';
@@ -34,6 +34,31 @@ router.put<{}, MessageResponse>(
   '/reset-password',
   preventLoggedUser,
   authController.resetPassword
+);
+
+// admin login route section
+
+router.post<{}, MessageResponse>(
+  '/admin/login',
+  preventLoggedUser,
+  authController.loginAdmin
+);
+
+router.post<{}, MessageResponse>(
+  '/admin/register',
+  preventLoggedUser,
+  authController.registerAdmin
+);
+
+router.get<{}, MessageResponse>(
+  '/admin/details',
+  adminLoginRequired,
+  authController.getAdmindetails
+);
+
+router.patch<{}, MessageResponse>(
+  '/admin/add-password',
+  authController.AddAdminPassword
 );
 
 export default router;

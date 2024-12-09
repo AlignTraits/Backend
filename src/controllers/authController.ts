@@ -6,8 +6,67 @@ import {
   validateTokenService,
   requestResetService,
   resetPasswordService,
+  // admin auth service
+  loginAdminService,
+  registerAdminService,
+  addAdminPasswordService,
 } from '../services/authService';
+import {
+  getAdminDataService,
+  getUserDataService,
+} from '../services/userServices';
+import { SessionRequest } from '../types/sessionRequest';
 // import ErrorResponse from '../types/errorResponse';
+
+const loginAdmin = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await loginAdminService(req.body);
+    return res.status(result.status).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const registerAdmin = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const result = await registerAdminService(req.body);
+    res.status(result.status).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const AddAdminPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const result = await addAdminPasswordService(req.body);
+    res.status(result.status).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getAdmindetails = async (
+  req: SessionRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const result = await getAdminDataService(req.user?.id ?? '');
+    res.status(result.status).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// admin auth ends here
 
 const login = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -77,4 +136,9 @@ export = {
   validateToken,
   requestReset,
   resetPassword,
+  // admin auth controller
+  loginAdmin,
+  registerAdmin,
+  AddAdminPassword,
+  getAdmindetails,
 };
