@@ -106,6 +106,7 @@ const registerAdminService = async ({
     const newUser = await createUser({
       data: {
         username: username,
+        firstname: 'admin name',
         lastname: 'admin user',
         email: email,
         role: 'ADMIN',
@@ -123,7 +124,7 @@ const registerAdminService = async ({
       data: {
         id: newUser.id,
         username: newUser.username,
-        // lastname: newUser.lastname,
+        lastname: newUser.lastname,
         email: newUser.email,
         role: newUser.role,
         createdAt: newUser.createdAt,
