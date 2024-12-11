@@ -140,3 +140,48 @@ model UserResponse {
   selectedOptionId String
   createdAt        DateTime     @default(now())
 }
+
+// school and course
+
+model School {
+  id       String   @id @default(uuid())
+  name     String
+  schoolType  SchoolType
+  logo     String?  // Image URL or path
+  courses  Course[]
+}
+
+model Course {
+  id                   String   @id @default(uuid())
+  title                String
+  profile              String?  // Image URL or path
+  universities         School[]
+  scholarship          String
+  duration             Int
+  durationPeriod       DurationPeriod
+  price                Float
+  currency             Currency
+  acceptanceFee        Float
+  acceptanceFeeCurrency Currency
+  description          String?
+  requirements         String?
+}
+
+enum SchoolType {
+  FEDERAL_UNIVERSITY
+  PRIVATE_UNIVERSITY
+  PUBLIC_UNIVERSITY
+}
+
+enum DurationPeriod {
+  YEAR
+  MONTH
+}
+
+enum Currency {
+  NAIRA
+  DOLLAR
+}
+
+
+
