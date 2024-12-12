@@ -1,5 +1,9 @@
 # LearnConnect Backend
 
+"postinstall": "npx prisma generate && npx prisma db push --schema prisma/schema.prisma --accept-data-loss",
+
+<!--  -->
+
 This is the LearnConnect Backend.
 
 ## Environment Variables
@@ -7,12 +11,15 @@ This is the LearnConnect Backend.
 To run this project, you will need to add the following environment variables to your `.env` file:
 
 1. `EMAIL_PASS`
+
    - Description: The password for the email account used for sending emails.
 
 2. `EMAIL_USER`
+
    - Description: The username (or email address) of the email account used for sending emails.
 
 3. `JWT_SECRET`
+
    - Description: A secret string used for JWT token encryption. You can generate a secure string on your Linux machine using the command `openssl rand -base64 32`.
 
 4. `DATABASE_URL`
@@ -33,3 +40,4 @@ npm install
 
 # Run the project
 npx prisma db push && npm start
+```

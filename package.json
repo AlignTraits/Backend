@@ -12,7 +12,8 @@
   "test": "jest",
   "format": "prettier --write 'src/**/*.{js,ts}'",
   "typecheck": "tsc --noEmit",
-  "postinstall": "npx prisma generate && npx prisma db push --schema prisma/schema.prisma --accept-data-loss"
+  "postinstall": "npx prisma generate && npx prisma db push --schema prisma/schema.prisma --accept-data-loss || true"
+
 },
   "keywords": [],
   "author": "",
