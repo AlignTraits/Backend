@@ -1,4 +1,3 @@
-// controllers/schoolController.ts
 import { Request, Response } from 'express';
 import {
   createCourseService,
