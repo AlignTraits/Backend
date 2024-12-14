@@ -147,6 +147,7 @@ model School {
   id       String   @id @default(uuid())
   name     String
   schoolType  SchoolType
+  location          String
   logo     String?  // Image URL or path
   courses  Course[]
 }
@@ -155,7 +156,8 @@ model Course {
   id                   String   @id @default(uuid())
   title                String
   profile              String?  // Image URL or path
-  universities         School[]
+  schoolId             String
+  university           School   @relation(fields: [schoolId], references: [id])
   scholarship          String
   duration             Int
   durationPeriod       DurationPeriod
@@ -166,6 +168,7 @@ model Course {
   description          String?
   requirements         String?
 }
+
 
 enum SchoolType {
   FEDERAL_UNIVERSITY

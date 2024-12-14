@@ -4,6 +4,9 @@ import {
   createCourseController,
   //   createCourseController,
   createSchoolController,
+  getAllSchoolsController,
+  getSchoolByIdController,
+  updateCourseController,
 } from '../controllers/schoolController';
 import multer from 'multer';
 import MessageResponse from '../types/messageResponse';
@@ -28,5 +31,12 @@ router.post<{}, MessageResponse>(
   upload.single('profile'),
   createCourseController
 );
+
+// school
+router.get('/get/all', getAllSchoolsController);
+router.get('/get/:id', getSchoolByIdController);
+
+// update course
+router.patch('/course/:id', upload.single('profile'), updateCourseController);
 
 export default router;

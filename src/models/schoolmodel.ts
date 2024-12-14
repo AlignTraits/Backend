@@ -20,7 +20,12 @@ export enum Currency {
 
 // Create School Function
 const createSchool = async (schoolData: {
-  data: { name: string; schoolType: SchoolType; logo: string | null };
+  data: {
+    name: string;
+    schoolType: SchoolType;
+    location: string;
+    logo: string | null;
+  };
 }) => {
   return db.school.create(schoolData);
 };
@@ -30,7 +35,8 @@ const createCourse = async (courseData: {
   data: {
     title: string;
     profile: string;
-    universities: { connect: { id: string }[] };
+    // universities: { connect: { id: string }[] }; multiple schools relationship
+    schoolId: string; // Single school ID
     scholarship: string;
     duration: number;
     durationPeriod: DurationPeriod;
