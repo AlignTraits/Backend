@@ -64,7 +64,8 @@ export const sendConfirmationEmail = async ({
   otp: string;
 }) => {
   try {
-    const url = new URL('/api/v1/auth/verification', process.env.BACKEND_URL);
+    const url = new URL('/email-verify', process.env.WEBSITE_URL);
+    // const url = new URL('/api/v1/auth/verification', process.env.BACKEND_URL);
 
     url.searchParams.append('email', email);
     url.searchParams.append('token', otp ?? '');

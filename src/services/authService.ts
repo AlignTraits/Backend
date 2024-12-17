@@ -561,7 +561,7 @@ const emailVerificationService = async (email: string) => {
       expirationTime,
     });
 
-    console.log('start sen confirmd email');
+    console.log('start confirm send email');
     const emailRes = await sendConfirmationEmail({
       name: existingUser.firstname,
       email: existingUser.email,
