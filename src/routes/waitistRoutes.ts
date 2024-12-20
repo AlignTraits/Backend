@@ -1,8 +1,12 @@
-// import express from 'express';
-// import { addToWaitlist } from '../controllers/waitlist.js';
-// import { preventLoggedUser } from '../../helpers/auth.js';
+import express from 'express';
+import { addToWaitlistNow } from '../controllers/waitlistController';
+// import { preventLoggedUser } from '../middlewares/auth.js';
 
-// const router = express.Router();
+const router = express.Router();
+
+// router.post('/add-waitlist', preventLoggedUser, addToWaitlistNow);
+router.post('/add-waitlist', addToWaitlistNow);
+export default router;
 
 // /**
 //  * //@swagger
@@ -49,6 +53,3 @@
 //  *       500:
 //  *         description: Internal Server Error
 //  */
-// router.post('/add-waitlist', preventLoggedUser, addToWaitlist);
-
-// export default router;

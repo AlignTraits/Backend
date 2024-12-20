@@ -5,7 +5,7 @@ import UserRoutes from '../routes/userRoutes';
 import AuthRoutes from '../routes/authRoutes';
 import surveyRoutes from '../routes/surveryRoutes';
 import schoolRoutes from '../routes/schoolRoutes';
-// import WaitlistRoutes from '../routes/waitlistRoutes'
+import WaitlistRoutes from '../routes/waitistRoutes';
 
 const router = express.Router();
 
@@ -20,6 +20,6 @@ router.use('/users', UserRoutes);
 router.use('/auth', AuthRoutes);
 router.use('/school', schoolRoutes);
 router.use('/survey', surveyRoutes);
-// router.use('/waitlist', WaitlistRoutes)
+router.use('/waitlist', WaitlistRoutes);
 
 export default router;

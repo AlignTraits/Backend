@@ -141,6 +141,12 @@ model UserResponse {
   createdAt        DateTime     @default(now())
 }
 
+model WaitList {
+  id             String           @id @default(uuid())
+  email          String           @unique
+  createdAt      DateTime         @default(now())
+}
+
 // school and course
 
 model School {
@@ -185,6 +191,3 @@ enum Currency {
   NAIRA
   DOLLAR
 }
-
-
-

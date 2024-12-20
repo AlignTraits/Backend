@@ -1,41 +1,61 @@
-// import { sendMail } from "./mailServices";
+import { db } from '../config/db';
+import { sendMail } from './mailServices';
 
-// const addToWaitlist = async (req, res) => {
-//     try {
-//         const { email } = req.body;
+const addToWaitlist = async ({ email }: { email: string }) => {
+  try {
+    // Check if the email is already registered in the waitlist
+    const existingWaitlist = await db.waitList.findUnique({
+      where: { email },
+    });
 
-//         const sent = await sendMail({
-//             recipients: [email],
-//             subject: 'Welcome to AlignTraits - Your Waitlist Spot is Secured!',
-//             email: {
-//                 body: {
-//                     name: email + " !",
-//                     // intro: `We received a request to reset the password for your LearnConnect account associated with this email address: ${user.email}.`,
-//                     outro: [
-//                         "Thank you for joining the waitlist for AlignTraits, the platform that brings personalized career recommendations based on your unique personality traits. Your spot on the waitlist is officially secured.",
+    if (existingWaitlist) {
+      return {
+        status: 409, // Conflict
+        message: 'This email is already registered on the waitlist',
+        data: {
+          id: existingWaitlist.id,
+          email: existingWaitlist.email,
+          createdAt: existingWaitlist.createdAt,
+        },
+      };
+    }
 
-//                         "We're currently in a private alpha and onboarding new users in batches every week.",
+    // Save new entry into the database
+    const wait_list = await db.waitList.create({
+      data: { email },
+    });
 
-//                         "If you want early access, simply reply to this email with 'Interested!'"
-//                                             ]
-//                 }
-//             }
-//         });
+    // Define your host, e.g., from environment variables or directly
+    const host = process.env.BACKEND_URL || 'http://localhost:3000';
 
-//         if (sent.error) return res.status(500).json({ message: 'Server error' });
-//         if (!(!!sent?.res?.includes('OK'))) return res.status(400).json({ message: 'Something went wrong. Unable to send email. Try again' });
+    // Send verification email
+    const sent = await sendMail({
+      recipients: [email],
+      subject: 'Welcome to AlignTraits - Your Waitlist Spot is Secured!',
+      templateName: 'waitList', // Make sure this matches your template name
+      templateInfo: { email, host }, // Ensure host is included here
+    });
 
-//         //  add mail to database waitlist schema
+    if (!sent.ok) {
+      console.error('Error sending email:', sent.message);
+      return { status: sent.status, message: 'Server error: ' + sent.message };
+    }
 
-//         return res.status(200).json({
-//             message: 'Waitlist Mail sent successfully',
-//         });
-//     } catch (error) {
-//         console.error('Error requesting OTP: ', error);
-//         return res.status(500).json({ message: 'Internal Server Error' });
-//     }
-// };
+    return {
+      status: 201,
+      message: 'Successful',
+      data: {
+        id: wait_list.id,
+        email: wait_list.email,
+        createdAt: wait_list.createdAt,
+      },
+    };
+  } catch (e) {
+    console.error('Error adding to waitlist:', e);
+    throw e;
+  } finally {
+    await db.$disconnect();
+  }
+};
 
-// export {
-//     addToWaitlist
-// }
+export { addToWaitlist };

@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verify Your Email - Welcome to AlignTraits!</title>
+    <title>Welcome to AlignTraits - Your Waitlist Spot is Secured!</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -17,7 +17,7 @@
         .email-container {
             max-width: 600px;
             margin: 0 auto;
-            background-color: #ffffff;
+            background-color: #001833;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
@@ -38,13 +38,15 @@
         }
 
         .content h1 {
-            color: #1565C0;
+            color: #ffffff;
+            /* color: #1565C0; */
             font-size: 24px;
             margin-bottom: 20px;
         }
 
         .content p {
-            color: #333333;
+            color: #ffffff;
+            /* color: #333333; */
             font-size: 16px;
             line-height: 1.6;
             margin-bottom: 20px;
@@ -70,12 +72,14 @@
         .footer {
             text-align: left;
             font-size: 14px;
-            color: #666666;
+            color: #ffffff;
+            /* color: #666666; */
             margin-top: 30px;
         }
 
         .footer a {
-            color: #1565C0;
+            color: #ffffff;
+            /* color: #1565C0; */
             text-decoration: none;
         }
 
@@ -96,26 +100,26 @@
             <img src="<%= host %>/assets/full-logo.png" alt="AlignTraits Logo">
         </div>
         <div class="content">
-            <h1>Verify Your Email - Welcome to AlignTraits!</h1>
-            <p><b>Dear <%= name %>,</b></p>
-            <p>Thank you for signing up for AlignTraits, your gateway to personalized career insights tailored to your
-                unique personality traits. We're excited to have you on board!</p>
-            <p>To complete your registration and secure your account, please verify your email address by clicking the
-                link below:</p>
-            <div class="button-wrapper">
-                <a href="<%= url %>" class="button">Verify Email</a>
-            </div>
-            <p>This link expires in 24 hours. If not verified, you'll need to sign up again.</p>
-            <p>For help, contact us at aligntraits@gmail.com.</p>
-            <p>Welcome to AlignTraits!<br>Best, The AlignTraits Team</p>
+            <!-- <h1>Welcome to AlignTraits - Your Waitlist Spot is Secured!</h1> -->
+            <p><b>Hi <%= email %>,</b></p>
+            <p>
+                Thank you for joining the waitlist for AlignTraits, the platform that brings personalized career
+                recommendations based on your unique personality traits. Your spot on the waitlist is officially
+                secured.
+            </p>
+            <p> We're currently in a private alpha and onboarding new users in batches every week.</p>
+            <p> If you want early access, simply reply to this email with "Interested!"</p>
+            <p>
+                Thank you,
+                The AlignTraits Team</p>
         </div>
         <div class="footer">
-            <p>P.S. Stay updated on features and career insights by following us on</p>
+            <!-- <p>P.S. Stay updated on features and career insights by following us on</p>
             <div class="social-icons">
                 <a href="#"><img src="<%= host %>/assets/instagram-icon.png" alt="Instagram"></a>
                 <a href="#"><img src="<%= host %>/assets/facebook-icon.png" alt="Facebook"></a>
                 <a href="#"><img src="<%= host %>/assets/linkedin-icon.png" alt="LinkedIn"></a>
-            </div>
+            </div> -->
         </div>
     </div>
 </body>
