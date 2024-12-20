@@ -494,16 +494,36 @@ const resetPasswordService = async ({
   newPassword: string;
 }) => {
   try {
-    const otpRecord = await getEmailVerificationTokenByToken(token);
-    console.log('OTP Record:', otpRecord); // Debugging
+    // const otpRecord = await getEmailVerificationTokenByToken(token);
+    const tokenRecord = await getEmailVerificationTokenByEmail(email);
 
-    if (!otpRecord || !(await bcrypt.compare(token, otpRecord.otp))) {
+    console.log('OTP Record:', tokenRecord); // Debugging
+    if (!tokenRecord) {
       return {
+        ok: false,
         status: 400,
-        message: 'Password Reset failed',
+        message: 'Validation failed',
         errors: [{ message: 'Invalid OTP or OTP expired' }],
       };
     }
+
+    const isMatch = await bcrypt.compare(token.toString(), tokenRecord.otp);
+    if (!isMatch) {
+      return {
+        ok: false,
+        status: 400,
+        message: 'Validation failed',
+        errors: [{ message: 'Invalid OTP or OTP expired' }],
+      };
+    }
+
+    // if (!otpRecord || !(await bcrypt.compare(token, otpRecord.otp))) {
+    //   return {
+    //     status: 400,
+    //     message: 'Password Reset failed',
+    //     errors: [{ message: 'Invalid OTP or OTP expired' }],
+    //   };
+    // }
 
     const user = await getUserByEmail(email);
     if (!user) {
