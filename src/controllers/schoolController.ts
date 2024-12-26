@@ -2,8 +2,10 @@ import { Request, Response } from 'express';
 import {
   createCourseService,
   createSchoolService,
+  deleteSchoolsService,
   getAllSchoolsService,
   getSchoolByIdService,
+  searchSchoolsService,
   updateCourseService,
 } from '../services/schoolService';
 
@@ -142,5 +144,36 @@ export const updateCourseController = async (req: Request, res: Response) => {
     res
       .status(500)
       .send({ error: 'An error occurred while updating the course' });
+  }
+};
+
+// Delete a school and associated courses
+export const deleteSchoolsController = async (req: Request, res: Response) => {
+  try {
+    const { schoolId } = req.params;
+    const deletedSchoolDetails = await deleteSchoolsService(schoolId);
+    res.status(200).send({
+      message: 'School deleted successfully',
+      school: deletedSchoolDetails,
+    });
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .send({ error: 'An error occurred while deleting the school' });
+  }
+};
+
+// Search schools by location
+export const searchSchoolsController = async (req: Request, res: Response) => {
+  try {
+    const { location } = req.params;
+    const schools = await searchSchoolsService(location);
+    res.status(200).send(schools);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({
+      error: 'An error occurred while searching for schools by location',
+    });
   }
 };

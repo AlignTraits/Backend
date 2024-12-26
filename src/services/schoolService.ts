@@ -303,3 +303,22 @@ export const updateCourseService = async ({
     throw e;
   }
 };
+
+//
+export const deleteSchoolsService = async (schoolId: string) => {
+  // Delete all courses associated with the school
+  await db.course.deleteMany({ where: { schoolId } });
+  // Delete the school
+  return db.school.delete({ where: { id: schoolId } });
+};
+//
+export const searchSchoolsService = async (location: string) => {
+  return db.school.findMany({
+    where: {
+      location: {
+        contains: `/${location}`, // This will match any location containing "/Country"
+      },
+    },
+    include: { courses: true },
+  });
+};
