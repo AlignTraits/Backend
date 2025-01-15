@@ -8,6 +8,9 @@ import {
   updateCourseController,
   deleteSchoolsController,
   searchSchoolsController,
+  deleteCourseController,
+  updateSchoolController,
+  getCourseByIdController,
 } from '../controllers/schoolController';
 import multer from 'multer';
 import MessageResponse from '../types/messageResponse';
@@ -37,8 +40,22 @@ router.post<{}, MessageResponse>(
 router.get('/get/all', getAllSchoolsController);
 router.get('/get/:id', getSchoolByIdController);
 
+// get a single course by ID
+router.get('/course/:id', getCourseByIdController); // Add this route
+
 // update course
 router.patch('/course/:id', upload.single('profile'), updateCourseController);
+
+// delete course
+router.delete('/course/delete/:id', adminLoginRequired, deleteCourseController);
+
+// update school
+router.patch(
+  '/update/:id',
+  adminLoginRequired,
+  upload.single('logo'),
+  updateSchoolController
+);
 
 // delete school and associated courses
 router.delete('/delete/:schoolId', adminLoginRequired, deleteSchoolsController);

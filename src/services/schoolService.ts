@@ -46,8 +46,8 @@ interface CreateCourseData {
   currency: Currency;
   acceptanceFee: number;
   acceptanceFeeCurrency: Currency;
-  description?: string;
-  requirements?: string;
+  description: string;
+  requirements: string;
 }
 
 const uploadToCloudinary = async ({
@@ -321,4 +321,97 @@ export const searchSchoolsService = async (location: string) => {
     },
     include: { courses: true },
   });
+};
+
+// new
+interface UpdateSchoolData {
+  id: string;
+  name?: string;
+  schoolType?: SchoolType;
+  location?: string;
+  logo?: Express.Multer.File | null | undefined;
+}
+
+export const updateSchoolService = async ({
+  id,
+  name,
+  schoolType,
+  location,
+  logo,
+}: UpdateSchoolData) => {
+  let logoUrl: string | undefined;
+  try {
+    // Check if the school exists
+    const existingSchool = await db.school.findUnique({ where: { id } });
+    if (!existingSchool) {
+      return { ok: false, status: 404, message: 'School not found' };
+    }
+    if (logo) {
+      const allowedExtensions = ['.jpg', '.jpeg', '.png'];
+      const fileExtension = path.extname(logo.originalname).toLowerCase();
+      if (!allowedExtensions.includes(fileExtension)) {
+        return {
+          ok: false,
+          status: 403,
+          message: 'File upload failed',
+          errors: [
+            { message: 'Invalid file type. Only JPG, JPEG & PNG are allowed.' },
+          ],
+        };
+      }
+      // Resize the image using sharp
+      const resizedBuffer = await sharp(logo.buffer)
+        .resize(400, 400, { fit: sharp.fit.inside, withoutEnlargement: true })
+        .toBuffer();
+      const result: UploadApiResponse = await uploadToCloudinary({
+        folder: 'school_logos',
+        file: { ...logo, buffer: resizedBuffer },
+      });
+      logoUrl = result.secure_url;
+    }
+    // Update the school
+    const updatedSchool = await db.school.update({
+      where: { id },
+      data: {
+        name: name || existingSchool.name,
+        schoolType: schoolType || existingSchool.schoolType,
+        location: location || existingSchool.location,
+        logo: logoUrl || existingSchool.logo,
+      },
+    });
+    return updatedSchool;
+  } catch (e) {
+    throw e;
+  }
+};
+
+export const deleteCourseService = async (courseId: string) => {
+  try {
+    // Check if the course exists
+    const existingCourse = await db.course.findUnique({
+      where: { id: courseId },
+    });
+    if (!existingCourse) {
+      return { ok: false, status: 404, message: 'Course not found' };
+    }
+    // Delete the course
+    await db.course.delete({ where: { id: courseId } });
+    return { ok: true, status: 200, message: 'Course deleted successfully' };
+  } catch (e) {
+    throw e;
+  }
+};
+
+// Get a single course by ID export
+export const getCourseByIdService = async (id: string) => {
+  try {
+    const course = await db.course.findUnique({
+      where: { id },
+      include: { university: true },
+      // Include the associated university
+    });
+    return course;
+  } catch (e) {
+    throw e;
+  }
 };

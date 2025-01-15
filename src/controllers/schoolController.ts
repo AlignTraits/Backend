@@ -7,6 +7,9 @@ import {
   getSchoolByIdService,
   searchSchoolsService,
   updateCourseService,
+  deleteCourseService,
+  updateSchoolService,
+  getCourseByIdService,
 } from '../services/schoolService';
 
 export const createSchoolController = async (req: Request, res: Response) => {
@@ -59,12 +62,11 @@ export const getSchoolByIdController = async (req: Request, res: Response) => {
   }
 };
 
-// course
+// Course creation
 export const createCourseController = async (req: Request, res: Response) => {
   try {
     const {
       title,
-      // universities,
       schoolId,
       scholarship,
       duration,
@@ -77,13 +79,9 @@ export const createCourseController = async (req: Request, res: Response) => {
       requirements,
     } = req.body;
     const logo = req.file;
-    // const parsedUniversities = Array.isArray(universities)
-    //   ? universities
-    //   : JSON.parse(universities);
     const newSchool = await createCourseService({
       title,
       logo,
-      // universities: parsedUniversities,
       schoolId,
       scholarship,
       duration: parseInt(duration, 10),
@@ -122,7 +120,6 @@ export const updateCourseController = async (req: Request, res: Response) => {
     } = req.body;
     const logo = req.file;
     const { id } = req.params;
-    // The course ID to be updated
     const updatedCourse = await updateCourseService({
       id,
       title,
@@ -144,6 +141,42 @@ export const updateCourseController = async (req: Request, res: Response) => {
     res
       .status(500)
       .send({ error: 'An error occurred while updating the course' });
+  }
+};
+
+// Delete a course
+export const deleteCourseController = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    await deleteCourseService(id);
+    res.status(200).send({ message: 'Course deleted successfully' });
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .send({ error: 'An error occurred while deleting the course' });
+  }
+};
+
+// Update a school
+export const updateSchoolController = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, schoolType, location } = req.body;
+    const logo = req.file;
+    const updatedSchool = await updateSchoolService({
+      id,
+      name,
+      schoolType,
+      logo,
+      location,
+    });
+    res.status(200).send(updatedSchool);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .send({ error: 'An error occurred while updating the school' });
   }
 };
 
@@ -175,5 +208,22 @@ export const searchSchoolsController = async (req: Request, res: Response) => {
     res.status(500).send({
       error: 'An error occurred while searching for schools by location',
     });
+  }
+};
+
+// Get a single course by ID
+export const getCourseByIdController = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const course = await getCourseByIdService(id);
+    if (!course) {
+      return res.status(404).send({ error: 'Course not found' });
+    }
+    res.status(200).send(course);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .send({ error: 'An error occurred while fetching the course' });
   }
 };

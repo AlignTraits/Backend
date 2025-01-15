@@ -44,8 +44,8 @@ const createCourse = async (courseData: {
     currency: Currency;
     acceptanceFee: number;
     acceptanceFeeCurrency: Currency;
-    description?: string;
-    requirements?: string;
+    description: string;
+    requirements: string;
   };
 }) => {
   return db.course.create(courseData);

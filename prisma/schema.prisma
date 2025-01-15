@@ -156,6 +156,8 @@ model School {
   location          String
   logo     String?  // Image URL or path
   courses  Course[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 }
 
 model Course {
@@ -171,8 +173,10 @@ model Course {
   currency             Currency
   acceptanceFee        Float
   acceptanceFeeCurrency Currency
-  description          String?
-  requirements         String?
+  description          String
+  requirements         String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 }
 
 
