@@ -47,7 +47,7 @@ interface CreateCourseData {
   acceptanceFee: number;
   acceptanceFeeCurrency: Currency;
   description: string;
-  requirements: string;
+  requirements: string[];
 }
 
 const uploadToCloudinary = async ({
@@ -218,6 +218,11 @@ export const createCourseService = async ({
     });
     //   pass the cloudinary uploaded image url
     profileUrl = result.secure_url;
+
+    // Parse requirements if it's a JSON string
+    if (typeof requirements === 'string') {
+      requirements = JSON.parse(requirements);
+    }
 
     const newCourse = await createCourse({
       data: {
