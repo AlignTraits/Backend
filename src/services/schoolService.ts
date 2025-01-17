@@ -138,8 +138,17 @@ export const createSchoolService = async ({
 };
 
 export const getAllSchoolsService = async () => {
-  return db.school.findMany();
+  return db.school.findMany({
+    include: {
+      _count: {
+        select: {
+          courses: true,
+        },
+      },
+    },
+  });
 };
+
 export const getSchoolByIdService = async (id: string) => {
   return db.school.findUnique({ where: { id }, include: { courses: true } });
 };
