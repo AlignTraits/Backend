@@ -429,3 +429,16 @@ export const getCourseByIdService = async (id: string) => {
     throw e;
   }
 };
+
+export const getAllCoursesService = async () => {
+  try {
+    const courses = await db.course.findMany({
+      include: {
+        university: true,
+      },
+    });
+    return courses;
+  } catch (error) {
+    throw error;
+  }
+};

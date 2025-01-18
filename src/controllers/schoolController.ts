@@ -10,6 +10,7 @@ import {
   deleteCourseService,
   updateSchoolService,
   getCourseByIdService,
+  getAllCoursesService,
 } from '../services/schoolService';
 
 export const createSchoolController = async (req: Request, res: Response) => {
@@ -225,5 +226,18 @@ export const getCourseByIdController = async (req: Request, res: Response) => {
     res
       .status(500)
       .send({ error: 'An error occurred while fetching the course' });
+  }
+};
+
+// Get all courses
+export const getAllCoursesController = async (req: Request, res: Response) => {
+  try {
+    const courses = await getAllCoursesService();
+    res.status(200).send(courses);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .send({ error: 'An error occurred while fetching the courses' });
   }
 };

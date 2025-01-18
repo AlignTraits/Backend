@@ -175,9 +175,11 @@ model Course {
   acceptanceFeeCurrency Currency
   description          String
   requirements         String[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  ratings              Float    @default(0.0) // New field for ratings
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @default(now()) @updatedAt
 }
+
 
 
 enum SchoolType {

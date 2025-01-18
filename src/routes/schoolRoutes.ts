@@ -11,6 +11,7 @@ import {
   deleteCourseController,
   updateSchoolController,
   getCourseByIdController,
+  getAllCoursesController,
 } from '../controllers/schoolController';
 import multer from 'multer';
 import MessageResponse from '../types/messageResponse';
@@ -42,6 +43,9 @@ router.get('/get/:id', getSchoolByIdController);
 
 // get a single course by ID
 router.get('/course/:id', getCourseByIdController); // Add this route
+
+// get all courses
+router.get('/courses', getAllCoursesController); // Add this route
 
 // update course
 router.patch('/course/:id', upload.single('profile'), updateCourseController);
