@@ -3,6 +3,12 @@ import { sendMail } from './mailServices';
 
 const addToWaitlist = async ({ email }: { email: string }) => {
   try {
+    if (!email) {
+      return {
+        status: 400, // Bad Request
+        message: 'Email is required to add to the waitlist',
+      };
+    }
     // Check if the email is already registered in the waitlist
     const existingWaitlist = await db.waitList.findUnique({
       where: { email },
