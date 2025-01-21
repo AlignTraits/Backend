@@ -295,6 +295,9 @@ export const updateCourseService = async ({
       profileUrl = result.secure_url;
     }
     // Update the course
+    if (typeof requirements === 'string') {
+      requirements = JSON.parse(requirements);
+    }
     const updatedCourse = await db.course.update({
       where: { id },
       data: {
