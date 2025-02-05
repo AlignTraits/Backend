@@ -154,19 +154,6 @@ CREATE TABLE "WaitList" (
 );
 
 -- CreateTable
-CREATE TABLE "School" (
-    "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "schoolType" "SchoolType" NOT NULL,
-    "location" TEXT NOT NULL,
-    "logo" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "School_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "Course" (
     "id" TEXT NOT NULL,
     "title" TEXT NOT NULL,
@@ -182,10 +169,30 @@ CREATE TABLE "Course" (
     "description" TEXT NOT NULL,
     "requirements" TEXT[],
     "ratings" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+    "courseInformation" TEXT NOT NULL,
+    "courseWebsiteUrl" TEXT NOT NULL,
+    "programLevel" TEXT NOT NULL,
+    "careerOpportunities" TEXT[],
+    "loanInformation" TEXT NOT NULL,
+    "estimatedLivingCost" DOUBLE PRECISION NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Course_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "School" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "schoolType" "SchoolType" NOT NULL,
+    "location" TEXT NOT NULL,
+    "logo" TEXT,
+    "websiteUrl" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "School_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable

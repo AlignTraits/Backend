@@ -149,37 +149,43 @@ model WaitList {
 
 // school and course
 
-model School {
-  id       String   @id @default(uuid())
-  name     String
-  schoolType  SchoolType
-  location          String
-  logo     String?  // Image URL or path
-  courses  Course[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
-}
-
 model Course {
-  id                   String   @id @default(uuid())
-  title                String
-  profile              String?  // Image URL or path
-  schoolId             String
-  university           School   @relation(fields: [schoolId], references: [id])
-  scholarship          String
-  duration             Int
-  durationPeriod       DurationPeriod
-  price                Float
-  currency             Currency
-  acceptanceFee        Float
-  acceptanceFeeCurrency Currency
-  description          String
-  requirements         String[]
-  ratings              Float    @default(0.0) // New field for ratings
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @default(now()) @updatedAt
+  id                     String          @id @default(uuid())
+  title                  String
+  profile                String?         // Image URL or path
+  schoolId               String
+  university             School          @relation(fields: [schoolId], references: [id])
+  scholarship            String
+  duration               Int
+  durationPeriod         DurationPeriod
+  price                  Float
+  currency               Currency
+  acceptanceFee          Float
+  acceptanceFeeCurrency  Currency
+  description            String
+  requirements           String[]
+  ratings                Float           @default(0.0) // Field for ratings
+  courseInformation      String          // Field for course information
+  courseWebsiteUrl       String          // Field for course website URL
+  programLevel           String          // Field for program level
+  careerOpportunities    String[]        // Field for career opportunities
+  loanInformation        String          // Field for loan information
+  estimatedLivingCost    Float           // New field for estimated living cost
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @default(now()) @updatedAt
 }
 
+model School {
+  id                     String          @id @default(uuid())
+  name                   String
+  schoolType             SchoolType
+  location               String
+  logo                   String?         // Image URL or path
+  websiteUrl             String          // New field for school website URL
+  courses                Course[]
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @default(now()) @updatedAt
+}
 
 
 enum SchoolType {

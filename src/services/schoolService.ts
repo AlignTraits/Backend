@@ -29,25 +29,32 @@ interface CreateSchoolData {
   name: string;
   schoolType: SchoolType;
   location: string;
+  websiteUrl: string;
   logo: Express.Multer.File | undefined;
 }
 
+// Course interface
 // Course interface
 interface CreateCourseData {
   id?: string;
   title: string;
   logo: Express.Multer.File | null | undefined;
-  // universities: string[]; // Array of school IDs
-  schoolId: string; // Array of school IDs
+  schoolId: string;
   scholarship: string;
   duration: number;
   durationPeriod: DurationPeriod;
   price: number;
   currency: Currency;
   acceptanceFee: number;
+  estimatedLivingCost: number;
   acceptanceFeeCurrency: Currency;
   description: string;
   requirements: string[];
+  courseInformation: string; // New field
+  courseWebsiteUrl: string; // New field
+  programLevel: string; // New field
+  careerOpportunities: string[]; // New field
+  loanInformation: string; // New field
 }
 
 const uploadToCloudinary = async ({
@@ -82,6 +89,7 @@ export const createSchoolService = async ({
   name,
   schoolType,
   location,
+  websiteUrl,
   logo,
 }: CreateSchoolData) => {
   let logoUrl: string | null = null;
@@ -129,7 +137,7 @@ export const createSchoolService = async ({
     }
 
     const newSchool = await createSchool({
-      data: { name, schoolType, location, logo: logoUrl },
+      data: { name, schoolType, location, websiteUrl, logo: logoUrl },
     });
     return newSchool;
   } catch (e) {
@@ -165,9 +173,15 @@ export const createCourseService = async ({
   price,
   currency,
   acceptanceFee,
+  estimatedLivingCost,
   acceptanceFeeCurrency,
   description,
   requirements,
+  courseInformation, // New field
+  courseWebsiteUrl, // New field
+  programLevel, // New field
+  careerOpportunities, // New field
+  loanInformation, // New field
 }: CreateCourseData) => {
   let profileUrl: string;
 
@@ -223,6 +237,10 @@ export const createCourseService = async ({
     if (typeof requirements === 'string') {
       requirements = JSON.parse(requirements);
     }
+    // Parse careerOpportunities if it's a JSON string
+    if (typeof careerOpportunities === 'string') {
+      careerOpportunities = JSON.parse(careerOpportunities);
+    }
 
     const newCourse = await createCourse({
       data: {
@@ -238,9 +256,15 @@ export const createCourseService = async ({
         price,
         currency,
         acceptanceFee,
+        estimatedLivingCost,
         acceptanceFeeCurrency,
         description,
         requirements,
+        courseInformation, // New field
+        courseWebsiteUrl, // New field
+        programLevel, // New field
+        careerOpportunities, // New field
+        loanInformation, // New field
       },
     });
     return newCourse;
@@ -263,6 +287,12 @@ export const updateCourseService = async ({
   acceptanceFeeCurrency,
   description,
   requirements,
+  estimatedLivingCost,
+  courseInformation, // New field
+  courseWebsiteUrl, // New field
+  programLevel, // New field
+  careerOpportunities, // New field
+  loanInformation, // New field
 }: CreateCourseData) => {
   let profileUrl: string | undefined;
   try {
@@ -298,6 +328,10 @@ export const updateCourseService = async ({
     if (typeof requirements === 'string') {
       requirements = JSON.parse(requirements);
     }
+
+    if (typeof careerOpportunities === 'string') {
+      careerOpportunities = JSON.parse(careerOpportunities);
+    }
     const updatedCourse = await db.course.update({
       where: { id },
       data: {
@@ -309,10 +343,19 @@ export const updateCourseService = async ({
         price: price || existingCourse.price,
         currency: currency || existingCourse.currency,
         acceptanceFee: acceptanceFee || existingCourse.acceptanceFee,
+        estimatedLivingCost:
+          estimatedLivingCost || existingCourse.estimatedLivingCost,
         acceptanceFeeCurrency:
           acceptanceFeeCurrency || existingCourse.acceptanceFeeCurrency,
         description: description || existingCourse.description,
         requirements: requirements || existingCourse.requirements,
+        courseInformation:
+          courseInformation || existingCourse.courseInformation, // New field
+        courseWebsiteUrl: courseWebsiteUrl || existingCourse.courseWebsiteUrl, // New field
+        programLevel: programLevel || existingCourse.programLevel, // New field
+        careerOpportunities:
+          careerOpportunities || existingCourse.careerOpportunities, // New field
+        loanInformation: loanInformation || existingCourse.loanInformation, // New field
       },
     });
     return updatedCourse;
@@ -346,6 +389,7 @@ interface UpdateSchoolData {
   name?: string;
   schoolType?: SchoolType;
   location?: string;
+  websiteUrl?: string;
   logo?: Express.Multer.File | null | undefined;
 }
 
@@ -355,6 +399,7 @@ export const updateSchoolService = async ({
   schoolType,
   location,
   logo,
+  websiteUrl,
 }: UpdateSchoolData) => {
   let logoUrl: string | undefined;
   try {
@@ -393,6 +438,7 @@ export const updateSchoolService = async ({
         name: name || existingSchool.name,
         schoolType: schoolType || existingSchool.schoolType,
         location: location || existingSchool.location,
+        websiteUrl: websiteUrl || existingSchool.websiteUrl,
         logo: logoUrl || existingSchool.logo,
       },
     });
@@ -445,3 +491,161 @@ export const getAllCoursesService = async () => {
     throw error;
   }
 };
+
+// Bulk Creations
+
+interface CreateCSVSchoolData {
+  name: string;
+  schoolType: string;
+  location: string;
+  websiteUrl: string;
+}
+
+export const createBulkSchoolsService = async (
+  schools: CreateSchoolData[],
+  files: Express.Multer.File[]
+) => {
+  const results = await Promise.all(
+    schools.map(async (school, index) => {
+      const file = files[index];
+
+      // Upload logo to Cloudinary
+      const result = await uploadToCloudinary({
+        folder: 'school_logos',
+        file,
+      });
+
+      // Create school with logo URL
+      const newSchool = await createSchool({
+        data: {
+          name: school.name,
+          schoolType: school.schoolType,
+          location: school.location,
+          websiteUrl: school.websiteUrl,
+          logo: result.secure_url,
+        },
+        // name: school.name,
+        // schoolType: school.schoolType,
+        // location: school.location,
+        // logo: result.secure_url,
+      });
+
+      return newSchool;
+    })
+  );
+
+  return results;
+};
+
+export const createBulkCSVSchoolsService = async (
+  schools: CreateCSVSchoolData[],
+  files: Express.Multer.File[]
+) => {
+  const results = await Promise.all(
+    schools.map(async (school, index) => {
+      const file = files ? files[index] : null;
+      let logoUrl: string | null = null;
+
+      if (file) {
+        const allowedExtensions = ['.jpg', '.jpeg', '.png'];
+        const fileExtension = path.extname(file.originalname).toLowerCase();
+
+        if (!allowedExtensions.includes(fileExtension)) {
+          throw new Error(
+            'Invalid file type. Only JPG, JPEG & PNG are allowed.'
+          );
+        }
+
+        // Resize the image using sharp
+        const resizedBuffer = await sharp(file.buffer)
+          .resize(400, 400, {
+            fit: sharp.fit.inside,
+            withoutEnlargement: true,
+          })
+          .toBuffer();
+
+        const result: UploadApiResponse = await uploadToCloudinary({
+          folder: 'school_logos',
+          file: { ...file, buffer: resizedBuffer },
+        });
+
+        logoUrl = result.secure_url;
+      }
+
+      // Create school with logo URL
+      const newSchool = await db.school.create({
+        data: {
+          name: school.name,
+          schoolType: school.schoolType as any, // Cast to appropriate type
+          location: school.location,
+          logo: logoUrl,
+          websiteUrl: school.websiteUrl,
+        },
+      });
+
+      return newSchool;
+    })
+  );
+
+  return results;
+};
+
+// export const createBulkCoursesService = async (
+//   courses: CreateCourseData[],
+//   files: Express.Multer.File[]
+// ) => {
+//   const results = await Promise.all(
+//     courses.map(async (course, index) => {
+//       const file = files[index];
+//       let profileUrl: string | null = null;
+
+//       if (file) {
+//         const allowedExtensions = ['.jpg', '.jpeg', '.png'];
+//         const fileExtension = path.extname(file.originalname).toLowerCase();
+
+//         if (!allowedExtensions.includes(fileExtension)) {
+//           throw new Error(
+//             'Invalid file type. Only JPG, JPEG & PNG are allowed.'
+//           );
+//         }
+
+//         // Resize the image using sharp
+//         const resizedBuffer = await sharp(file.buffer)
+//           .resize(400, 400, {
+//             fit: sharp.fit.inside,
+//             withoutEnlargement: true,
+//           })
+//           .toBuffer();
+
+//         const result: UploadApiResponse = await uploadToCloudinary({
+//           folder: 'course_profile',
+//           file: { ...file, buffer: resizedBuffer },
+//         });
+
+//         profileUrl = result.secure_url;
+//       }
+
+//       // Create course with profile URL or a placeholder if profileUrl is null
+//       const newCourse = await createCourse({
+//         data: {
+//           title: course.title,
+//           profile: profileUrl || '', // Provide a default value if profileUrl is null
+//           schoolId: course.schoolId,
+//           scholarship: course.scholarship,
+//           duration: course.duration,
+//           durationPeriod: course.durationPeriod,
+//           price: course.price,
+//           currency: course.currency,
+//           acceptanceFee: course.acceptanceFee,
+//           acceptanceFeeCurrency: course.acceptanceFeeCurrency,
+//           description: course.description,
+//           requirements: course.requirements,
+//         },
+//       });
+
+//       return newCourse;
+//     })
+//   );
+
+//   return results;
+// };

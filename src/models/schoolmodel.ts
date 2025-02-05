@@ -25,6 +25,7 @@ const createSchool = async (schoolData: {
     schoolType: SchoolType;
     location: string;
     logo: string | null;
+    websiteUrl: string;
   };
 }) => {
   return db.school.create(schoolData);
@@ -35,17 +36,22 @@ const createCourse = async (courseData: {
   data: {
     title: string;
     profile: string;
-    // universities: { connect: { id: string }[] }; multiple schools relationship
-    schoolId: string; // Single school ID
+    schoolId: string;
     scholarship: string;
     duration: number;
     durationPeriod: DurationPeriod;
     price: number;
     currency: Currency;
     acceptanceFee: number;
+    estimatedLivingCost: number;
     acceptanceFeeCurrency: Currency;
     description: string;
     requirements: string[];
+    courseInformation: string; // New field
+    courseWebsiteUrl: string; // New field
+    programLevel: string; // New field
+    careerOpportunities: string[]; // New field
+    loanInformation: string; // New field
   };
 }) => {
   return db.course.create(courseData);

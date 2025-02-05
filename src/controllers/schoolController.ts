@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import Papa from 'papaparse';
+
 import {
   createCourseService,
   createSchoolService,
@@ -11,11 +13,67 @@ import {
   updateSchoolService,
   getCourseByIdService,
   getAllCoursesService,
+  createBulkSchoolsService,
+  createBulkCSVSchoolsService,
+  // createBulkCoursesService,
 } from '../services/schoolService';
+
+interface CreateCSVSchoolData {
+  name: string;
+  schoolType: string;
+  location: string;
+  websiteUrl: string;
+}
+
+export const createBulkCSVSchoolsController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    const csvFile = files?.csvFile?.[0];
+    const logos = files?.logos;
+
+    if (!csvFile) {
+      return res.status(400).send({ error: 'CSV file is required' });
+    }
+
+    // Convert the CSV file buffer to string
+    const csvData = csvFile.buffer.toString('utf-8');
+
+    // Parse the CSV string
+    const parsedData = Papa.parse<CreateCSVSchoolData>(csvData, {
+      header: true,
+      skipEmptyLines: true,
+      dynamicTyping: true,
+    });
+
+    if (parsedData.errors.length > 0) {
+      return res.status(400).send({ error: 'Invalid CSV data' });
+    }
+
+    const schools: CreateCSVSchoolData[] =
+      parsedData.data as CreateCSVSchoolData[];
+
+    const results = await createBulkCSVSchoolsService(schools, logos);
+
+    res.status(201).json({
+      message: 'Schools created successfully',
+      data: results,
+    });
+  } catch (error) {
+    console.error('Error creating schools:', error);
+    res
+      .status(500)
+      .send({ error: 'An error occurred while creating the schools' });
+  }
+};
+
+//
 
 export const createSchoolController = async (req: Request, res: Response) => {
   try {
-    const { name, schoolType, location } = req.body;
+    const { name, schoolType, location, websiteUrl } = req.body;
     const logo = req.file;
 
     const newSchool = await createSchoolService({
@@ -23,6 +81,7 @@ export const createSchoolController = async (req: Request, res: Response) => {
       schoolType,
       logo,
       location,
+      websiteUrl,
     });
 
     res.status(201).send(newSchool);
@@ -46,6 +105,7 @@ export const getAllSchoolsController = async (req: Request, res: Response) => {
       .send({ error: 'An error occurred while fetching the schools' });
   }
 };
+
 // Get a single school by ID and populate courses export
 export const getSchoolByIdController = async (req: Request, res: Response) => {
   try {
@@ -75,12 +135,18 @@ export const createCourseController = async (req: Request, res: Response) => {
       price,
       currency,
       acceptanceFee,
+      estimatedLivingCost,
       acceptanceFeeCurrency,
       description,
       requirements,
+      courseInformation, // New property
+      courseWebsiteUrl, // New property
+      programLevel, // New property
+      careerOpportunities, // New property
+      loanInformation, // New property
     } = req.body;
     const logo = req.file;
-    const newSchool = await createCourseService({
+    const newCourse = await createCourseService({
       title,
       logo,
       schoolId,
@@ -90,12 +156,18 @@ export const createCourseController = async (req: Request, res: Response) => {
       price: parseFloat(price),
       currency,
       acceptanceFee: parseFloat(acceptanceFee),
+      estimatedLivingCost: parseFloat(estimatedLivingCost),
       acceptanceFeeCurrency,
       description,
       requirements,
+      courseInformation, // New property
+      courseWebsiteUrl, // New property
+      programLevel, // New property
+      careerOpportunities, // New property
+      loanInformation, // New property
     });
 
-    res.status(201).send(newSchool);
+    res.status(201).send(newCourse);
   } catch (error) {
     console.error(error);
     res
@@ -115,9 +187,15 @@ export const updateCourseController = async (req: Request, res: Response) => {
       price,
       currency,
       acceptanceFee,
+      estimatedLivingCost,
       acceptanceFeeCurrency,
       description,
       requirements,
+      courseInformation, // New property
+      courseWebsiteUrl, // New property
+      programLevel, // New property
+      careerOpportunities, // New property
+      loanInformation, // New property
     } = req.body;
     const logo = req.file;
     const { id } = req.params;
@@ -132,9 +210,15 @@ export const updateCourseController = async (req: Request, res: Response) => {
       price: parseFloat(price),
       currency,
       acceptanceFee: parseFloat(acceptanceFee),
+      estimatedLivingCost: parseFloat(estimatedLivingCost),
       acceptanceFeeCurrency,
       description,
       requirements,
+      courseInformation, // New property
+      courseWebsiteUrl, // New property
+      programLevel, // New property
+      careerOpportunities, // New property
+      loanInformation, // New property
     });
     res.status(200).send(updatedCourse);
   } catch (error) {
@@ -163,7 +247,7 @@ export const deleteCourseController = async (req: Request, res: Response) => {
 export const updateSchoolController = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, schoolType, location } = req.body;
+    const { name, schoolType, location, websiteUrl } = req.body;
     const logo = req.file;
     const updatedSchool = await updateSchoolService({
       id,
@@ -171,6 +255,7 @@ export const updateSchoolController = async (req: Request, res: Response) => {
       schoolType,
       logo,
       location,
+      websiteUrl,
     });
     res.status(200).send(updatedSchool);
   } catch (error) {
@@ -241,3 +326,51 @@ export const getAllCoursesController = async (req: Request, res: Response) => {
       .send({ error: 'An error occurred while fetching the courses' });
   }
 };
+
+// bulk School creations
+
+export const createBulkSchoolsController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const schools = JSON.parse(req.body.schools); // Array of schools
+    const files = req.files as Express.Multer.File[]; // Array of uploaded logo files
+
+    const results = await createBulkSchoolsService(schools, files);
+
+    res.status(201).json({
+      message: 'Schools created successfully',
+      data: results,
+    });
+  } catch (error) {
+    console.error('Error creating schools:', error);
+    res
+      .status(500)
+      .send({ error: 'An error occurred while creating the schools' });
+  }
+};
+
+//  bulk School creations
+
+// export const createBulkCoursesController = async (
+//   req: Request,
+//   res: Response
+// ) => {
+//   try {
+//     const courses = JSON.parse(req.body.courses); // Array of courses
+//     const files = req.files as Express.Multer.File[]; // Array of uploaded profile images
+
+//     const results = await createBulkCoursesService(courses, files);
+
+//     res.status(201).json({
+//       message: 'Courses created successfully',
+//       data: results,
+//     });
+//   } catch (error) {
+//     console.error('Error creating courses:', error);
+//     res
+//       .status(500)
+//       .send({ error: 'An error occurred while creating the courses' });
+//   }
+// };

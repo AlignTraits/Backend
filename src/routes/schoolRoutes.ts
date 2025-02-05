@@ -12,6 +12,9 @@ import {
   updateSchoolController,
   getCourseByIdController,
   getAllCoursesController,
+  createBulkSchoolsController,
+  createBulkCSVSchoolsController,
+  // createBulkCoursesController,
 } from '../controllers/schoolController';
 import multer from 'multer';
 import MessageResponse from '../types/messageResponse';
@@ -36,6 +39,35 @@ router.post<{}, MessageResponse>(
   upload.single('profile'),
   createCourseController
 );
+
+// Bulk school creation
+router.post(
+  '/bulk/add-bulk-schools',
+  // adminLoginRequired,
+  upload.array('logos', 10),
+  createBulkSchoolsController
+);
+
+// Bulk school creation route
+router.post<{}, MessageResponse>(
+  '/csv/bulk-add-schools',
+  adminLoginRequired,
+  upload.fields([
+    { name: 'csvFile', maxCount: 1 },
+    { name: 'logos', maxCount: 10 },
+  ]),
+  createBulkCSVSchoolsController
+);
+
+//
+
+// Bulk course creation route
+// router.post<{}, MessageResponse>(
+//   '/add-bulk-courses',
+//   adminLoginRequired,
+//   upload.array('profiles', 10),
+//   createBulkCoursesController
+// );
 
 // school
 router.get('/get/all', getAllSchoolsController);
