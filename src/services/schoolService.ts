@@ -93,6 +93,7 @@ export const createSchoolService = async ({
   logo,
 }: CreateSchoolData) => {
   let logoUrl: string | null = null;
+
   try {
     // Check if a school with the given name already exists
     const existingSchool = await db.school.findFirst({ where: { name } });
@@ -139,9 +140,22 @@ export const createSchoolService = async ({
     const newSchool = await createSchool({
       data: { name, schoolType, location, websiteUrl, logo: logoUrl },
     });
-    return newSchool;
-  } catch (e) {
-    throw e;
+
+    return {
+      ok: true,
+      status: 201,
+      message: 'School created successfully',
+      data: newSchool,
+    };
+  } catch (error: any) {
+    console.error('Error creating school:', error);
+
+    return {
+      ok: false,
+      status: 500,
+      message: 'An error occurred while creating the school',
+      errors: [{ message: error.message }],
+    };
   }
 };
 
@@ -165,7 +179,6 @@ export const getSchoolByIdService = async (id: string) => {
 export const createCourseService = async ({
   title,
   logo,
-  // universities,
   schoolId,
   scholarship,
   duration,
@@ -177,26 +190,15 @@ export const createCourseService = async ({
   acceptanceFeeCurrency,
   description,
   requirements,
-  courseInformation, // New field
-  courseWebsiteUrl, // New field
-  programLevel, // New field
-  careerOpportunities, // New field
-  loanInformation, // New field
+  courseInformation,
+  courseWebsiteUrl,
+  programLevel,
+  careerOpportunities,
+  loanInformation,
 }: CreateCourseData) => {
   let profileUrl: string;
 
   try {
-    // Check if a course with the given title already exists
-    // const existingCourse = await db.course.findFirst({ where: { title } });
-    // if (existingCourse) {
-    //   return {
-    //     ok: false,
-    //     status: 400,
-    //     message: 'A course with this title already exists',
-    //     errors: [{ message: 'Duplicate course title' }],
-    //   };
-    // }
-
     if (!logo) {
       return {
         ok: false,
@@ -218,7 +220,7 @@ export const createCourseService = async ({
         ],
       };
 
-    // Resize the image using sharp
+    // Resize image using sharp
     const resizedBuffer = await sharp(logo.buffer)
       .resize(400, 400, {
         fit: sharp.fit.inside,
@@ -230,14 +232,13 @@ export const createCourseService = async ({
       folder: 'course_profile',
       file: { ...logo, buffer: resizedBuffer },
     });
-    //   pass the cloudinary uploaded image url
+
     profileUrl = result.secure_url;
 
-    // Parse requirements if it's a JSON string
+    // Parse JSON fields if needed
     if (typeof requirements === 'string') {
       requirements = JSON.parse(requirements);
     }
-    // Parse careerOpportunities if it's a JSON string
     if (typeof careerOpportunities === 'string') {
       careerOpportunities = JSON.parse(careerOpportunities);
     }
@@ -246,9 +247,6 @@ export const createCourseService = async ({
       data: {
         title,
         profile: profileUrl,
-        // universities: { linking multiple schools
-        //   connect: universities.map((id) => ({ id })), // Properly structure the universities relation
-        // },
         schoolId,
         scholarship,
         duration,
@@ -260,16 +258,29 @@ export const createCourseService = async ({
         acceptanceFeeCurrency,
         description,
         requirements,
-        courseInformation, // New field
-        courseWebsiteUrl, // New field
-        programLevel, // New field
-        careerOpportunities, // New field
-        loanInformation, // New field
+        courseInformation,
+        courseWebsiteUrl,
+        programLevel,
+        careerOpportunities,
+        loanInformation,
       },
     });
-    return newCourse;
-  } catch (e) {
-    throw e;
+
+    return {
+      ok: true,
+      status: 201,
+      message: 'Course created successfully',
+      data: newCourse,
+    };
+  } catch (error: any) {
+    console.error('Error creating course:', error);
+
+    return {
+      ok: false,
+      status: 500,
+      message: 'An error occurred while creating the course',
+      errors: [{ message: error.message }],
+    };
   }
 };
 
@@ -295,12 +306,14 @@ export const updateCourseService = async ({
   loanInformation, // New field
 }: CreateCourseData) => {
   let profileUrl: string | undefined;
+
   try {
     // Check if the course exists
     const existingCourse = await db.course.findUnique({ where: { id } });
     if (!existingCourse) {
       return { ok: false, status: 404, message: 'Course not found' };
     }
+
     if (logo) {
       const allowedExtensions = ['.jpg', '.jpeg', '.png'];
       const fileExtension = path.extname(logo.originalname).toLowerCase();
@@ -314,17 +327,21 @@ export const updateCourseService = async ({
           ],
         };
       }
+
       // Resize the image using sharp
       const resizedBuffer = await sharp(logo.buffer)
         .resize(400, 400, { fit: sharp.fit.inside, withoutEnlargement: true })
         .toBuffer();
+
       const result: UploadApiResponse = await uploadToCloudinary({
         folder: 'course_profile',
         file: { ...logo, buffer: resizedBuffer },
       });
+
       profileUrl = result.secure_url;
     }
-    // Update the course
+
+    // Parse JSON fields if needed
     if (typeof requirements === 'string') {
       requirements = JSON.parse(requirements);
     }
@@ -332,6 +349,8 @@ export const updateCourseService = async ({
     if (typeof careerOpportunities === 'string') {
       careerOpportunities = JSON.parse(careerOpportunities);
     }
+
+    // Update the course
     const updatedCourse = await db.course.update({
       where: { id },
       data: {
@@ -350,17 +369,30 @@ export const updateCourseService = async ({
         description: description || existingCourse.description,
         requirements: requirements || existingCourse.requirements,
         courseInformation:
-          courseInformation || existingCourse.courseInformation, // New field
-        courseWebsiteUrl: courseWebsiteUrl || existingCourse.courseWebsiteUrl, // New field
-        programLevel: programLevel || existingCourse.programLevel, // New field
+          courseInformation || existingCourse.courseInformation,
+        courseWebsiteUrl: courseWebsiteUrl || existingCourse.courseWebsiteUrl,
+        programLevel: programLevel || existingCourse.programLevel,
         careerOpportunities:
-          careerOpportunities || existingCourse.careerOpportunities, // New field
-        loanInformation: loanInformation || existingCourse.loanInformation, // New field
+          careerOpportunities || existingCourse.careerOpportunities,
+        loanInformation: loanInformation || existingCourse.loanInformation,
       },
     });
-    return updatedCourse;
-  } catch (e) {
-    throw e;
+
+    return {
+      ok: true,
+      status: 200,
+      message: 'Course updated successfully',
+      data: updatedCourse,
+    };
+  } catch (error: any) {
+    console.error('Error updating course:', error);
+
+    return {
+      ok: false,
+      status: 500,
+      message: 'An error occurred while updating the course',
+      errors: [{ message: error.message }],
+    };
   }
 };
 
@@ -589,63 +621,3 @@ export const createBulkCSVSchoolsService = async (
 
   return results;
 };
-
-// export const createBulkCoursesService = async (
-//   courses: CreateCourseData[],
-//   files: Express.Multer.File[]
-// ) => {
-//   const results = await Promise.all(
-//     courses.map(async (course, index) => {
-//       const file = files[index];
-//       let profileUrl: string | null = null;
-
-//       if (file) {
-//         const allowedExtensions = ['.jpg', '.jpeg', '.png'];
-//         const fileExtension = path.extname(file.originalname).toLowerCase();
-
-//         if (!allowedExtensions.includes(fileExtension)) {
-//           throw new Error(
-//             'Invalid file type. Only JPG, JPEG & PNG are allowed.'
-//           );
-//         }
-
-//         // Resize the image using sharp
-//         const resizedBuffer = await sharp(file.buffer)
-//           .resize(400, 400, {
-//             fit: sharp.fit.inside,
-//             withoutEnlargement: true,
-//           })
-//           .toBuffer();
-
-//         const result: UploadApiResponse = await uploadToCloudinary({
-//           folder: 'course_profile',
-//           file: { ...file, buffer: resizedBuffer },
-//         });
-
-//         profileUrl = result.secure_url;
-//       }
-
-//       // Create course with profile URL or a placeholder if profileUrl is null
-//       const newCourse = await createCourse({
-//         data: {
-//           title: course.title,
-//           profile: profileUrl || '', // Provide a default value if profileUrl is null
-//           schoolId: course.schoolId,
-//           scholarship: course.scholarship,
-//           duration: course.duration,
-//           durationPeriod: course.durationPeriod,
-//           price: course.price,
-//           currency: course.currency,
-//           acceptanceFee: course.acceptanceFee,
-//           acceptanceFeeCurrency: course.acceptanceFeeCurrency,
-//           description: course.description,
-//           requirements: course.requirements,
-//         },
-//       });
-
-//       return newCourse;
-//     })
-//   );
-
-//   return results;
-// };

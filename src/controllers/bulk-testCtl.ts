@@ -5,61 +5,15 @@ import {
   createBulkSchoolsService2,
   deleteBulkCoursesService,
   deleteBulkSchoolsService,
+  updateBulkCoursesService,
+  updateBulkSchoolsService,
 } from '../services/bulk-test';
-
-enum SchoolType {
-  FEDERAL_UNIVERSITY = 'FEDERAL_UNIVERSITY',
-  PRIVATE_UNIVERSITY = 'PRIVATE_UNIVERSITY',
-  PUBLIC_UNIVERSITY = 'PUBLIC_UNIVERSITY',
-}
-
-interface CreateCSVSchoolData {
-  name: string;
-  schoolType: SchoolType;
-  location: string;
-  websiteUrl: string;
-}
-
-export enum DurationPeriod {
-  YEAR = 'YEAR',
-  MONTH = 'MONTH',
-}
-
-export enum Currency {
-  NAIRA = 'NAIRA',
-  DOLLAR = 'DOLLAR',
-}
-
-interface CreateCSVCourseData {
-  id?: string;
-  title: string;
-  // logo: Express.Multer.File | null | undefined;
-  profile: any; // added this
-  schoolId: string;
-  scholarship: string;
-  duration: number;
-  durationPeriod: DurationPeriod;
-  price: number;
-  currency: Currency;
-  acceptanceFee: number;
-  estimatedLivingCost: number;
-  acceptanceFeeCurrency: Currency;
-  description: string;
-  requirements: string[];
-  courseInformation: string; // New field
-  courseWebsiteUrl: string; // New field
-  programLevel: string; // New field
-  careerOpportunities: string[]; // New field
-  loanInformation: string; // New field
-}
-
-interface newCreateCSVSchoolData {
-  name: string;
-  schoolType: SchoolType;
-  location: string;
-  websiteUrl: string;
-  logo?: string; // This will be the image URL
-}
+import {
+  CreateCSVCourseData,
+  NewCreateCSVSchoolData,
+  UpdateCourseData,
+  UpdateSchoolData,
+} from '../types/school-course-types';
 
 export const createBulkSchoolsController = async (
   req: Request,
@@ -73,7 +27,7 @@ export const createBulkSchoolsController = async (
     }
 
     const csvData = file.buffer.toString('utf-8');
-    const parsedData = Papa.parse<newCreateCSVSchoolData>(csvData, {
+    const parsedData = Papa.parse<NewCreateCSVSchoolData>(csvData, {
       header: true,
       skipEmptyLines: true,
       dynamicTyping: true,
@@ -83,11 +37,11 @@ export const createBulkSchoolsController = async (
       return res.status(400).send({ error: 'Invalid CSV data' });
     }
 
-    const schools: newCreateCSVSchoolData[] =
-      parsedData.data as newCreateCSVSchoolData[];
+    const schools: NewCreateCSVSchoolData[] =
+      parsedData.data as NewCreateCSVSchoolData[];
 
     // Transform data to include optional logo
-    const transformedSchools: newCreateCSVSchoolData[] = schools.map(
+    const transformedSchools: NewCreateCSVSchoolData[] = schools.map(
       (school) => ({
         name: school.name,
         schoolType: school.schoolType,
@@ -202,5 +156,85 @@ export const deleteBulkCoursesController = async (
     res
       .status(500)
       .send({ error: 'An error occurred while deleting the courses' });
+  }
+};
+
+// update
+
+export const updateBulkSchoolsController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).send({ error: 'CSV file is required' });
+    }
+
+    const csvData = file.buffer.toString('utf-8');
+    const parsedData = Papa.parse<UpdateSchoolData>(csvData, {
+      header: true,
+      skipEmptyLines: true,
+      dynamicTyping: true,
+    });
+
+    if (parsedData.errors.length > 0) {
+      return res.status(400).send({ error: 'Invalid CSV data' });
+    }
+
+    // Explicitly cast parsed data to the correct type
+    const schoolsToUpdate: UpdateSchoolData[] =
+      parsedData.data as UpdateSchoolData[];
+
+    const updatedSchools = await updateBulkSchoolsService(schoolsToUpdate);
+
+    res.status(200).json({
+      message: 'Schools updated successfully',
+      data: updatedSchools,
+    });
+  } catch (error) {
+    console.error('Error updating schools:', error);
+    res
+      .status(500)
+      .send({ error: 'An error occurred while updating the schools' });
+  }
+};
+
+export const updateBulkCoursesController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).send({ error: 'CSV file is required' });
+    }
+
+    const csvData = file.buffer.toString('utf-8');
+    const parsedData = Papa.parse<UpdateCourseData>(csvData, {
+      header: true,
+      skipEmptyLines: true,
+      dynamicTyping: true,
+    });
+
+    if (parsedData.errors.length > 0) {
+      return res.status(400).send({ error: 'Invalid CSV data' });
+    }
+
+    const coursesToUpdate = parsedData.data;
+
+    const updatedCourses = await updateBulkCoursesService(coursesToUpdate);
+
+    res.status(200).json({
+      message: 'Courses updated successfully',
+      data: updatedCourses,
+    });
+  } catch (error) {
+    console.error('Error updating courses:', error);
+    res
+      .status(500)
+      .send({ error: 'An error occurred while updating the courses' });
   }
 };

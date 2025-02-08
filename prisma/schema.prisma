@@ -150,7 +150,7 @@ model WaitList {
 // school and course
 
 model Course {
-  id                     String          @id @default(uuid())
+  id                     String          @id @default(cuid())
   title                  String
   profile                String?         // Image URL or path
   schoolId               String
@@ -176,7 +176,7 @@ model Course {
 }
 
 model School {
-  id                     String          @id @default(uuid())
+  id                     String          @id @default(cuid())
   name                   String
   schoolType             SchoolType
   location               String

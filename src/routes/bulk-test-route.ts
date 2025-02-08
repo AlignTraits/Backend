@@ -7,6 +7,8 @@ import {
   deleteBulkSchoolsController,
   createBulkCoursesController,
   deleteBulkCoursesController,
+  updateBulkSchoolsController,
+  updateBulkCoursesController,
 } from '../controllers/bulk-testCtl';
 
 const router = express.Router();
@@ -26,6 +28,13 @@ router.post<{}, MessageResponse>(
   upload.single('csvFile'),
   createBulkSchoolsController
 );
+// Bulk school update route with CSV
+router.put<{}, MessageResponse>(
+  '/bulk-update-schools',
+  adminLoginRequired,
+  upload.single('csvFile'),
+  updateBulkSchoolsController
+);
 
 // Bulk school deletion route
 router.delete<{}, MessageResponse>(
@@ -40,6 +49,14 @@ router.post<{}, MessageResponse>(
   adminLoginRequired,
   upload.single('csvFile'),
   createBulkCoursesController
+);
+
+// Bulk course update route with CSV
+router.put<{}, MessageResponse>(
+  '/bulk-update-courses',
+  adminLoginRequired,
+  upload.single('csvFile'),
+  updateBulkCoursesController
 );
 
 // Bulk course deletion route

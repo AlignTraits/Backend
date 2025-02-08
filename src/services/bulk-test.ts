@@ -3,45 +3,12 @@ import { UploadApiResponse } from 'cloudinary';
 import cloudinary from '../config/cloudinary';
 import path from 'path';
 import sharp from 'sharp';
-
-enum SchoolType {
-  FEDERAL_UNIVERSITY = 'FEDERAL_UNIVERSITY',
-  PRIVATE_UNIVERSITY = 'PRIVATE_UNIVERSITY',
-  PUBLIC_UNIVERSITY = 'PUBLIC_UNIVERSITY',
-}
-
-export enum DurationPeriod {
-  YEAR = 'YEAR',
-  MONTH = 'MONTH',
-}
-
-export enum Currency {
-  NAIRA = 'NAIRA',
-  DOLLAR = 'DOLLAR',
-}
-
-interface CreateCSVCourseData {
-  profile: any;
-  id?: string;
-  title: string;
-  // logo: Express.Multer.File | null | undefined;
-  schoolId: string;
-  scholarship: string;
-  duration: number;
-  durationPeriod: DurationPeriod;
-  price: number;
-  currency: Currency;
-  acceptanceFee: number;
-  estimatedLivingCost: number;
-  acceptanceFeeCurrency: Currency;
-  description: string;
-  requirements: string[];
-  courseInformation: string; // New field
-  courseWebsiteUrl: string; // New field
-  programLevel: string; // New field
-  careerOpportunities: string[]; // New field
-  loanInformation: string; // New field
-}
+import {
+  CreateCSVCourseData,
+  newCreateSchoolData,
+  UpdateCourseData,
+  UpdateSchoolData,
+} from '../types/school-course-types';
 
 const uploadBase64ImageToCloudinary = async (
   base64Image: string
@@ -63,14 +30,6 @@ const uploadBase64ImageToCloudinary = async (
     );
   });
 };
-
-interface newCreateSchoolData {
-  name: string;
-  schoolType: SchoolType;
-  location: string;
-  websiteUrl: string;
-  logo?: string; // Make logo optional and accept URL or file
-}
 
 export const createBulkSchoolsService2 = async (
   schools: newCreateSchoolData[]
@@ -332,5 +291,240 @@ export const createBulkCoursesService = async (
   } catch (error) {
     console.error('Error in createBulkCoursesService:', error);
     throw new Error('Bulk course creation failed');
+  }
+};
+
+// update bulk schools
+
+// export const updateBulkSchoolsService = async (schools: UpdateSchoolData[]) => {
+//   try {
+//     const results = await Promise.allSettled(
+//       schools.map(async (school) => {
+//         try {
+//           const updatedSchool = await db.school.update({
+//             where: { id: school.id },
+//             data: {
+//               name: school.name,
+//               schoolType: school.schoolType,
+//               location: school.location,
+//               websiteUrl: school.websiteUrl,
+//               logo: school.logo,
+//             },
+//           });
+
+//           return updatedSchool;
+//         } catch (error) {
+//           console.error(`Error updating school with ID ${school.id}:`, error);
+//           throw new Error(`Failed to update school with ID ${school.id}`);
+//         }
+//       })
+//     );
+
+//     return results;
+//   } catch (error) {
+//     console.error('Error in updateBulkSchoolsService:', error);
+//     throw new Error('Bulk school update failed');
+//   }
+// };
+
+// update bulk course
+
+export const updateBulkSchoolsService = async (schools: UpdateSchoolData[]) => {
+  try {
+    const results = await Promise.all(
+      schools.map(async (school) => {
+        try {
+          // Validate that school ID exists
+          if (!school.id) {
+            console.error('Skipping school update due to missing ID:', school);
+            return {
+              status: 'skipped',
+              reason: 'Missing school ID',
+            };
+          }
+
+          // Fetch the existing school record
+          const existingSchool = await db.school.findUnique({
+            where: { id: school.id },
+          });
+
+          if (!existingSchool) {
+            console.error(`School with ID ${school.id} not found`);
+            return {
+              status: 'failed',
+              reason: `School with ID ${school.id} not found`,
+            };
+          }
+
+          // Construct update data by keeping existing values if undefined
+          const updateData = {
+            name: school.name ?? existingSchool.name,
+            schoolType: school.schoolType ?? existingSchool.schoolType,
+            location: school.location ?? existingSchool.location,
+            websiteUrl: school.websiteUrl ?? existingSchool.websiteUrl,
+            logo: school.logo ?? existingSchool.logo,
+          };
+
+          // Check if there are actual updates
+          if (JSON.stringify(updateData) === JSON.stringify(existingSchool)) {
+            return {
+              status: 'skipped',
+              message: `No changes for school with ID ${school.id}`,
+            };
+          }
+
+          // Update school
+          const updatedSchool = await db.school.update({
+            where: { id: school.id },
+            data: updateData,
+          });
+
+          return {
+            status: 'success',
+            data: updatedSchool,
+          };
+        } catch (error) {
+          console.error(`Error updating school with ID ${school.id}:`, error);
+          return {
+            status: 'failed',
+            reason: `Error updating school with ID ${school.id}`,
+          };
+        }
+      })
+    );
+
+    return results;
+  } catch (error) {
+    console.error('Error in updateBulkSchoolsService:', error);
+    throw new Error('Bulk school update failed');
+  }
+};
+
+const parseJsonFieldForUpdate = (field: any): string[] => {
+  try {
+    if (typeof field === 'string') {
+      const parsed = JSON.parse(field);
+      return Array.isArray(parsed) ? parsed : [];
+    }
+    return Array.isArray(field) ? field : [];
+  } catch (error) {
+    throw new Error('Invalid JSON format in one of the fields');
+  }
+};
+
+export const updateBulkCoursesService = async (courses: UpdateCourseData[]) => {
+  try {
+    const results = await Promise.allSettled(
+      courses.map(async (course) => {
+        try {
+          // Validate that school ID exists
+          if (!course.id) {
+            console.error('Skipping course update due to missing ID:', course);
+            return {
+              status: 'skipped',
+              reason: 'Missing course ID',
+            };
+          }
+
+          // Fetch existing course from DB
+          const existingCourse = await db.course.findUnique({
+            where: { id: course.id },
+          });
+
+          if (!existingCourse) {
+            throw new Error(`Course with ID ${course.id} not found`);
+          }
+
+          // Function to keep old value if new value is empty
+          const keepOldIfEmpty = (newValue: any, oldValue: any) =>
+            typeof newValue === 'string' && newValue.trim() !== ''
+              ? newValue
+              : oldValue;
+
+          // Convert JSON fields to array
+          const parsedRequirements = parseJsonFieldForUpdate(
+            course.requirements
+          );
+          const parsedCareerOpportunities = parseJsonFieldForUpdate(
+            course.careerOpportunities
+          );
+
+          // Keep old values if empty array is provided
+          const finalRequirements =
+            parsedRequirements.length > 0
+              ? parsedRequirements
+              : existingCourse.requirements;
+          const finalCareerOpportunities =
+            parsedCareerOpportunities.length > 0
+              ? parsedCareerOpportunities
+              : existingCourse.careerOpportunities;
+
+          // Construct update data while keeping existing values
+          const updateData = {
+            title: keepOldIfEmpty(course.title, existingCourse.title),
+            profile: keepOldIfEmpty(course.profile, existingCourse.profile),
+            schoolId: course.schoolId ?? existingCourse.schoolId,
+            scholarship: course.scholarship ?? existingCourse.scholarship,
+            duration: course.duration ?? existingCourse.duration,
+            durationPeriod:
+              course.durationPeriod ?? existingCourse.durationPeriod,
+            price: course.price ?? existingCourse.price,
+            currency: course.currency ?? existingCourse.currency,
+            acceptanceFee: course.acceptanceFee ?? existingCourse.acceptanceFee,
+            estimatedLivingCost:
+              course.estimatedLivingCost ?? existingCourse.estimatedLivingCost,
+            acceptanceFeeCurrency:
+              course.acceptanceFeeCurrency ??
+              existingCourse.acceptanceFeeCurrency,
+            description: keepOldIfEmpty(
+              course.description,
+              existingCourse.description
+            ),
+            requirements: finalRequirements,
+            courseInformation: keepOldIfEmpty(
+              course.courseInformation,
+              existingCourse.courseInformation
+            ),
+            courseWebsiteUrl: keepOldIfEmpty(
+              course.courseWebsiteUrl,
+              existingCourse.courseWebsiteUrl
+            ),
+            programLevel: course.programLevel ?? existingCourse.programLevel,
+            careerOpportunities: finalCareerOpportunities,
+            loanInformation: keepOldIfEmpty(
+              course.loanInformation,
+              existingCourse.loanInformation
+            ),
+          };
+
+          // Prevent unnecessary updates if no change is detected
+          if (JSON.stringify(updateData) === JSON.stringify(existingCourse)) {
+            return {
+              status: 'skipped',
+              message: `No changes for course ID ${course.id}`,
+            };
+          }
+
+          // Update the course
+          const updatedCourse = await db.course.update({
+            where: { id: course.id },
+            data: updateData,
+          });
+
+          return updatedCourse;
+        } catch (error) {
+          console.error(`Error updating course with ID ${course.id}:`, error);
+          return {
+            status: 'rejected',
+            reason: `Failed to update course with ID ${course.id}`,
+          };
+        }
+      })
+    );
+
+    return results;
+  } catch (error) {
+    console.error('Error in updateBulkCoursesService:', error);
+    throw new Error('Bulk course update failed');
   }
 };
