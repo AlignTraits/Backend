@@ -51,7 +51,9 @@ export const createBulkSchoolsController = async (
       })
     );
 
-    const results = await createBulkSchoolsService2(transformedSchools);
+    const userId = (req as any)?.user?.id ?? '';
+
+    const results = await createBulkSchoolsService2(transformedSchools, userId);
 
     res.status(201).json({
       message: 'Schools created successfully',
@@ -93,7 +95,9 @@ export const createBulkCoursesController = async (
     const courses: CreateCSVCourseData[] =
       parsedData.data as CreateCSVCourseData[];
 
-    const results = await createBulkCoursesService(courses);
+    const userId = (req as any)?.user?.id ?? '';
+
+    const results = await createBulkCoursesService(courses, userId);
 
     res.status(201).json({
       message: 'Courses created successfully',
@@ -119,8 +123,9 @@ export const deleteBulkSchoolsController = async (
       return res.status(400).send({ error: 'Invalid school IDs' });
     }
 
+    const userId = (req as any)?.user?.id ?? '';
     // Call the service to delete schools
-    const deletedSchools = await deleteBulkSchoolsService(schoolIds);
+    const deletedSchools = await deleteBulkSchoolsService(schoolIds, userId);
 
     res.status(200).json({
       message: 'Schools deleted successfully',
@@ -145,7 +150,8 @@ export const deleteBulkCoursesController = async (
       return res.status(400).send({ error: 'Invalid course data' });
     }
 
-    const deletedSchools = await deleteBulkCoursesService(courseIds);
+    const userId = (req as any)?.user?.id ?? '';
+    const deletedSchools = await deleteBulkCoursesService(courseIds, userId);
 
     res.status(200).json({
       message: 'Courses deleted successfully',
@@ -187,7 +193,11 @@ export const updateBulkSchoolsController = async (
     const schoolsToUpdate: UpdateSchoolData[] =
       parsedData.data as UpdateSchoolData[];
 
-    const updatedSchools = await updateBulkSchoolsService(schoolsToUpdate);
+    const userId = (req as any)?.user?.id ?? '';
+    const updatedSchools = await updateBulkSchoolsService(
+      schoolsToUpdate,
+      userId
+    );
 
     res.status(200).json({
       message: 'Schools updated successfully',
@@ -225,7 +235,11 @@ export const updateBulkCoursesController = async (
 
     const coursesToUpdate = parsedData.data;
 
-    const updatedCourses = await updateBulkCoursesService(coursesToUpdate);
+    const userId = (req as any)?.user?.id ?? '';
+    const updatedCourses = await updateBulkCoursesService(
+      coursesToUpdate,
+      userId
+    );
 
     res.status(200).json({
       message: 'Courses updated successfully',

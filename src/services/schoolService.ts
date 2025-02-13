@@ -91,11 +91,12 @@ export const createSchoolService = async ({
   location,
   websiteUrl,
   logo,
-}: CreateSchoolData) => {
+  userId,
+}: CreateSchoolData & { userId: string }) => {
   let logoUrl: string | null = null;
 
   try {
-    // Check if a school with the given name already exists
+    // Check for duplicate school name
     const existingSchool = await db.school.findFirst({ where: { name } });
     if (existingSchool) {
       return {
@@ -106,6 +107,7 @@ export const createSchoolService = async ({
       };
     }
 
+    // Validate and upload logo
     if (logo) {
       const allowedExtensions = ['.jpg', '.jpeg', '.png'];
       const fileExtension = path.extname(logo.originalname).toLowerCase();
@@ -121,12 +123,9 @@ export const createSchoolService = async ({
         };
       }
 
-      // Resize the image using sharp
+      // Resize image
       const resizedBuffer = await sharp(logo.buffer)
-        .resize(400, 400, {
-          fit: sharp.fit.inside,
-          withoutEnlargement: true,
-        })
+        .resize(400, 400, { fit: sharp.fit.inside, withoutEnlargement: true })
         .toBuffer();
 
       const result: UploadApiResponse = await uploadToCloudinary({
@@ -137,8 +136,19 @@ export const createSchoolService = async ({
       logoUrl = result.secure_url;
     }
 
-    const newSchool = await createSchool({
+    // Create school
+    const newSchool = await db.school.create({
       data: { name, schoolType, location, websiteUrl, logo: logoUrl },
+    });
+
+    // Log action history
+    await db.actionHistory.create({
+      data: {
+        action: 'Create',
+        entity: 'School',
+        entityIds: [{ id: newSchool.id, name: newSchool.name }], // Stores an array of { id, name }
+        userId: userId, // Admin who performed the action
+      },
     });
 
     return {
@@ -195,7 +205,8 @@ export const createCourseService = async ({
   programLevel,
   careerOpportunities,
   loanInformation,
-}: CreateCourseData) => {
+  userId, // Capture user ID
+}: CreateCourseData & { userId: string }) => {
   let profileUrl: string;
 
   try {
@@ -210,7 +221,7 @@ export const createCourseService = async ({
 
     const allowedExtensions = ['.jpg', '.jpeg', '.png'];
     const fileExtension = path.extname(logo.originalname).toLowerCase();
-    if (!allowedExtensions.includes(fileExtension))
+    if (!allowedExtensions.includes(fileExtension)) {
       return {
         ok: false,
         status: 403,
@@ -219,6 +230,7 @@ export const createCourseService = async ({
           { message: 'Invalid file type. Only JPG, JPEG & PNG are allowed.' },
         ],
       };
+    }
 
     // Resize image using sharp
     const resizedBuffer = await sharp(logo.buffer)
@@ -243,7 +255,8 @@ export const createCourseService = async ({
       careerOpportunities = JSON.parse(careerOpportunities);
     }
 
-    const newCourse = await createCourse({
+    // Create course
+    const newCourse = await db.course.create({
       data: {
         title,
         profile: profileUrl,
@@ -263,6 +276,16 @@ export const createCourseService = async ({
         programLevel,
         careerOpportunities,
         loanInformation,
+      },
+    });
+
+    // Log action history
+    await db.actionHistory.create({
+      data: {
+        action: 'Create',
+        entity: 'Course',
+        entityIds: [{ id: newCourse.id, title: newCourse.title }], // Stores an array of { id, title }
+        userId: userId, // Admin who performed the action
       },
     });
 
@@ -299,12 +322,13 @@ export const updateCourseService = async ({
   description,
   requirements,
   estimatedLivingCost,
-  courseInformation, // New field
-  courseWebsiteUrl, // New field
-  programLevel, // New field
-  careerOpportunities, // New field
-  loanInformation, // New field
-}: CreateCourseData) => {
+  courseInformation,
+  courseWebsiteUrl,
+  programLevel,
+  careerOpportunities,
+  loanInformation,
+  userId, // Capture user ID
+}: CreateCourseData & { userId: string }) => {
   let profileUrl: string | undefined;
 
   try {
@@ -378,6 +402,16 @@ export const updateCourseService = async ({
       },
     });
 
+    // Log action history
+    await db.actionHistory.create({
+      data: {
+        action: 'Update',
+        entity: 'Course',
+        entityIds: [{ id: updatedCourse.id, title: updatedCourse.title }], // Stores an array of { id, title }
+        userId: userId, // Admin who performed the update
+      },
+    });
+
     return {
       ok: true,
       status: 200,
@@ -397,12 +431,65 @@ export const updateCourseService = async ({
 };
 
 //
-export const deleteSchoolsService = async (schoolId: string) => {
-  // Delete all courses associated with the school
-  await db.course.deleteMany({ where: { schoolId } });
-  // Delete the school
-  return db.school.delete({ where: { id: schoolId } });
+export const deleteSchoolsService = async (
+  schoolId: string,
+  userId: string
+) => {
+  try {
+    // Fetch the school before deletion to log its details
+    const schoolToDelete = await db.school.findUnique({
+      where: { id: schoolId },
+      select: { id: true, name: true },
+    });
+
+    if (!schoolToDelete) {
+      throw new Error(`School with ID ${schoolId} not found`);
+    }
+
+    // Delete all courses associated with the school
+    await db.course.deleteMany({ where: { schoolId } });
+
+    // Delete the school
+    const deletedSchool = await db.school.delete({ where: { id: schoolId } });
+
+    // Log successful deletion in action history
+    await db.actionHistory.create({
+      data: {
+        action: 'Delete',
+        entity: 'School',
+        entityIds: [{ id: deletedSchool.id, name: deletedSchool.name }], // Store school details
+        userId: userId,
+      },
+    });
+
+    return {
+      ok: true,
+      status: 200,
+      message: 'School deleted successfully',
+      data: deletedSchool,
+    };
+  } catch (error: any) {
+    console.error('Error deleting school:', error);
+
+    // Log failed delete attempt
+    await db.actionHistory.create({
+      data: {
+        action: 'Failed Delete',
+        entity: 'School',
+        entityIds: [{ id: schoolId }],
+        userId: userId,
+      },
+    });
+
+    return {
+      ok: false,
+      status: 500,
+      message: 'An error occurred while deleting the school',
+      errors: [{ message: error.message }],
+    };
+  }
 };
+
 //
 export const searchSchoolsService = async (location: string) => {
   return db.school.findMany({
@@ -432,14 +519,17 @@ export const updateSchoolService = async ({
   location,
   logo,
   websiteUrl,
-}: UpdateSchoolData) => {
+  userId, // Admin who performed the update
+}: UpdateSchoolData & { userId: string }) => {
   let logoUrl: string | undefined;
+
   try {
     // Check if the school exists
     const existingSchool = await db.school.findUnique({ where: { id } });
     if (!existingSchool) {
-      return { ok: false, status: 404, message: 'School not found' };
+      throw new Error(`School with ID ${id} not found`);
     }
+
     if (logo) {
       const allowedExtensions = ['.jpg', '.jpeg', '.png'];
       const fileExtension = path.extname(logo.originalname).toLowerCase();
@@ -453,6 +543,7 @@ export const updateSchoolService = async ({
           ],
         };
       }
+
       // Resize the image using sharp
       const resizedBuffer = await sharp(logo.buffer)
         .resize(400, 400, { fit: sharp.fit.inside, withoutEnlargement: true })
@@ -463,6 +554,7 @@ export const updateSchoolService = async ({
       });
       logoUrl = result.secure_url;
     }
+
     // Update the school
     const updatedSchool = await db.school.update({
       where: { id },
@@ -474,13 +566,46 @@ export const updateSchoolService = async ({
         logo: logoUrl || existingSchool.logo,
       },
     });
-    return updatedSchool;
-  } catch (e) {
-    throw e;
+
+    // Log action history for successful update
+    await db.actionHistory.create({
+      data: {
+        action: 'Update',
+        entity: 'School',
+        entityIds: [{ id: updatedSchool.id, name: updatedSchool.name }],
+        userId: userId,
+      },
+    });
+
+    return {
+      ok: true,
+      status: 200,
+      message: 'School updated successfully',
+      data: updatedSchool,
+    };
+  } catch (error: any) {
+    console.error('Error updating school:', error);
+
+    // Log failed update attempt
+    await db.actionHistory.create({
+      data: {
+        action: 'Failed Update',
+        entity: 'School',
+        entityIds: [{ id }],
+        userId: userId,
+      },
+    });
+
+    return {
+      ok: false,
+      status: 500,
+      message: 'An error occurred while updating the school',
+      errors: [{ message: error.message }],
+    };
   }
 };
 
-export const deleteCourseService = async (courseId: string) => {
+export const deleteCourseService = async (courseId: string, userId: string) => {
   try {
     // Check if the course exists
     const existingCourse = await db.course.findUnique({
@@ -489,11 +614,40 @@ export const deleteCourseService = async (courseId: string) => {
     if (!existingCourse) {
       return { ok: false, status: 404, message: 'Course not found' };
     }
+
     // Delete the course
     await db.course.delete({ where: { id: courseId } });
+
+    // Log action history for successful deletion
+    await db.actionHistory.create({
+      data: {
+        action: 'Delete',
+        entity: 'Course',
+        entityIds: [{ id: existingCourse.id, name: existingCourse.title }],
+        userId: userId,
+      },
+    });
+
     return { ok: true, status: 200, message: 'Course deleted successfully' };
-  } catch (e) {
-    throw e;
+  } catch (error: any) {
+    console.error('Error deleting course:', error);
+
+    // Log failed deletion attempt
+    await db.actionHistory.create({
+      data: {
+        action: 'Failed Delete',
+        entity: 'Course',
+        entityIds: [{ id: courseId }],
+        userId: userId,
+      },
+    });
+
+    return {
+      ok: false,
+      status: 500,
+      message: 'An error occurred while deleting the course',
+      errors: [{ message: error.message }],
+    };
   }
 };
 
@@ -523,101 +677,15 @@ export const getAllCoursesService = async () => {
     throw error;
   }
 };
-
-// Bulk Creations
-
-interface CreateCSVSchoolData {
-  name: string;
-  schoolType: string;
-  location: string;
-  websiteUrl: string;
-}
-
-export const createBulkSchoolsService = async (
-  schools: CreateSchoolData[],
-  files: Express.Multer.File[]
-) => {
-  const results = await Promise.all(
-    schools.map(async (school, index) => {
-      const file = files[index];
-
-      // Upload logo to Cloudinary
-      const result = await uploadToCloudinary({
-        folder: 'school_logos',
-        file,
-      });
-
-      // Create school with logo URL
-      const newSchool = await createSchool({
-        data: {
-          name: school.name,
-          schoolType: school.schoolType,
-          location: school.location,
-          websiteUrl: school.websiteUrl,
-          logo: result.secure_url,
-        },
-        // name: school.name,
-        // schoolType: school.schoolType,
-        // location: school.location,
-        // logo: result.secure_url,
-      });
-
-      return newSchool;
-    })
-  );
-
-  return results;
-};
-
-export const createBulkCSVSchoolsService = async (
-  schools: CreateCSVSchoolData[],
-  files: Express.Multer.File[]
-) => {
-  const results = await Promise.all(
-    schools.map(async (school, index) => {
-      const file = files ? files[index] : null;
-      let logoUrl: string | null = null;
-
-      if (file) {
-        const allowedExtensions = ['.jpg', '.jpeg', '.png'];
-        const fileExtension = path.extname(file.originalname).toLowerCase();
-
-        if (!allowedExtensions.includes(fileExtension)) {
-          throw new Error(
-            'Invalid file type. Only JPG, JPEG & PNG are allowed.'
-          );
-        }
-
-        // Resize the image using sharp
-        const resizedBuffer = await sharp(file.buffer)
-          .resize(400, 400, {
-            fit: sharp.fit.inside,
-            withoutEnlargement: true,
-          })
-          .toBuffer();
-
-        const result: UploadApiResponse = await uploadToCloudinary({
-          folder: 'school_logos',
-          file: { ...file, buffer: resizedBuffer },
-        });
-
-        logoUrl = result.secure_url;
-      }
-
-      // Create school with logo URL
-      const newSchool = await db.school.create({
-        data: {
-          name: school.name,
-          schoolType: school.schoolType as any, // Cast to appropriate type
-          location: school.location,
-          logo: logoUrl,
-          websiteUrl: school.websiteUrl,
-        },
-      });
-
-      return newSchool;
-    })
-  );
-
-  return results;
+export const getAllHistoryService = async () => {
+  try {
+    const courses = await db.actionHistory.findMany({
+      include: {
+        user: true,
+      },
+    });
+    return courses;
+  } catch (error) {
+    throw error;
+  }
 };

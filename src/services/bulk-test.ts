@@ -32,170 +32,180 @@ const uploadBase64ImageToCloudinary = async (
 };
 
 export const createBulkSchoolsService2 = async (
-  schools: newCreateSchoolData[]
+  schools: newCreateSchoolData[],
+  userId: string // Pass the admin user ID from the request
 ) => {
   try {
-    // promise.all() will fail all when on requirement fails
-    // promise.allSettle() will fail only the course or school with requirement fail and others will be success
     const results = await Promise.allSettled(
       schools.map(async (school) => {
         try {
-          let logoUrl: string | null = null;
-
-          if (school.logo) {
-            logoUrl = school.logo; // Use the URL directly
-          }
-
           const newSchool = await db.school.create({
             data: {
               name: school.name,
               schoolType: school.schoolType,
               location: school.location,
-              logo: logoUrl,
+              logo: school.logo || null, // Keep null if no logo provided
               websiteUrl: school.websiteUrl,
             },
           });
 
-          return newSchool;
-        } catch (error) {
+          return { id: newSchool.id, name: newSchool.name };
+        } catch (error: any) {
           console.error(`Error creating school ${school.name}:`, error);
-          throw new Error(`Failed to create school ${school.name}`);
+          throw new Error(
+            `Failed to create school ${school.name}: ${error.message}`
+          );
         }
       })
     );
 
-    return results;
-  } catch (error) {
+    // Extract successful and failed creations
+    const successfulSchools = results
+      .filter((result) => result.status === 'fulfilled')
+      .map(
+        (result: PromiseFulfilledResult<{ id: string; name: string }>) =>
+          result.value
+      );
+
+    const failedSchools = results
+      .filter((result) => result.status === 'rejected')
+      .map((result: PromiseRejectedResult) => ({
+        error: result.reason.message,
+      }));
+
+    // Log action history if any schools were successfully created
+    if (successfulSchools.length > 0) {
+      try {
+        await db.actionHistory.create({
+          data: {
+            action: 'Bulk Create',
+            entity: 'School',
+            entityIds: successfulSchools.map(({ id, name }) => ({ id, name })), // ✅ Directly store array (No need for JSON.stringify)
+            userId: userId,
+          },
+        });
+      } catch (error) {
+        console.error('Error logging action history:', error);
+      }
+    }
+
+    return {
+      success: successfulSchools,
+      failed: failedSchools,
+    };
+  } catch (error: any) {
     console.error('Error in createBulkSchoolsService2:', error);
-    throw new Error('Bulk school creation failed');
+    throw new Error(`Bulk school creation failed: ${error.message}`);
   }
 };
 
 // delete
-export const deleteBulkSchoolsService = async (schoolIds: string[]) => {
+export const deleteBulkSchoolsService = async (
+  schoolIds: string[],
+  userId: string
+) => {
   try {
-    // Delete all courses associated with the schools
+    // Fetch valid schools before deletion
+    const schoolsToDelete = await db.school.findMany({
+      where: { id: { in: schoolIds } },
+      select: { id: true, name: true },
+    });
+
+    // Extract valid school IDs
+    const validSchoolIds = schoolsToDelete.map((school) => school.id);
+
+    // Identify invalid school IDs
+    const invalidSchoolIds = schoolIds.filter(
+      (id) => !validSchoolIds.includes(id)
+    );
+
+    // Delete all courses associated with valid schools
     await db.course.deleteMany({
-      where: {
-        schoolId: {
-          in: schoolIds,
-        },
-      },
+      where: { schoolId: { in: validSchoolIds } },
     });
 
-    // Delete the schools
+    // Delete valid schools
     const deletedSchools = await db.school.deleteMany({
-      where: {
-        id: {
-          in: schoolIds,
-        },
-      },
+      where: { id: { in: validSchoolIds } },
     });
 
-    return deletedSchools;
-  } catch (error) {
-    console.error('Error deleting schools and their courses:', error);
-    throw new Error('Failed to delete schools and their associated courses');
+    // Log action history if any schools were deleted
+    if (deletedSchools.count > 0) {
+      await db.actionHistory.create({
+        data: {
+          action: 'Bulk Delete',
+          entity: 'School',
+          entityIds: schoolsToDelete.map(({ id, name }) => ({ id, name })), // ✅ Directly store array (No need for JSON.stringify)
+          userId: userId, // Admin who performed the action
+        },
+      });
+    }
+
+    return {
+      message: 'Bulk school deletion process completed',
+      data: {
+        deleted: schoolsToDelete, // Successfully deleted schools with id & name
+        failed: invalidSchoolIds.length > 0 ? invalidSchoolIds : null, // Invalid school IDs
+      },
+    };
+  } catch (error: any) {
+    console.error('Error in deleteBulkSchoolsService:', error);
+    throw new Error(
+      'Failed to delete schools and their associated courses: ' + error.message
+    );
   }
 };
 
 // course
 
-export const deleteBulkCoursesService = async (courseIds: string[]) => {
+export const deleteBulkCoursesService = async (
+  courseIds: string[],
+  userId: string
+) => {
   try {
-    const deletedCourses = await db.course.deleteMany({
-      where: {
-        id: {
-          in: courseIds,
-        },
-      },
+    // Fetch valid courses before deletion
+    const coursesToDelete = await db.course.findMany({
+      where: { id: { in: courseIds } },
+      select: { id: true, title: true },
     });
 
-    return deletedCourses;
-  } catch (error) {
-    console.error('Error deleting courses:', error);
-    throw new Error('Failed to delete courses');
+    // Extract valid course IDs
+    const validCourseIds = coursesToDelete.map((course) => course.id);
+
+    // Identify invalid course IDs
+    const invalidCourseIds = courseIds.filter(
+      (id) => !validCourseIds.includes(id)
+    );
+
+    // Delete valid courses
+    const deletedCourses = await db.course.deleteMany({
+      where: { id: { in: validCourseIds } },
+    });
+
+    // Log action history if any courses were deleted
+    if (deletedCourses.count > 0) {
+      await db.actionHistory.create({
+        data: {
+          action: 'Bulk Delete',
+          entity: 'Course',
+          entityIds: coursesToDelete.map(({ id, title }) => ({ id, title })), // Properly formatted array of { id, title }
+          userId: userId, // Admin who performed the action
+        },
+      });
+    }
+
+    return {
+      message: 'Bulk course deletion process completed',
+      data: {
+        deleted: coursesToDelete, // Successfully deleted courses with id & title
+        failed: invalidCourseIds.length > 0 ? invalidCourseIds : null, // Invalid course IDs
+      },
+    };
+  } catch (error: any) {
+    console.error('Error in deleteBulkCoursesService:', error);
+    throw new Error('Failed to delete courses: ' + error.message);
   }
 };
-
-//
-// export const createBulkCoursesService = async (
-//   courses: CreateCSVCourseData[]
-// ) => {
-//   try {
-//     const results = await Promise.all(
-//       courses.map(async (course) => {
-//         try {
-//           let profileUrl: string | null = null;
-
-//           if (course.profile) {
-//             if (course.profile.startsWith('data:image/')) {
-//               const result: UploadApiResponse =
-//                 await uploadBase64ImageToCloudinary(course.profile);
-//               profileUrl = result.secure_url;
-//             } else if (course.profile.startsWith('https://')) {
-//               profileUrl = course.profile; // Use URL directly
-//             } else {
-//               throw new Error('Invalid profile image format');
-//             }
-//           }
-
-//           // Parse requirements and careerOpportunities from strings to arrays
-//           if (typeof course.requirements === 'string') {
-//             course.requirements = JSON.parse(course.requirements);
-//           }
-
-//           if (typeof course.careerOpportunities === 'string') {
-//             course.careerOpportunities = JSON.parse(course.careerOpportunities);
-//           }
-
-//           // Check if the schoolId exists
-//           const schoolExists = await db.school.findUnique({
-//             where: { id: course.schoolId },
-//           });
-
-//           if (!schoolExists) {
-//             throw new Error(`School with ID ${course.schoolId} does not exist`);
-//           }
-
-//           const newCourse = await db.course.create({
-//             data: {
-//               title: course.title,
-//               profile: profileUrl,
-//               schoolId: course.schoolId,
-//               scholarship: course.scholarship,
-//               duration: course.duration,
-//               durationPeriod: course.durationPeriod as any,
-//               price: course.price,
-//               currency: course.currency as any,
-//               acceptanceFee: course.acceptanceFee,
-//               acceptanceFeeCurrency: course.acceptanceFeeCurrency as any,
-//               description: course.description,
-//               requirements: course.requirements,
-//               ratings: 0.0, // Initialize ratings to 0.0
-//               courseInformation: course.courseInformation,
-//               courseWebsiteUrl: course.courseWebsiteUrl,
-//               programLevel: course.programLevel,
-//               careerOpportunities: course.careerOpportunities,
-//               loanInformation: course.loanInformation,
-//               estimatedLivingCost: course.estimatedLivingCost,
-//             },
-//           });
-
-//           return newCourse;
-//         } catch (error) {
-//           console.error(`Error creating course ${course.title}:`, error);
-//           throw error; // Rethrow to be caught by the outer try-catch block
-//         }
-//       })
-//     );
-
-//     return results;
-//   } catch (error) {
-//     console.error('Error in createBulkCoursesService:', error);
-//     throw new Error('Bulk course creation failed');
-//   }
-// };
 
 // Helper to process profile image
 const processProfileImage = async (profile: string): Promise<string | null> => {
@@ -220,9 +230,12 @@ const parseJsonField = (field: any): any[] => {
 };
 
 export const createBulkCoursesService = async (
-  courses: CreateCSVCourseData[]
+  courses: CreateCSVCourseData[],
+  userId: string // Admin performing the action
 ) => {
   try {
+    const errors: { courseTitle: string; error: string }[] = []; // ✅ Define errors array
+
     // Get unique schoolIds from the input courses
     const schoolIds = [...new Set(courses.map((course) => course.schoolId))];
 
@@ -254,7 +267,7 @@ export const createBulkCoursesService = async (
             course.careerOpportunities
           );
 
-          // Create course
+          // ✅ Fix: Explicitly connect course to an existing school
           const newCourse = await db.course.create({
             data: {
               title: course.title,
@@ -279,15 +292,44 @@ export const createBulkCoursesService = async (
             },
           });
 
-          return { status: 'fulfilled', value: newCourse };
+          return { id: newCourse.id, title: newCourse.title };
         } catch (error: any) {
           console.error(`Error creating course "${course.title}":`, error);
-          return { status: 'rejected', reason: error.message };
+          errors.push({ courseTitle: course.title, error: error.message }); // ✅ Collect errors
+          return null; // ✅ Ensure rejected items return null
         }
       })
     );
 
-    return results;
+    // ✅ Fix: Filter out null values before destructuring
+    const createdCourses = results
+      .filter(
+        (
+          result
+        ): result is PromiseFulfilledResult<{ id: string; title: string }> =>
+          result.status === 'fulfilled' && result.value !== null
+      )
+      .map((result) => result.value);
+
+    // ✅ Fix: Check if `createdCourses` is empty before logging action history
+    if (createdCourses.length > 0) {
+      await db.actionHistory.create({
+        data: {
+          action: 'Bulk Create',
+          entity: 'Course',
+          entityIds: createdCourses.map(({ id, title }) => ({ id, title })), // ✅ Store as an array
+          userId: userId, // Admin who performed the action
+        },
+      });
+    }
+
+    return {
+      message: 'Courses created successfully',
+      data: {
+        success: createdCourses,
+        errors: errors, // ✅ Include errors
+      },
+    };
   } catch (error) {
     console.error('Error in createBulkCoursesService:', error);
     throw new Error('Bulk course creation failed');
@@ -296,51 +338,17 @@ export const createBulkCoursesService = async (
 
 // update bulk schools
 
-// export const updateBulkSchoolsService = async (schools: UpdateSchoolData[]) => {
-//   try {
-//     const results = await Promise.allSettled(
-//       schools.map(async (school) => {
-//         try {
-//           const updatedSchool = await db.school.update({
-//             where: { id: school.id },
-//             data: {
-//               name: school.name,
-//               schoolType: school.schoolType,
-//               location: school.location,
-//               websiteUrl: school.websiteUrl,
-//               logo: school.logo,
-//             },
-//           });
-
-//           return updatedSchool;
-//         } catch (error) {
-//           console.error(`Error updating school with ID ${school.id}:`, error);
-//           throw new Error(`Failed to update school with ID ${school.id}`);
-//         }
-//       })
-//     );
-
-//     return results;
-//   } catch (error) {
-//     console.error('Error in updateBulkSchoolsService:', error);
-//     throw new Error('Bulk school update failed');
-//   }
-// };
-
-// update bulk course
-
-export const updateBulkSchoolsService = async (schools: UpdateSchoolData[]) => {
+export const updateBulkSchoolsService = async (
+  schools: UpdateSchoolData[],
+  userId: string // Admin performing the update
+) => {
   try {
-    const results = await Promise.all(
+    const results = await Promise.allSettled(
       schools.map(async (school) => {
         try {
           // Validate that school ID exists
           if (!school.id) {
-            console.error('Skipping school update due to missing ID:', school);
-            return {
-              status: 'skipped',
-              reason: 'Missing school ID',
-            };
+            throw new Error('Missing school ID');
           }
 
           // Fetch the existing school record
@@ -349,11 +357,7 @@ export const updateBulkSchoolsService = async (schools: UpdateSchoolData[]) => {
           });
 
           if (!existingSchool) {
-            console.error(`School with ID ${school.id} not found`);
-            return {
-              status: 'failed',
-              reason: `School with ID ${school.id} not found`,
-            };
+            throw new Error(`School with ID ${school.id} not found`);
           }
 
           // Construct update data by keeping existing values if undefined
@@ -369,6 +373,8 @@ export const updateBulkSchoolsService = async (schools: UpdateSchoolData[]) => {
           if (JSON.stringify(updateData) === JSON.stringify(existingSchool)) {
             return {
               status: 'skipped',
+              id: school.id,
+              name: existingSchool.name,
               message: `No changes for school with ID ${school.id}`,
             };
           }
@@ -381,19 +387,71 @@ export const updateBulkSchoolsService = async (schools: UpdateSchoolData[]) => {
 
           return {
             status: 'success',
-            data: updatedSchool,
+            data: { id: updatedSchool.id, name: updatedSchool.name },
           };
-        } catch (error) {
-          console.error(`Error updating school with ID ${school.id}:`, error);
+        } catch (error: any) {
           return {
             status: 'failed',
-            reason: `Error updating school with ID ${school.id}`,
+            id: school.id,
+            name: school.name || 'Unknown',
+            reason: error.message,
           };
         }
       })
     );
 
-    return results;
+    // Extract successful updates
+    const updatedSchools = results
+      .filter(
+        (result) =>
+          result.status === 'fulfilled' && result.value.status === 'success'
+      )
+      .map((result: any) => result.value.data);
+
+    // Extract failed updates
+    const failedUpdates = results
+      .filter(
+        (result) =>
+          result.status === 'fulfilled' && result.value.status === 'failed'
+      )
+      .map((result: any) => ({
+        id: result.value.id,
+        name: result.value.name,
+        error: result.value.reason,
+      }));
+
+    // Extract skipped updates
+    const skippedUpdates = results
+      .filter(
+        (result) =>
+          result.status === 'fulfilled' && result.value.status === 'skipped'
+      )
+      .map((result: any) => ({
+        id: result.value.id,
+        name: result.value.name,
+        message: result.value.message,
+      }));
+
+    // Log action history if any schools were updated
+    if (updatedSchools.length > 0) {
+      await db.actionHistory.create({
+        data: {
+          action: 'Bulk Update',
+          entity: 'School',
+          entityIds: updatedSchools.map(({ id, name }) => ({ id, name })),
+          userId: userId, // Admin who performed the action
+        },
+      });
+    }
+
+    return {
+      message: 'Bulk update process completed',
+      data: {
+        updated: updatedSchools, // Successfully updated schools with id & name
+        failed: failedUpdates, // Failed updates with school id & error reason
+        skipped: skippedUpdates, // Schools that had no changes
+      },
+    };
   } catch (error) {
     console.error('Error in updateBulkSchoolsService:', error);
     throw new Error('Bulk school update failed');
@@ -412,18 +470,17 @@ const parseJsonFieldForUpdate = (field: any): string[] => {
   }
 };
 
-export const updateBulkCoursesService = async (courses: UpdateCourseData[]) => {
+export const updateBulkCoursesService = async (
+  courses: UpdateCourseData[],
+  userId: string // Admin performing the update
+) => {
   try {
     const results = await Promise.allSettled(
       courses.map(async (course) => {
         try {
-          // Validate that school ID exists
+          // Validate that course ID exists
           if (!course.id) {
-            console.error('Skipping course update due to missing ID:', course);
-            return {
-              status: 'skipped',
-              reason: 'Missing course ID',
-            };
+            throw new Error('Missing course ID');
           }
 
           // Fetch existing course from DB
@@ -501,6 +558,8 @@ export const updateBulkCoursesService = async (courses: UpdateCourseData[]) => {
           if (JSON.stringify(updateData) === JSON.stringify(existingCourse)) {
             return {
               status: 'skipped',
+              id: course.id,
+              title: existingCourse.title,
               message: `No changes for course ID ${course.id}`,
             };
           }
@@ -511,18 +570,73 @@ export const updateBulkCoursesService = async (courses: UpdateCourseData[]) => {
             data: updateData,
           });
 
-          return updatedCourse;
-        } catch (error) {
-          console.error(`Error updating course with ID ${course.id}:`, error);
           return {
-            status: 'rejected',
-            reason: `Failed to update course with ID ${course.id}`,
+            status: 'success',
+            data: { id: updatedCourse.id, title: updatedCourse.title },
+          };
+        } catch (error: any) {
+          return {
+            status: 'failed',
+            id: course.id,
+            title: course.title || 'Unknown',
+            reason: error.message,
           };
         }
       })
     );
 
-    return results;
+    // Extract successfully updated courses
+    const updatedCourses = results
+      .filter(
+        (result) =>
+          result.status === 'fulfilled' && result.value.status === 'success'
+      )
+      .map((result: any) => result.value.data);
+
+    // Extract failed updates
+    const failedUpdates = results
+      .filter(
+        (result) =>
+          result.status === 'fulfilled' && result.value.status === 'failed'
+      )
+      .map((result: any) => ({
+        id: result.value.id,
+        title: result.value.title,
+        error: result.value.reason,
+      }));
+
+    // Extract skipped updates
+    const skippedUpdates = results
+      .filter(
+        (result) =>
+          result.status === 'fulfilled' && result.value.status === 'skipped'
+      )
+      .map((result: any) => ({
+        id: result.value.id,
+        title: result.value.title,
+        message: result.value.message,
+      }));
+
+    // Log action history if any courses were updated
+    if (updatedCourses.length > 0) {
+      await db.actionHistory.create({
+        data: {
+          action: 'Bulk Update',
+          entity: 'Course',
+          entityIds: updatedCourses.map(({ id, title }) => ({ id, title })), // Correctly formatted array of { id, title }
+          userId: userId, // Admin who performed the action
+        },
+      });
+    }
+
+    return {
+      message: 'Bulk update process completed',
+      data: {
+        updated: updatedCourses, // Successfully updated courses with id & title
+        failed: failedUpdates, // Failed updates with course id & error reason
+        skipped: skippedUpdates, // Courses that had no changes
+      },
+    };
   } catch (error) {
     console.error('Error in updateBulkCoursesService:', error);
     throw new Error('Bulk course update failed');

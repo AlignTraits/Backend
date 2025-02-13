@@ -46,6 +46,7 @@ model User {
   interests      Interest[]       @relation("UserInterests")
   ResultDocument ResultDocument[]
   UserResponse   UserResponse[]
+  actionHistories ActionHistory[]
 }
 
 model City {
@@ -187,6 +188,15 @@ model School {
   updatedAt              DateTime        @default(now()) @updatedAt
 }
 
+model ActionHistory {
+  id        String   @id @default(cuid())
+  action    String   // Action performed (Create, Update, Delete, Bulk Create, Bulk Update, Bulk Delete)
+  entity    String   // Entity affected (School, Course)
+  entityIds Json     // Stores an array of objects with id and name/title
+  userId    String   // ID of the user (admin) who performed the action
+  user      User     @relation(fields: [userId], references: [id])
+  timestamp DateTime @default(now()) // Timestamp of the action
+}
 
 enum SchoolType {
   FEDERAL_UNIVERSITY
