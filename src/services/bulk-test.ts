@@ -1,4 +1,6 @@
 import { db } from '../config/db';
+const { nanoid } = require('nanoid');
+
 import { UploadApiResponse } from 'cloudinary';
 import cloudinary from '../config/cloudinary';
 import path from 'path';
@@ -39,8 +41,11 @@ export const createBulkSchoolsService2 = async (
     const results = await Promise.allSettled(
       schools.map(async (school) => {
         try {
+          const schoolId = nanoid(10);
+          // id: schoolId,
           const newSchool = await db.school.create({
             data: {
+              id: schoolId,
               name: school.name,
               schoolType: school.schoolType,
               location: school.location,
@@ -267,9 +272,12 @@ export const createBulkCoursesService = async (
             course.careerOpportunities
           );
 
+          const courseId = nanoid(10);
+          // id: courseId, // Use generated short ID
           // ✅ Fix: Explicitly connect course to an existing school
           const newCourse = await db.course.create({
             data: {
+              id: courseId,
               title: course.title,
               profile: profileUrl,
               schoolId: course.schoolId,

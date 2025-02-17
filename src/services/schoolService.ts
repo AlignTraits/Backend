@@ -1,5 +1,7 @@
 // services/schoolService.ts
 import { UploadApiErrorResponse, UploadApiResponse } from 'cloudinary';
+const { nanoid } = require('nanoid');
+
 import cloudinary from '../config/cloudinary';
 import path from 'path';
 import sharp from 'sharp';
@@ -136,9 +138,18 @@ export const createSchoolService = async ({
       logoUrl = result.secure_url;
     }
 
+    const schoolId = nanoid(10);
+    // id: schoolId,
     // Create school
     const newSchool = await db.school.create({
-      data: { name, schoolType, location, websiteUrl, logo: logoUrl },
+      data: {
+        id: schoolId,
+        name,
+        schoolType,
+        location,
+        websiteUrl,
+        logo: logoUrl,
+      },
     });
 
     // Log action history
@@ -255,9 +266,13 @@ export const createCourseService = async ({
       careerOpportunities = JSON.parse(careerOpportunities);
     }
 
+    // Generate short ID using nanoid(10)
+    const courseId = nanoid(10);
+
     // Create course
     const newCourse = await db.course.create({
       data: {
+        id: courseId, // Use generated short ID
         title,
         profile: profileUrl,
         schoolId,

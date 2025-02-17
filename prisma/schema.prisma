@@ -151,9 +151,9 @@ model WaitList {
 // school and course
 
 model Course {
-  id                     String          @id @default(cuid())
+  id                     String          @id @default(dbgenerated("substring(gen_random_uuid()::text, 1, 10)"))
   title                  String
-  profile                String?         // Image URL or path
+  profile                String?
   schoolId               String
   university             School          @relation(fields: [schoolId], references: [id])
   scholarship            String
@@ -165,28 +165,29 @@ model Course {
   acceptanceFeeCurrency  Currency
   description            String
   requirements           String[]
-  ratings                Float           @default(0.0) // Field for ratings
-  courseInformation      String          // Field for course information
-  courseWebsiteUrl       String          // Field for course website URL
-  programLevel           String          // Field for program level
-  careerOpportunities    String[]        // Field for career opportunities
-  loanInformation        String          // Field for loan information
-  estimatedLivingCost    Float           // New field for estimated living cost
+  ratings                Float           @default(0.0)
+  courseInformation      String
+  courseWebsiteUrl       String
+  programLevel           String
+  careerOpportunities    String[]
+  loanInformation        String
+  estimatedLivingCost    Float
   createdAt              DateTime        @default(now())
   updatedAt              DateTime        @default(now()) @updatedAt
 }
 
 model School {
-  id                     String          @id @default(cuid())
+  id                     String          @id @default(dbgenerated("substring(gen_random_uuid()::text, 1, 10)"))
   name                   String
   schoolType             SchoolType
   location               String
-  logo                   String?         // Image URL or path
-  websiteUrl             String          // New field for school website URL
+  logo                   String?
+  websiteUrl             String
   courses                Course[]
   createdAt              DateTime        @default(now())
   updatedAt              DateTime        @default(now()) @updatedAt
 }
+
 
 model ActionHistory {
   id        String   @id @default(cuid())
