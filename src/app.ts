@@ -6,6 +6,7 @@ import cors from 'cors';
 import * as middlewares from './middlewares';
 import api from './api';
 import MessageResponse from './types/messageResponse';
+import path from 'path';
 
 require('dotenv').config();
 
@@ -15,6 +16,9 @@ app.use(morgan('dev'));
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
+
+// Serve static files from the downloads directory
+app.use('/downloads', express.static(path.join(__dirname, '../downloads')));
 
 app.get<{}, MessageResponse>('/', (req, res) => {
   res.status(200).json({

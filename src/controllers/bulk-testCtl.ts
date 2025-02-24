@@ -7,6 +7,7 @@ import {
   deleteBulkSchoolsService,
   updateBulkCoursesService,
   updateBulkSchoolsService,
+  generateSchoolCourseReport,
 } from '../services/bulk-test';
 import {
   CreateCSVCourseData,
@@ -250,5 +251,62 @@ export const updateBulkCoursesController = async (
     res
       .status(500)
       .send({ error: 'An error occurred while updating the courses' });
+  }
+};
+
+// Download csv Data
+export const downloadSchoolCourseDataController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const {
+      format,
+      entity,
+      startDate,
+      endDate,
+      id, // New
+      name, // New
+      title, // New
+      location, // New
+      schoolId, // New
+    } = req.query;
+
+    // Log raw query for debugging
+    console.log('Raw query:', req.query);
+
+    // Validate format
+    if (!['csv', 'excel'].includes(format as string)) {
+      return res
+        .status(400)
+        .json({ message: 'Invalid format. Choose CSV or Excel.' });
+    }
+
+    // Validate entity type
+    if (!['school', 'course'].includes(entity as string)) {
+      return res
+        .status(400)
+        .json({ message: 'Invalid entity type. Choose school or course.' });
+    }
+
+    // Call the service function to generate the file
+    const fileUrl = await generateSchoolCourseReport(
+      entity as string,
+      format as string,
+      startDate as string,
+      endDate as string,
+      id as string,
+      name as string,
+      title as string,
+      location as string,
+      schoolId as string
+    );
+
+    return res.json({ message: 'Download ready', fileUrl });
+  } catch (error) {
+    console.error('Download error:', error);
+    return res
+      .status(500)
+      .json({ message: 'Error processing download request' });
   }
 };

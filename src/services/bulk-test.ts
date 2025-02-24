@@ -1,6 +1,8 @@
 import { db } from '../config/db';
 const { nanoid } = require('nanoid');
-
+import { parseAsync } from 'json2csv';
+import * as XLSX from 'xlsx';
+import fs from 'fs';
 import { UploadApiResponse } from 'cloudinary';
 import cloudinary from '../config/cloudinary';
 import path from 'path';
@@ -11,6 +13,7 @@ import {
   UpdateCourseData,
   UpdateSchoolData,
 } from '../types/school-course-types';
+// import { Request, Response } from 'express';
 
 const uploadBase64ImageToCloudinary = async (
   base64Image: string
@@ -648,5 +651,215 @@ export const updateBulkCoursesService = async (
   } catch (error) {
     console.error('Error in updateBulkCoursesService:', error);
     throw new Error('Bulk course update failed');
+  }
+};
+
+//  download files
+
+type SchoolReportData = {
+  id: string;
+  name: string;
+  schoolType: string;
+  location: string;
+  websiteUrl: string;
+  logo: string | null;
+  createdAt: Date;
+};
+
+type CourseReportData = {
+  id: string;
+  title: string;
+  profile: string;
+  schoolId: string;
+  scholarship: string;
+  duration: string;
+  price: number;
+  currency: string;
+  acceptanceFee: number;
+  acceptanceFeeCurrency: string;
+  description: string;
+  requirements: string;
+  ratings: number;
+  courseInformation: string;
+  courseWebsiteUrl: string;
+  programLevel: string;
+  careerOpportunities: string;
+  loanInformation: string;
+  estimatedLivingCost: number;
+  createdAt: Date;
+};
+
+export const generateSchoolCourseReport = async (
+  entity: string,
+  format: string,
+  startDate?: string,
+  endDate?: string,
+  id?: string, // New: Filter by ID (school or course)
+  name?: string, // New: Filter schools by name
+  title?: string, // New: Filter courses by title
+  location?: string, // New: Filter schools by location
+  schoolId?: string // New: Filter courses by schoolId
+): Promise<string> => {
+  try {
+    // Convert date strings to Date objects
+    const start = startDate ? new Date(startDate) : undefined;
+    const end = endDate ? new Date(endDate) : undefined;
+
+    // Log actual date range and new filters used for filtering
+    console.log('Received filters:', {
+      entity,
+      format,
+      startDate,
+      endDate,
+      id,
+      name,
+      title,
+      location,
+      schoolId,
+    });
+
+    // Ensure downloads directory exists
+    const downloadsDir = path.join(__dirname, '../../downloads');
+    if (!fs.existsSync(downloadsDir)) {
+      fs.mkdirSync(downloadsDir, { recursive: true });
+    }
+
+    // Define file path
+    const timestamp = Date.now();
+    const fileName = `${entity}_report_${timestamp}.${format}`;
+    const filePath = path.join(downloadsDir, fileName);
+
+    if (entity === 'school') {
+      const where: any = {};
+      if (start && end) where.createdAt = { gte: start, lte: end };
+      if (id) where.id = id;
+      if (name) where.name = { contains: name, mode: 'insensitive' };
+      if (location)
+        where.location = { contains: location, mode: 'insensitive' };
+
+      const schools = await db.school.findMany({
+        where,
+        select: {
+          id: true,
+          name: true,
+          schoolType: true,
+          location: true,
+          websiteUrl: true,
+          logo: true,
+          createdAt: true,
+        },
+      });
+
+      const schoolData: SchoolReportData[] = schools;
+
+      if (schoolData.length === 0) {
+        console.error('No school data found for the given filters:', {
+          startDate,
+          endDate,
+          id,
+          name,
+          location,
+        });
+        throw new Error('No data available for the given filters.');
+      }
+
+      if (format === 'csv') {
+        const csv = await parseAsync(schoolData);
+        fs.writeFileSync(filePath, csv);
+      } else if (format === 'excel') {
+        const ws = XLSX.utils.json_to_sheet(schoolData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Schools');
+        XLSX.writeFile(wb, filePath);
+      } else {
+        throw new Error('Unsupported format');
+      }
+    } else if (entity === 'course') {
+      const where: any = {};
+      if (start && end) where.createdAt = { gte: start, lte: end };
+      if (id) where.id = id;
+      if (title) where.title = { contains: title, mode: 'insensitive' };
+      if (schoolId) where.schoolId = schoolId;
+
+      const courses = await db.course.findMany({
+        where,
+        select: {
+          id: true,
+          title: true,
+          profile: true,
+          schoolId: true,
+          scholarship: true,
+          duration: true,
+          durationPeriod: true,
+          price: true,
+          currency: true,
+          acceptanceFee: true,
+          acceptanceFeeCurrency: true,
+          description: true,
+          requirements: true,
+          ratings: true,
+          courseInformation: true,
+          courseWebsiteUrl: true,
+          programLevel: true,
+          careerOpportunities: true,
+          loanInformation: true,
+          estimatedLivingCost: true,
+          createdAt: true,
+        },
+      });
+
+      const courseData: CourseReportData[] = courses.map((course) => ({
+        id: course.id,
+        title: course.title,
+        profile: course.profile ?? '',
+        schoolId: course.schoolId,
+        scholarship: course.scholarship,
+        duration: `${course.duration} ${course.durationPeriod.toLowerCase()}`,
+        price: course.price,
+        currency: course.currency,
+        acceptanceFee: course.acceptanceFee,
+        acceptanceFeeCurrency: course.acceptanceFeeCurrency,
+        description: course.description,
+        requirements: course.requirements.join(', '),
+        ratings: course.ratings,
+        courseInformation: course.courseInformation,
+        courseWebsiteUrl: course.courseWebsiteUrl,
+        programLevel: course.programLevel,
+        careerOpportunities: course.careerOpportunities.join(', '),
+        loanInformation: course.loanInformation,
+        estimatedLivingCost: course.estimatedLivingCost,
+        createdAt: course.createdAt,
+      }));
+
+      if (courseData.length === 0) {
+        console.error('No course data found for the given filters:', {
+          startDate,
+          endDate,
+          id,
+          title,
+          schoolId,
+        });
+        throw new Error('No data available for the given filters.');
+      }
+
+      if (format === 'csv') {
+        const csv = await parseAsync(courseData);
+        fs.writeFileSync(filePath, csv);
+      } else if (format === 'excel') {
+        const ws = XLSX.utils.json_to_sheet(courseData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Courses');
+        XLSX.writeFile(wb, filePath);
+      } else {
+        throw new Error('Unsupported format');
+      }
+    } else {
+      throw new Error('Invalid entity type');
+    }
+
+    return `/downloads/${fileName}`;
+  } catch (error) {
+    console.error('Error generating report:', error);
+    throw new Error('Error generating report');
   }
 };
