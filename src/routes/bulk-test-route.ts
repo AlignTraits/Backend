@@ -70,9 +70,10 @@ router.delete<{}, MessageResponse>(
 // GET /api/download?format=csv&entity=school&startDate=2024-01-01&endDate=2024-12-31
 // ../download?format=csv&entity=course&id=xyz789&title=Coding&schoolId=fN1rh8QWg1
 // ../api/v1/bulk/download?format=csv&entity=school&id=MlGKz-0RHG
+// .../download?format=csv&entity=course&id=jy0ObkN1eK
 router.get(
   '/download',
-  // adminLoginRequired, // Ensure only admins can access
+  adminLoginRequired, // Ensure only admins can access
   downloadSchoolCourseDataController
 );
 

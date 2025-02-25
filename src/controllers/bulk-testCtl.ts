@@ -307,6 +307,6 @@ export const downloadSchoolCourseDataController = async (
     console.error('Download error:', error);
     return res
       .status(500)
-      .json({ message: 'Error processing download request' });
+      .json({ message: 'Error processing download request', data: [] });
   }
 };

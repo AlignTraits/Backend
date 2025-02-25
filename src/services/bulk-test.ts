@@ -777,9 +777,15 @@ export const generateSchoolCourseReport = async (
     } else if (entity === 'course') {
       const where: any = {};
       if (start && end) where.createdAt = { gte: start, lte: end };
-      if (id) where.id = id;
-      if (title) where.title = { contains: title, mode: 'insensitive' };
-      if (schoolId) where.schoolId = schoolId;
+      if (id) {
+        where.id = { equals: id }; // Ensure exact match
+      }
+      if (title) {
+        where.title = { contains: title, mode: 'insensitive' }; // Partial match
+      }
+      if (schoolId) {
+        where.schoolId = { equals: schoolId }; // Ensure exact match
+      }
 
       const courses = await db.course.findMany({
         where,

@@ -68,5 +68,5 @@ router.delete('/delete/:schoolId', adminLoginRequired, deleteSchoolsController);
 // search schools by location
 router.get('/search/location/:location', searchSchoolsController);
 
-router.get('/get/all/history', getAllHistoryController);
+router.get('/get/all/history', adminLoginRequired, getAllHistoryController);
 export default router;
