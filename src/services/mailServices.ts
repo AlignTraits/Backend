@@ -116,3 +116,77 @@ export const sendResetPasswordEmail = async ({
     throw e;
   }
 };
+
+// new mails services
+
+export const sendAdminCreateEmail = async ({
+  name,
+  email,
+  password,
+}: {
+  name: string;
+  email: string;
+  password: string;
+}) => {
+  try {
+    return await sendMail({
+      recipients: [email],
+      subject: 'Welcome to AlignTraits Admin Panel!',
+      templateName: 'adminCreateEmail',
+      templateInfo: {
+        name,
+        email,
+        password, // Pass password instead of OTP
+        host: process.env.BACKEND_URL,
+      },
+    });
+  } catch (e) {
+    throw e;
+  }
+};
+
+export const sendAdminUpdateEmail = async ({
+  name,
+  email,
+}: {
+  name: string;
+  email: string;
+}) => {
+  try {
+    return await sendMail({
+      recipients: [email],
+      subject: 'Your Admin Profile Has Been Updated',
+      templateName: 'adminUpdateEmail',
+      templateInfo: {
+        name,
+        email,
+        host: process.env.BACKEND_URL,
+      },
+    });
+  } catch (e) {
+    throw e;
+  }
+};
+
+export const sendAdminDeleteEmail = async ({
+  name,
+  email,
+}: {
+  name: string;
+  email: string;
+}) => {
+  try {
+    return await sendMail({
+      recipients: [email],
+      subject: 'Your Admin Profile Has Been Deleted',
+      templateName: 'adminDeleteEmail',
+      templateInfo: {
+        name,
+        email,
+        host: process.env.BACKEND_URL,
+      },
+    });
+  } catch (e) {
+    throw e;
+  }
+};

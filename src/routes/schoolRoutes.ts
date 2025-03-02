@@ -13,6 +13,7 @@ import {
   getCourseByIdController,
   getAllCoursesController,
   getAllHistoryController,
+  getAdminDashboard,
 } from '../controllers/schoolController';
 import multer from 'multer';
 import MessageResponse from '../types/messageResponse';
@@ -69,4 +70,14 @@ router.delete('/delete/:schoolId', adminLoginRequired, deleteSchoolsController);
 router.get('/search/location/:location', searchSchoolsController);
 
 router.get('/get/all/history', adminLoginRequired, getAllHistoryController);
+
+// New route for Admin Dashboard
+// curl "http://localhost:3000/api/v1/admin/dashboard?startDate=2024-01-01&endDate=2024-12-31&location=Lagos" \
+// -H "Authorization: Bearer <admin-token>"
+router.get<{}, MessageResponse>(
+  '/admin/dashboard',
+  adminLoginRequired,
+  getAdminDashboard
+);
+
 export default router;

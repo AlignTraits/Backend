@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import Papa from 'papaparse';
 
 import {
@@ -14,7 +14,9 @@ import {
   getCourseByIdService,
   getAllCoursesService,
   getAllHistoryService,
+  getAdminDashboardService,
 } from '../services/schoolService';
+import { SessionRequest } from '../types/sessionRequest';
 
 interface CreateCSVSchoolData {
   name: string;
@@ -304,5 +306,25 @@ export const getAllHistoryController = async (req: Request, res: Response) => {
     res
       .status(500)
       .send({ error: 'An error occurred while fetching the courses' });
+  }
+};
+
+// New controller for Admin Dashboard
+export const getAdminDashboard = async (
+  req: SessionRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { startDate, endDate, location, export: exportFormat } = req.query;
+    const result = await getAdminDashboardService({
+      startDate: startDate as string,
+      endDate: endDate as string,
+      location: location as string,
+      exportFormat: exportFormat as string,
+    });
+    res.status(result.status).json(result);
+  } catch (error) {
+    next(error);
   }
 };

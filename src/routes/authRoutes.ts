@@ -61,4 +61,17 @@ router.patch<{}, MessageResponse>(
   authController.AddAdminPassword
 );
 
+// New routes for profile and password management
+router.patch<{}, MessageResponse>(
+  '/admin/profile',
+  adminLoginRequired,
+  authController.updateAdminProfile
+);
+
+router.patch<{}, MessageResponse>(
+  '/admin/password',
+  adminLoginRequired,
+  authController.updateAdminPassword
+);
+
 export default router;

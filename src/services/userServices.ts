@@ -21,9 +21,11 @@ export const getAdminDataService = async (userId: string) => {
       message: 'Admin found',
       data: {
         id: user.id,
-        username: user.firstname,
+        username: user.username,
+        firstname: user.firstname,
+        lastname: user.lastname,
         email: user.email,
-        image: user.image,
+        contactNumber: user.contactNumber,
         role: user.role,
       },
     };

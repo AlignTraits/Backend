@@ -7,6 +7,9 @@ import path from 'path';
 import sharp from 'sharp';
 import { createCourse, createSchool } from '../models/schoolmodel';
 import { db } from '../config/db';
+import { z } from 'zod';
+import { getUserByEmail } from '../models/userModel';
+import { Prisma } from '@prisma/client';
 
 // Define the SchoolType enum
 enum SchoolType {
@@ -702,5 +705,142 @@ export const getAllHistoryService = async () => {
     return courses;
   } catch (error) {
     throw error;
+  }
+};
+
+// Validation schema for dashboard filters (exportFormat removed)
+const dashboardFilterSchema = z.object({
+  startDate: z
+    .string()
+    .optional()
+    .transform((val) => (val ? new Date(val) : undefined)),
+  endDate: z
+    .string()
+    .optional()
+    .transform((val) => (val ? new Date(val) : undefined)),
+  location: z.string().optional(),
+});
+
+export const getAdminDashboardService = async (
+  // adminId: string,
+  filters: any
+) => {
+  try {
+    // Check admin permissions (allow all admins)
+
+    const parsedFilters = dashboardFilterSchema.parse(filters);
+
+    // Build where clauses for filtering
+    const dateFilter =
+      parsedFilters.startDate && parsedFilters.endDate
+        ? {
+            createdAt: {
+              gte: parsedFilters.startDate,
+              lte: parsedFilters.endDate,
+            },
+          }
+        : {};
+    const schoolFilter: Prisma.SchoolWhereInput = {
+      ...(parsedFilters.location
+        ? {
+            location: {
+              contains: parsedFilters.location,
+              mode: 'insensitive',
+            } as Prisma.StringFilter<'School'>,
+          }
+        : {}),
+      ...dateFilter,
+    };
+    // const schoolFilter = {
+    //   ...(parsedFilters.location
+    //     ? {
+    //         location: { contains: parsedFilters.location, mode: 'insensitive' },
+    //       }
+    //     : {}),
+    //   ...dateFilter,
+    // };
+
+    // Metrics
+    const totalSchools = await db.school.count({ where: schoolFilter });
+    const totalCourses = await db.course.count({ where: dateFilter });
+
+    // Proxy for students (using Users with role USER as a placeholder)
+    const totalStudents = await db.user.count({
+      where: { role: 'USER', ...dateFilter },
+    });
+
+    // Placeholder for loan applications (mocked as course count per school)
+    const totalLoanApplications = await db.course.count({ where: dateFilter }); // Adjust if you add a LoanApplication model
+
+    // Top Schools by Course Count (proxy for loan applications)
+    const topCourseSchools = await db.course.groupBy({
+      by: ['schoolId'],
+      _count: { schoolId: true },
+      where: dateFilter,
+      orderBy: { _count: { schoolId: 'desc' } },
+      take: 5,
+    });
+    const topSchoolsWithDetails = await Promise.all(
+      topCourseSchools.map(async (course) => {
+        const school = await db.school.findUnique({
+          where: { id: course.schoolId },
+          select: { name: true, location: true },
+        });
+        return { ...school, courseCount: course._count.schoolId };
+      })
+    );
+
+    // Courses by Location (proxy for loan applications by location)
+    const coursesByLocation = await db.course.groupBy({
+      by: ['schoolId'],
+      _count: { schoolId: true },
+      where: dateFilter,
+    });
+    const locationBreakdown = await Promise.all(
+      coursesByLocation.map(async (course) => {
+        const school = await db.school.findUnique({
+          where: { id: course.schoolId },
+          select: { location: true },
+        });
+        return { location: school?.location, count: course._count.schoolId };
+      })
+    ).then((results) =>
+      results.reduce(
+        (acc, curr) => {
+          acc[curr.location || 'Unknown'] =
+            (acc[curr.location || 'Unknown'] || 0) + curr.count;
+          return acc;
+        },
+        {} as Record<string, number>
+      )
+    );
+
+    const dashboardData = {
+      totalSchools,
+      totalCourses,
+      totalStudents, // Proxy metric
+      totalLoanApplications, // Proxy metric
+      topLoanSchools: topSchoolsWithDetails.map((s) => ({
+        name: s.name,
+        location: s.location,
+        count: s.courseCount,
+      })),
+      loansByLocation: locationBreakdown, // Proxy metric
+    };
+
+    return {
+      status: 200,
+      message: 'Dashboard data retrieved successfully',
+      data: dashboardData,
+    };
+  } catch (e) {
+    if (e instanceof z.ZodError) {
+      return {
+        status: 400,
+        message: 'Validation failed',
+        errors: e.errors.map((err) => ({ message: err.message })),
+      };
+    }
+    throw e;
   }
 };

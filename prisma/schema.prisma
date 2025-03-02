@@ -12,6 +12,7 @@ datasource db {
 enum Roles {
   ADMIN
   USER
+  SUPER_ADMIN
 }
 
 enum Gender {
@@ -32,6 +33,7 @@ model User {
   emailVerified  DateTime?
   password       String
   role           Roles            @default(USER)
+  contactNumber  String?          // New field: Optional contact number
   createdAt      DateTime         @default(now())
   gender         Gender?
   dob            DateTime?
@@ -191,13 +193,14 @@ model School {
 
 model ActionHistory {
   id        String   @id @default(cuid())
-  action    String   // Action performed (Create, Update, Delete, Bulk Create, Bulk Update, Bulk Delete)
-  entity    String   // Entity affected (School, Course)
-  entityIds Json     // Stores an array of objects with id and name/title
-  userId    String   // ID of the user (admin) who performed the action
-  user      User     @relation(fields: [userId], references: [id])
-  timestamp DateTime @default(now()) // Timestamp of the action
+  action    String
+  entity    String
+  entityIds Json
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  timestamp DateTime @default(now())
 }
+
 
 enum SchoolType {
   FEDERAL_UNIVERSITY

@@ -10,6 +10,8 @@ import {
   loginAdminService,
   registerAdminService,
   addAdminPasswordService,
+  updateAdminPasswordService,
+  updateAdminProfileService,
 } from '../services/authService';
 import {
   getAdminDataService,
@@ -130,6 +132,40 @@ const resetPassword = async (
   }
 };
 
+// New controller: Update Admin Profile
+const updateAdminProfile = async (
+  req: SessionRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const result = await updateAdminProfileService(
+      req.user?.id ?? '',
+      req.body
+    );
+    res.status(result.status).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// New controller: Update Admin Password
+const updateAdminPassword = async (
+  req: SessionRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const result = await updateAdminPasswordService(
+      req.user?.id ?? '',
+      req.body
+    );
+    res.status(result.status).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export = {
   login,
   register,
@@ -141,4 +177,6 @@ export = {
   registerAdmin,
   AddAdminPassword,
   getAdmindetails,
+  updateAdminPassword,
+  updateAdminProfile,
 };

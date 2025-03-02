@@ -36,4 +36,20 @@ const updateUser = async (
   });
 };
 
-export { createUser, getUserByEmail, getUserById, updateUser };
+const deleteUser = async (id: string) => {
+  try {
+    return await db.user.delete({
+      where: { id },
+    });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2025'
+    ) {
+      throw new Error('User not found');
+    }
+    throw error;
+  }
+};
+
+export { createUser, getUserByEmail, getUserById, updateUser, deleteUser };
