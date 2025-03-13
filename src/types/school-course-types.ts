@@ -68,7 +68,8 @@ export interface CreateCSVCourseData {
 export interface NewCreateCSVSchoolData {
   name: string;
   schoolType: SchoolType;
-  location: string;
+  country: string;
+  region: string;
   websiteUrl: string;
   logo?: string; // This will be the image URL
 }
@@ -77,7 +78,8 @@ export interface UpdateSchoolData {
   id: string;
   name?: string;
   schoolType?: SchoolType;
-  location?: string;
+  country: string;
+  region: string;
   websiteUrl?: string;
   logo?: string;
 }
@@ -107,7 +109,8 @@ export interface UpdateCourseData {
 export interface newCreateSchoolData {
   name: string;
   schoolType: SchoolType;
-  location: string;
+  country: string;
+  region: string;
   websiteUrl: string;
   logo?: string; // Make logo optional and accept URL or file
 }

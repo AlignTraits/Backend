@@ -13,14 +13,13 @@ import {
   UpdateCourseData,
   UpdateSchoolData,
 } from '../types/school-course-types';
-// import { Request, Response } from 'express';
 
 const uploadBase64ImageToCloudinary = async (
   base64Image: string
 ): Promise<UploadApiResponse> => {
   return new Promise((resolve, reject) => {
     cloudinary.uploader.upload(
-      `data:image/jpeg;base64,${base64Image}`, // Ensure the base64 string is properly formatted
+      `data:image/jpeg;base64,${base64Image}`,
       { folder: 'course_profiles' },
       (error, result) => {
         if (error) {
@@ -38,21 +37,21 @@ const uploadBase64ImageToCloudinary = async (
 
 export const createBulkSchoolsService2 = async (
   schools: newCreateSchoolData[],
-  userId: string // Pass the admin user ID from the request
+  userId: string
 ) => {
   try {
     const results = await Promise.allSettled(
       schools.map(async (school) => {
         try {
           const schoolId = nanoid(10);
-          // id: schoolId,
           const newSchool = await db.school.create({
             data: {
               id: schoolId,
               name: school.name,
               schoolType: school.schoolType,
-              location: school.location,
-              logo: school.logo || null, // Keep null if no logo provided
+              country: school.country, // Updated from location to country
+              region: school.region, // New field for region
+              logo: school.logo || null,
               websiteUrl: school.websiteUrl,
             },
           });
@@ -67,7 +66,6 @@ export const createBulkSchoolsService2 = async (
       })
     );
 
-    // Extract successful and failed creations
     const successfulSchools = results
       .filter((result) => result.status === 'fulfilled')
       .map(
@@ -81,14 +79,13 @@ export const createBulkSchoolsService2 = async (
         error: result.reason.message,
       }));
 
-    // Log action history if any schools were successfully created
     if (successfulSchools.length > 0) {
       try {
         await db.actionHistory.create({
           data: {
             action: 'Bulk Create',
             entity: 'School',
-            entityIds: successfulSchools.map(({ id, name }) => ({ id, name })), // ✅ Directly store array (No need for JSON.stringify)
+            entityIds: successfulSchools.map(({ id, name }) => ({ id, name })),
             userId: userId,
           },
         });
@@ -107,44 +104,36 @@ export const createBulkSchoolsService2 = async (
   }
 };
 
-// delete
 export const deleteBulkSchoolsService = async (
   schoolIds: string[],
   userId: string
 ) => {
   try {
-    // Fetch valid schools before deletion
     const schoolsToDelete = await db.school.findMany({
       where: { id: { in: schoolIds } },
       select: { id: true, name: true },
     });
 
-    // Extract valid school IDs
     const validSchoolIds = schoolsToDelete.map((school) => school.id);
-
-    // Identify invalid school IDs
     const invalidSchoolIds = schoolIds.filter(
       (id) => !validSchoolIds.includes(id)
     );
 
-    // Delete all courses associated with valid schools
     await db.course.deleteMany({
       where: { schoolId: { in: validSchoolIds } },
     });
 
-    // Delete valid schools
     const deletedSchools = await db.school.deleteMany({
       where: { id: { in: validSchoolIds } },
     });
 
-    // Log action history if any schools were deleted
     if (deletedSchools.count > 0) {
       await db.actionHistory.create({
         data: {
           action: 'Bulk Delete',
           entity: 'School',
-          entityIds: schoolsToDelete.map(({ id, name }) => ({ id, name })), // ✅ Directly store array (No need for JSON.stringify)
-          userId: userId, // Admin who performed the action
+          entityIds: schoolsToDelete.map(({ id, name }) => ({ id, name })),
+          userId: userId,
         },
       });
     }
@@ -152,8 +141,8 @@ export const deleteBulkSchoolsService = async (
     return {
       message: 'Bulk school deletion process completed',
       data: {
-        deleted: schoolsToDelete, // Successfully deleted schools with id & name
-        failed: invalidSchoolIds.length > 0 ? invalidSchoolIds : null, // Invalid school IDs
+        deleted: schoolsToDelete,
+        failed: invalidSchoolIds.length > 0 ? invalidSchoolIds : null,
       },
     };
   } catch (error: any) {
@@ -164,40 +153,32 @@ export const deleteBulkSchoolsService = async (
   }
 };
 
-// course
-
 export const deleteBulkCoursesService = async (
   courseIds: string[],
   userId: string
 ) => {
   try {
-    // Fetch valid courses before deletion
     const coursesToDelete = await db.course.findMany({
       where: { id: { in: courseIds } },
       select: { id: true, title: true },
     });
 
-    // Extract valid course IDs
     const validCourseIds = coursesToDelete.map((course) => course.id);
-
-    // Identify invalid course IDs
     const invalidCourseIds = courseIds.filter(
       (id) => !validCourseIds.includes(id)
     );
 
-    // Delete valid courses
     const deletedCourses = await db.course.deleteMany({
       where: { id: { in: validCourseIds } },
     });
 
-    // Log action history if any courses were deleted
     if (deletedCourses.count > 0) {
       await db.actionHistory.create({
         data: {
           action: 'Bulk Delete',
           entity: 'Course',
-          entityIds: coursesToDelete.map(({ id, title }) => ({ id, title })), // Properly formatted array of { id, title }
-          userId: userId, // Admin who performed the action
+          entityIds: coursesToDelete.map(({ id, title }) => ({ id, title })),
+          userId: userId,
         },
       });
     }
@@ -205,8 +186,8 @@ export const deleteBulkCoursesService = async (
     return {
       message: 'Bulk course deletion process completed',
       data: {
-        deleted: coursesToDelete, // Successfully deleted courses with id & title
-        failed: invalidCourseIds.length > 0 ? invalidCourseIds : null, // Invalid course IDs
+        deleted: coursesToDelete,
+        failed: invalidCourseIds.length > 0 ? invalidCourseIds : null,
       },
     };
   } catch (error: any) {
@@ -215,7 +196,6 @@ export const deleteBulkCoursesService = async (
   }
 };
 
-// Helper to process profile image
 const processProfileImage = async (profile: string): Promise<string | null> => {
   if (profile.startsWith('data:image/')) {
     const result: UploadApiResponse =
@@ -228,7 +208,6 @@ const processProfileImage = async (profile: string): Promise<string | null> => {
   }
 };
 
-// Helper to parse JSON fields safely
 const parseJsonField = (field: any): any[] => {
   try {
     return typeof field === 'string' ? JSON.parse(field) : field;
@@ -239,15 +218,12 @@ const parseJsonField = (field: any): any[] => {
 
 export const createBulkCoursesService = async (
   courses: CreateCSVCourseData[],
-  userId: string // Admin performing the action
+  userId: string
 ) => {
   try {
-    const errors: { courseTitle: string; error: string }[] = []; // ✅ Define errors array
+    const errors: { courseTitle: string; error: string }[] = [];
 
-    // Get unique schoolIds from the input courses
     const schoolIds = [...new Set(courses.map((course) => course.schoolId))];
-
-    // Fetch existing schools in one query
     const existingSchools = await db.school.findMany({
       where: { id: { in: schoolIds } },
       select: { id: true },
@@ -258,26 +234,21 @@ export const createBulkCoursesService = async (
     const results = await Promise.allSettled(
       courses.map(async (course) => {
         try {
-          // Validate school existence
           if (!existingSchoolIds.has(course.schoolId)) {
             throw new Error(`School with ID ${course.schoolId} does not exist`);
           }
 
-          // Process profile image
           let profileUrl: string | null = null;
           if (course.profile) {
             profileUrl = await processProfileImage(course.profile);
           }
 
-          // Parse stringified fields
           const requirements = parseJsonField(course.requirements);
           const careerOpportunities = parseJsonField(
             course.careerOpportunities
           );
 
           const courseId = nanoid(10);
-          // id: courseId, // Use generated short ID
-          // ✅ Fix: Explicitly connect course to an existing school
           const newCourse = await db.course.create({
             data: {
               id: courseId,
@@ -306,13 +277,12 @@ export const createBulkCoursesService = async (
           return { id: newCourse.id, title: newCourse.title };
         } catch (error: any) {
           console.error(`Error creating course "${course.title}":`, error);
-          errors.push({ courseTitle: course.title, error: error.message }); // ✅ Collect errors
-          return null; // ✅ Ensure rejected items return null
+          errors.push({ courseTitle: course.title, error: error.message });
+          return null;
         }
       })
     );
 
-    // ✅ Fix: Filter out null values before destructuring
     const createdCourses = results
       .filter(
         (
@@ -322,14 +292,13 @@ export const createBulkCoursesService = async (
       )
       .map((result) => result.value);
 
-    // ✅ Fix: Check if `createdCourses` is empty before logging action history
     if (createdCourses.length > 0) {
       await db.actionHistory.create({
         data: {
           action: 'Bulk Create',
           entity: 'Course',
-          entityIds: createdCourses.map(({ id, title }) => ({ id, title })), // ✅ Store as an array
-          userId: userId, // Admin who performed the action
+          entityIds: createdCourses.map(({ id, title }) => ({ id, title })),
+          userId: userId,
         },
       });
     }
@@ -338,7 +307,7 @@ export const createBulkCoursesService = async (
       message: 'Courses created successfully',
       data: {
         success: createdCourses,
-        errors: errors, // ✅ Include errors
+        errors: errors,
       },
     };
   } catch (error) {
@@ -347,22 +316,18 @@ export const createBulkCoursesService = async (
   }
 };
 
-// update bulk schools
-
 export const updateBulkSchoolsService = async (
   schools: UpdateSchoolData[],
-  userId: string // Admin performing the update
+  userId: string
 ) => {
   try {
     const results = await Promise.allSettled(
       schools.map(async (school) => {
         try {
-          // Validate that school ID exists
           if (!school.id) {
             throw new Error('Missing school ID');
           }
 
-          // Fetch the existing school record
           const existingSchool = await db.school.findUnique({
             where: { id: school.id },
           });
@@ -371,16 +336,15 @@ export const updateBulkSchoolsService = async (
             throw new Error(`School with ID ${school.id} not found`);
           }
 
-          // Construct update data by keeping existing values if undefined
           const updateData = {
             name: school.name ?? existingSchool.name,
             schoolType: school.schoolType ?? existingSchool.schoolType,
-            location: school.location ?? existingSchool.location,
+            country: school.country ?? existingSchool.country, // Updated from location to country
+            region: school.region ?? existingSchool.region, // New field for region
             websiteUrl: school.websiteUrl ?? existingSchool.websiteUrl,
             logo: school.logo ?? existingSchool.logo,
           };
 
-          // Check if there are actual updates
           if (JSON.stringify(updateData) === JSON.stringify(existingSchool)) {
             return {
               status: 'skipped',
@@ -390,7 +354,6 @@ export const updateBulkSchoolsService = async (
             };
           }
 
-          // Update school
           const updatedSchool = await db.school.update({
             where: { id: school.id },
             data: updateData,
@@ -411,7 +374,6 @@ export const updateBulkSchoolsService = async (
       })
     );
 
-    // Extract successful updates
     const updatedSchools = results
       .filter(
         (result) =>
@@ -419,7 +381,6 @@ export const updateBulkSchoolsService = async (
       )
       .map((result: any) => result.value.data);
 
-    // Extract failed updates
     const failedUpdates = results
       .filter(
         (result) =>
@@ -431,7 +392,6 @@ export const updateBulkSchoolsService = async (
         error: result.value.reason,
       }));
 
-    // Extract skipped updates
     const skippedUpdates = results
       .filter(
         (result) =>
@@ -443,14 +403,13 @@ export const updateBulkSchoolsService = async (
         message: result.value.message,
       }));
 
-    // Log action history if any schools were updated
     if (updatedSchools.length > 0) {
       await db.actionHistory.create({
         data: {
           action: 'Bulk Update',
           entity: 'School',
           entityIds: updatedSchools.map(({ id, name }) => ({ id, name })),
-          userId: userId, // Admin who performed the action
+          userId: userId,
         },
       });
     }
@@ -458,9 +417,9 @@ export const updateBulkSchoolsService = async (
     return {
       message: 'Bulk update process completed',
       data: {
-        updated: updatedSchools, // Successfully updated schools with id & name
-        failed: failedUpdates, // Failed updates with school id & error reason
-        skipped: skippedUpdates, // Schools that had no changes
+        updated: updatedSchools,
+        failed: failedUpdates,
+        skipped: skippedUpdates,
       },
     };
   } catch (error) {
@@ -483,18 +442,16 @@ const parseJsonFieldForUpdate = (field: any): string[] => {
 
 export const updateBulkCoursesService = async (
   courses: UpdateCourseData[],
-  userId: string // Admin performing the update
+  userId: string
 ) => {
   try {
     const results = await Promise.allSettled(
       courses.map(async (course) => {
         try {
-          // Validate that course ID exists
           if (!course.id) {
             throw new Error('Missing course ID');
           }
 
-          // Fetch existing course from DB
           const existingCourse = await db.course.findUnique({
             where: { id: course.id },
           });
@@ -503,13 +460,11 @@ export const updateBulkCoursesService = async (
             throw new Error(`Course with ID ${course.id} not found`);
           }
 
-          // Function to keep old value if new value is empty
           const keepOldIfEmpty = (newValue: any, oldValue: any) =>
             typeof newValue === 'string' && newValue.trim() !== ''
               ? newValue
               : oldValue;
 
-          // Convert JSON fields to array
           const parsedRequirements = parseJsonFieldForUpdate(
             course.requirements
           );
@@ -517,7 +472,6 @@ export const updateBulkCoursesService = async (
             course.careerOpportunities
           );
 
-          // Keep old values if empty array is provided
           const finalRequirements =
             parsedRequirements.length > 0
               ? parsedRequirements
@@ -527,7 +481,6 @@ export const updateBulkCoursesService = async (
               ? parsedCareerOpportunities
               : existingCourse.careerOpportunities;
 
-          // Construct update data while keeping existing values
           const updateData = {
             title: keepOldIfEmpty(course.title, existingCourse.title),
             profile: keepOldIfEmpty(course.profile, existingCourse.profile),
@@ -565,7 +518,6 @@ export const updateBulkCoursesService = async (
             ),
           };
 
-          // Prevent unnecessary updates if no change is detected
           if (JSON.stringify(updateData) === JSON.stringify(existingCourse)) {
             return {
               status: 'skipped',
@@ -575,7 +527,6 @@ export const updateBulkCoursesService = async (
             };
           }
 
-          // Update the course
           const updatedCourse = await db.course.update({
             where: { id: course.id },
             data: updateData,
@@ -596,7 +547,6 @@ export const updateBulkCoursesService = async (
       })
     );
 
-    // Extract successfully updated courses
     const updatedCourses = results
       .filter(
         (result) =>
@@ -604,7 +554,6 @@ export const updateBulkCoursesService = async (
       )
       .map((result: any) => result.value.data);
 
-    // Extract failed updates
     const failedUpdates = results
       .filter(
         (result) =>
@@ -616,7 +565,6 @@ export const updateBulkCoursesService = async (
         error: result.value.reason,
       }));
 
-    // Extract skipped updates
     const skippedUpdates = results
       .filter(
         (result) =>
@@ -628,14 +576,13 @@ export const updateBulkCoursesService = async (
         message: result.value.message,
       }));
 
-    // Log action history if any courses were updated
     if (updatedCourses.length > 0) {
       await db.actionHistory.create({
         data: {
           action: 'Bulk Update',
           entity: 'Course',
-          entityIds: updatedCourses.map(({ id, title }) => ({ id, title })), // Correctly formatted array of { id, title }
-          userId: userId, // Admin who performed the action
+          entityIds: updatedCourses.map(({ id, title }) => ({ id, title })),
+          userId: userId,
         },
       });
     }
@@ -643,9 +590,9 @@ export const updateBulkCoursesService = async (
     return {
       message: 'Bulk update process completed',
       data: {
-        updated: updatedCourses, // Successfully updated courses with id & title
-        failed: failedUpdates, // Failed updates with course id & error reason
-        skipped: skippedUpdates, // Courses that had no changes
+        updated: updatedCourses,
+        failed: failedUpdates,
+        skipped: skippedUpdates,
       },
     };
   } catch (error) {
@@ -654,13 +601,12 @@ export const updateBulkCoursesService = async (
   }
 };
 
-//  download files
-
 type SchoolReportData = {
   id: string;
   name: string;
   schoolType: string;
-  location: string;
+  country: string; // Updated from location to country
+  region: string; // New field for region
   websiteUrl: string;
   logo: string | null;
   createdAt: Date;
@@ -694,18 +640,17 @@ export const generateSchoolCourseReport = async (
   format: string,
   startDate?: string,
   endDate?: string,
-  id?: string, // New: Filter by ID (school or course)
-  name?: string, // New: Filter schools by name
-  title?: string, // New: Filter courses by title
-  location?: string, // New: Filter schools by location
-  schoolId?: string // New: Filter courses by schoolId
+  id?: string,
+  name?: string,
+  title?: string,
+  country?: string,
+  region?: string,
+  schoolId?: string
 ): Promise<string> => {
   try {
-    // Convert date strings to Date objects
     const start = startDate ? new Date(startDate) : undefined;
     const end = endDate ? new Date(endDate) : undefined;
 
-    // Log actual date range and new filters used for filtering
     console.log('Received filters:', {
       entity,
       format,
@@ -714,17 +659,16 @@ export const generateSchoolCourseReport = async (
       id,
       name,
       title,
-      location,
+      country,
+      region,
       schoolId,
     });
 
-    // Ensure downloads directory exists
     const downloadsDir = path.join(__dirname, '../../downloads');
     if (!fs.existsSync(downloadsDir)) {
       fs.mkdirSync(downloadsDir, { recursive: true });
     }
 
-    // Define file path
     const timestamp = Date.now();
     const fileName = `${entity}_report_${timestamp}.${format}`;
     const filePath = path.join(downloadsDir, fileName);
@@ -734,8 +678,8 @@ export const generateSchoolCourseReport = async (
       if (start && end) where.createdAt = { gte: start, lte: end };
       if (id) where.id = id;
       if (name) where.name = { contains: name, mode: 'insensitive' };
-      if (location)
-        where.location = { contains: location, mode: 'insensitive' };
+      if (country) where.country = { contains: country, mode: 'insensitive' };
+      if (region) where.region = { contains: region, mode: 'insensitive' };
 
       const schools = await db.school.findMany({
         where,
@@ -743,7 +687,8 @@ export const generateSchoolCourseReport = async (
           id: true,
           name: true,
           schoolType: true,
-          location: true,
+          country: true, // Updated from location to country
+          region: true, // New field for region
           websiteUrl: true,
           logo: true,
           createdAt: true,
@@ -758,7 +703,8 @@ export const generateSchoolCourseReport = async (
           endDate,
           id,
           name,
-          location,
+          country,
+          region,
         });
         throw new Error('No data available for the given filters.');
       }
@@ -777,15 +723,9 @@ export const generateSchoolCourseReport = async (
     } else if (entity === 'course') {
       const where: any = {};
       if (start && end) where.createdAt = { gte: start, lte: end };
-      if (id) {
-        where.id = { equals: id }; // Ensure exact match
-      }
-      if (title) {
-        where.title = { contains: title, mode: 'insensitive' }; // Partial match
-      }
-      if (schoolId) {
-        where.schoolId = { equals: schoolId }; // Ensure exact match
-      }
+      if (id) where.id = { equals: id };
+      if (title) where.title = { contains: title, mode: 'insensitive' };
+      if (schoolId) where.schoolId = { equals: schoolId };
 
       const courses = await db.course.findMany({
         where,

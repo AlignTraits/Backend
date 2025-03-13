@@ -1,6 +1,6 @@
+// src/controllers/userController.ts
 import dotenv from 'dotenv';
-import { getUserById, updateUser } from '../models/userModel';
-import { NextFunction, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import MessageResponse from '../types/messageResponse';
 import ErrorResponse from '../types/errorResponse';
 import {
@@ -8,18 +8,17 @@ import {
   getUserDataService,
   updateUserProfileService,
 } from '../services/userServices';
-import { SessionRequest } from '../types/sessionRequest';
 import { uploadProfilePicService } from '../services/uploadServices';
 
 dotenv.config();
 
 export const getUserData = async (
-  req: SessionRequest,
+  req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) => {
   try {
-    const result = await getUserDataService(req.user?.id ?? '');
+    const result = await getUserDataService((req.user as any)?.id ?? '');
     res.status(result.status).json(result);
   } catch (error) {
     next(error);
@@ -27,9 +26,9 @@ export const getUserData = async (
 };
 
 export const updateUserProfile = async (
-  req: SessionRequest,
+  req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) => {
   try {
     const {
@@ -44,7 +43,7 @@ export const updateUserProfile = async (
         ...filteredData
       },
     } = req.body; // use join to filter out unwanted data
-    const userId = req.body.userId ?? req.user?.id ?? '';
+    const userId = req.body.userId ?? (req.user as any)?.id ?? '';
     const result = await updateUserProfileService(userId, filteredData);
     res.status(result.status).json(result);
   } catch (error) {
@@ -53,13 +52,13 @@ export const updateUserProfile = async (
 };
 
 export const updateUserPassword = async (
-  req: SessionRequest,
+  req: Request,
   res: Response<MessageResponse | ErrorResponse>,
-  next: NextFunction,
+  next: NextFunction
 ) => {
   try {
     const { newPassword } = req.body;
-    const userId = req.user?.id ?? '';
+    const userId = (req.user as any)?.id ?? '';
     const result = await updatePasswordService(userId, newPassword);
     res.status(result.status).json(result);
   } catch (error) {
@@ -68,12 +67,12 @@ export const updateUserPassword = async (
 };
 
 export const uploadUserPicture = async (
-  req: SessionRequest,
+  req: Request,
   res: Response<MessageResponse | ErrorResponse>,
-  next: NextFunction,
+  next: NextFunction
 ) => {
   try {
-    const userId = req?.user?.id ?? '';
+    const userId = (req.user as any)?.id ?? '';
     const result = await uploadProfilePicService(userId, req.file);
     res.status(result.status).json(result);
   } catch (error) {

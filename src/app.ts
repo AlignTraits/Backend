@@ -1,6 +1,7 @@
 import express from 'express';
 import morgan from 'morgan';
 import helmet from 'helmet';
+import passport from 'passport';
 import cors from 'cors';
 
 import * as middlewares from './middlewares';
@@ -16,6 +17,7 @@ app.use(morgan('dev'));
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
+app.use(passport.initialize()); // Initialize Passport
 
 // Serve static files from the downloads directory
 app.use('/downloads', express.static(path.join(__dirname, '../downloads')));

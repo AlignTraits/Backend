@@ -3,7 +3,12 @@ import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 import { z } from 'zod';
 import jwt from 'jsonwebtoken';
-import { createUser, getUserByEmail, updateUser } from '../models/userModel';
+import {
+  createUser,
+  getUserByEmail,
+  getUserById,
+  updateUser,
+} from '../models/userModel';
 import {
   getEmailVerificationTokenByEmail,
   deleteEmailVerificationToken,

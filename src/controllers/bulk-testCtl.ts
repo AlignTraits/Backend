@@ -46,7 +46,8 @@ export const createBulkSchoolsController = async (
       (school) => ({
         name: school.name,
         schoolType: school.schoolType,
-        location: school.location,
+        country: school.country, // Updated from location to country
+        region: school.region, // New field for region
         websiteUrl: school.websiteUrl,
         logo: school.logo || undefined, // Use logo URL if provided
       })
@@ -68,7 +69,6 @@ export const createBulkSchoolsController = async (
   }
 };
 
-// course
 export const createBulkCoursesController = async (
   req: Request,
   res: Response
@@ -112,7 +112,6 @@ export const createBulkCoursesController = async (
   }
 };
 
-// delete
 export const deleteBulkSchoolsController = async (
   req: Request,
   res: Response
@@ -125,7 +124,6 @@ export const deleteBulkSchoolsController = async (
     }
 
     const userId = (req as any)?.user?.id ?? '';
-    // Call the service to delete schools
     const deletedSchools = await deleteBulkSchoolsService(schoolIds, userId);
 
     res.status(200).json({
@@ -166,8 +164,6 @@ export const deleteBulkCoursesController = async (
   }
 };
 
-// update
-
 export const updateBulkSchoolsController = async (
   req: Request,
   res: Response
@@ -190,7 +186,6 @@ export const updateBulkSchoolsController = async (
       return res.status(400).send({ error: 'Invalid CSV data' });
     }
 
-    // Explicitly cast parsed data to the correct type
     const schoolsToUpdate: UpdateSchoolData[] =
       parsedData.data as UpdateSchoolData[];
 
@@ -254,7 +249,6 @@ export const updateBulkCoursesController = async (
   }
 };
 
-// Download csv Data
 export const downloadSchoolCourseDataController = async (
   req: Request,
   res: Response
@@ -265,31 +259,28 @@ export const downloadSchoolCourseDataController = async (
       entity,
       startDate,
       endDate,
-      id, // New
-      name, // New
-      title, // New
-      location, // New
-      schoolId, // New
+      id,
+      name,
+      title,
+      country, // Updated from location to country
+      region, // New field for region
+      schoolId,
     } = req.query;
 
-    // Log raw query for debugging
     console.log('Raw query:', req.query);
 
-    // Validate format
     if (!['csv', 'excel'].includes(format as string)) {
       return res
         .status(400)
         .json({ message: 'Invalid format. Choose CSV or Excel.' });
     }
 
-    // Validate entity type
     if (!['school', 'course'].includes(entity as string)) {
       return res
         .status(400)
         .json({ message: 'Invalid entity type. Choose school or course.' });
     }
 
-    // Call the service function to generate the file
     const fileUrl = await generateSchoolCourseReport(
       entity as string,
       format as string,
@@ -298,7 +289,8 @@ export const downloadSchoolCourseDataController = async (
       id as string,
       name as string,
       title as string,
-      location as string,
+      country as string, // Updated from location to country
+      region as string, // New field for region
       schoolId as string
     );
 

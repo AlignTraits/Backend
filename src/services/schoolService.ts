@@ -33,12 +33,12 @@ export enum Currency {
 interface CreateSchoolData {
   name: string;
   schoolType: SchoolType;
-  location: string;
+  region: string; // Updated from location to region
+  country: string; // New field
   websiteUrl: string;
   logo: Express.Multer.File | undefined;
 }
 
-// Course interface
 // Course interface
 interface CreateCourseData {
   id?: string;
@@ -93,7 +93,8 @@ const uploadToCloudinary = async ({
 export const createSchoolService = async ({
   name,
   schoolType,
-  location,
+  region,
+  country,
   websiteUrl,
   logo,
   userId,
@@ -142,14 +143,14 @@ export const createSchoolService = async ({
     }
 
     const schoolId = nanoid(10);
-    // id: schoolId,
     // Create school
     const newSchool = await db.school.create({
       data: {
         id: schoolId,
         name,
         schoolType,
-        location,
+        region,
+        country,
         websiteUrl,
         logo: logoUrl,
       },
@@ -160,8 +161,8 @@ export const createSchoolService = async ({
       data: {
         action: 'Create',
         entity: 'School',
-        entityIds: [{ id: newSchool.id, name: newSchool.name }], // Stores an array of { id, name }
-        userId: userId, // Admin who performed the action
+        entityIds: [{ id: newSchool.id, name: newSchool.name }],
+        userId: userId,
       },
     });
 
@@ -219,7 +220,7 @@ export const createCourseService = async ({
   programLevel,
   careerOpportunities,
   loanInformation,
-  userId, // Capture user ID
+  userId,
 }: CreateCourseData & { userId: string }) => {
   let profileUrl: string;
 
@@ -275,7 +276,7 @@ export const createCourseService = async ({
     // Create course
     const newCourse = await db.course.create({
       data: {
-        id: courseId, // Use generated short ID
+        id: courseId,
         title,
         profile: profileUrl,
         schoolId,
@@ -302,8 +303,8 @@ export const createCourseService = async ({
       data: {
         action: 'Create',
         entity: 'Course',
-        entityIds: [{ id: newCourse.id, title: newCourse.title }], // Stores an array of { id, title }
-        userId: userId, // Admin who performed the action
+        entityIds: [{ id: newCourse.id, title: newCourse.title }],
+        userId: userId,
       },
     });
 
@@ -345,7 +346,7 @@ export const updateCourseService = async ({
   programLevel,
   careerOpportunities,
   loanInformation,
-  userId, // Capture user ID
+  userId,
 }: CreateCourseData & { userId: string }) => {
   let profileUrl: string | undefined;
 
@@ -398,6 +399,7 @@ export const updateCourseService = async ({
       data: {
         title: title || existingCourse.title,
         profile: profileUrl || existingCourse.profile,
+        schoolId: schoolId || existingCourse.schoolId,
         scholarship: scholarship || existingCourse.scholarship,
         duration: duration || existingCourse.duration,
         durationPeriod: durationPeriod || existingCourse.durationPeriod,
@@ -425,8 +427,8 @@ export const updateCourseService = async ({
       data: {
         action: 'Update',
         entity: 'Course',
-        entityIds: [{ id: updatedCourse.id, title: updatedCourse.title }], // Stores an array of { id, title }
-        userId: userId, // Admin who performed the update
+        entityIds: [{ id: updatedCourse.id, title: updatedCourse.title }],
+        userId: userId,
       },
     });
 
@@ -448,7 +450,6 @@ export const updateCourseService = async ({
   }
 };
 
-//
 export const deleteSchoolsService = async (
   schoolId: string,
   userId: string
@@ -475,7 +476,7 @@ export const deleteSchoolsService = async (
       data: {
         action: 'Delete',
         entity: 'School',
-        entityIds: [{ id: deletedSchool.id, name: deletedSchool.name }], // Store school details
+        entityIds: [{ id: deletedSchool.id, name: deletedSchool.name }],
         userId: userId,
       },
     });
@@ -508,24 +509,25 @@ export const deleteSchoolsService = async (
   }
 };
 
-//
-export const searchSchoolsService = async (location: string) => {
+export const searchSchoolsService = async (
+  country: string,
+  region?: string
+) => {
   return db.school.findMany({
     where: {
-      location: {
-        contains: `/${location}`, // This will match any location containing "/Country"
-      },
+      ...(country && { country: { contains: country, mode: 'insensitive' } }),
+      ...(region && { region: { contains: region, mode: 'insensitive' } }),
     },
     include: { courses: true },
   });
 };
 
-// new
 interface UpdateSchoolData {
   id: string;
   name?: string;
   schoolType?: SchoolType;
-  location?: string;
+  region?: string;
+  country?: string;
   websiteUrl?: string;
   logo?: Express.Multer.File | null | undefined;
 }
@@ -534,10 +536,11 @@ export const updateSchoolService = async ({
   id,
   name,
   schoolType,
-  location,
+  region,
+  country,
   logo,
   websiteUrl,
-  userId, // Admin who performed the update
+  userId,
 }: UpdateSchoolData & { userId: string }) => {
   let logoUrl: string | undefined;
 
@@ -579,7 +582,8 @@ export const updateSchoolService = async ({
       data: {
         name: name || existingSchool.name,
         schoolType: schoolType || existingSchool.schoolType,
-        location: location || existingSchool.location,
+        region: region || existingSchool.region,
+        country: country || existingSchool.country,
         websiteUrl: websiteUrl || existingSchool.websiteUrl,
         logo: logoUrl || existingSchool.logo,
       },
@@ -669,13 +673,11 @@ export const deleteCourseService = async (courseId: string, userId: string) => {
   }
 };
 
-// Get a single course by ID export
 export const getCourseByIdService = async (id: string) => {
   try {
     const course = await db.course.findUnique({
       where: { id },
-      include: { university: true },
-      // Include the associated university
+      include: { university: true }, // Assuming 'university' is a typo and should be 'school'
     });
     return course;
   } catch (e) {
@@ -687,7 +689,7 @@ export const getAllCoursesService = async () => {
   try {
     const courses = await db.course.findMany({
       include: {
-        university: true,
+        university: true, // Assuming 'university' is a typo and should be 'school'
       },
     });
     return courses;
@@ -695,6 +697,7 @@ export const getAllCoursesService = async () => {
     throw error;
   }
 };
+
 export const getAllHistoryService = async () => {
   try {
     const courses = await db.actionHistory.findMany({
@@ -708,7 +711,7 @@ export const getAllHistoryService = async () => {
   }
 };
 
-// Validation schema for dashboard filters (exportFormat removed)
+// Validation schema for dashboard filters
 const dashboardFilterSchema = z.object({
   startDate: z
     .string()
@@ -718,16 +721,12 @@ const dashboardFilterSchema = z.object({
     .string()
     .optional()
     .transform((val) => (val ? new Date(val) : undefined)),
-  location: z.string().optional(),
+  country: z.string().optional(), // Updated from location to country
+  region: z.string().optional(), // New field for region
 });
 
-export const getAdminDashboardService = async (
-  // adminId: string,
-  filters: any
-) => {
+export const getAdminDashboardService = async (filters: any) => {
   try {
-    // Check admin permissions (allow all admins)
-
     const parsedFilters = dashboardFilterSchema.parse(filters);
 
     // Build where clauses for filtering
@@ -741,35 +740,21 @@ export const getAdminDashboardService = async (
           }
         : {};
     const schoolFilter: Prisma.SchoolWhereInput = {
-      ...(parsedFilters.location
-        ? {
-            location: {
-              contains: parsedFilters.location,
-              mode: 'insensitive',
-            } as Prisma.StringFilter<'School'>,
-          }
+      ...(parsedFilters.country
+        ? { country: { contains: parsedFilters.country, mode: 'insensitive' } }
+        : {}),
+      ...(parsedFilters.region
+        ? { region: { contains: parsedFilters.region, mode: 'insensitive' } }
         : {}),
       ...dateFilter,
     };
-    // const schoolFilter = {
-    //   ...(parsedFilters.location
-    //     ? {
-    //         location: { contains: parsedFilters.location, mode: 'insensitive' },
-    //       }
-    //     : {}),
-    //   ...dateFilter,
-    // };
 
     // Metrics
     const totalSchools = await db.school.count({ where: schoolFilter });
     const totalCourses = await db.course.count({ where: dateFilter });
-
-    // Proxy for students (using Users with role USER as a placeholder)
     const totalStudents = await db.user.count({
       where: { role: 'USER', ...dateFilter },
     });
-
-    // Placeholder for loan applications (mocked as course count per school)
     const totalLoanApplications = await db.course.count({ where: dateFilter }); // Adjust if you add a LoanApplication model
 
     // Top Schools by Course Count (proxy for loan applications)
@@ -784,9 +769,12 @@ export const getAdminDashboardService = async (
       topCourseSchools.map(async (course) => {
         const school = await db.school.findUnique({
           where: { id: course.schoolId },
-          select: { name: true, location: true },
+          select: { name: true, country: true, region: true },
         });
-        return { ...school, courseCount: course._count.schoolId };
+        return {
+          ...school,
+          courseCount: course._count.schoolId,
+        };
       })
     );
 
@@ -800,32 +788,44 @@ export const getAdminDashboardService = async (
       coursesByLocation.map(async (course) => {
         const school = await db.school.findUnique({
           where: { id: course.schoolId },
-          select: { location: true },
+          select: { country: true, region: true },
         });
-        return { location: school?.location, count: course._count.schoolId };
+        return {
+          region: school?.region || 'Unknown',
+          country: school?.country || 'Unknown',
+          count: course._count.schoolId,
+        };
       })
     ).then((results) =>
       results.reduce(
         (acc, curr) => {
-          acc[curr.location || 'Unknown'] =
-            (acc[curr.location || 'Unknown'] || 0) + curr.count;
+          const existing = acc.find(
+            (item) =>
+              item.region === curr.region && item.country === curr.country
+          );
+          if (existing) {
+            existing.count += curr.count;
+          } else {
+            acc.push(curr);
+          }
           return acc;
         },
-        {} as Record<string, number>
+        [] as { region: string; country: string; count: number }[]
       )
     );
 
     const dashboardData = {
       totalSchools,
       totalCourses,
-      totalStudents, // Proxy metric
-      totalLoanApplications, // Proxy metric
+      totalStudents,
+      totalLoanApplications,
       topLoanSchools: topSchoolsWithDetails.map((s) => ({
         name: s.name,
-        location: s.location,
+        country: s.country,
+        region: s.region,
         count: s.courseCount,
       })),
-      loansByLocation: locationBreakdown, // Proxy metric
+      loanApplicationsByCountryAndRegion: locationBreakdown,
     };
 
     return {

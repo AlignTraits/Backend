@@ -1,5 +1,5 @@
-import { Application, NextFunction, Request, Response } from 'express';
-import MessageResponse from '../types/messageResponse';
+// src/controllers/authController.ts
+import { NextFunction, Request, Response } from 'express';
 import {
   loginService,
   registerService,
@@ -17,8 +17,6 @@ import {
   getAdminDataService,
   getUserDataService,
 } from '../services/userServices';
-import { SessionRequest } from '../types/sessionRequest';
-// import ErrorResponse from '../types/errorResponse';
 
 const loginAdmin = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -56,12 +54,12 @@ const AddAdminPassword = async (
 };
 
 const getAdmindetails = async (
-  req: SessionRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const result = await getAdminDataService(req.user?.id ?? '');
+    const result = await getAdminDataService((req.user as any)?.id ?? '');
     res.status(result.status).json(result);
   } catch (error) {
     next(error);
@@ -111,7 +109,6 @@ const requestReset = async (
   try {
     const { email } = req.body;
     console.log(email);
-
     const result = await requestResetService(email);
     res.status(result.status).json(result);
   } catch (error) {
@@ -134,13 +131,13 @@ const resetPassword = async (
 
 // New controller: Update Admin Profile
 const updateAdminProfile = async (
-  req: SessionRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
     const result = await updateAdminProfileService(
-      req.user?.id ?? '',
+      (req.user as any)?.id ?? '',
       req.body
     );
     res.status(result.status).json(result);
@@ -151,13 +148,13 @@ const updateAdminProfile = async (
 
 // New controller: Update Admin Password
 const updateAdminPassword = async (
-  req: SessionRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
     const result = await updateAdminPasswordService(
-      req.user?.id ?? '',
+      (req.user as any)?.id ?? '',
       req.body
     );
     res.status(result.status).json(result);

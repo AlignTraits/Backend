@@ -182,7 +182,8 @@ model School {
   id                     String          @id @default(dbgenerated("substring(gen_random_uuid()::text, 1, 10)"))
   name                   String
   schoolType             SchoolType
-  location               String
+  country                String    // Replacing location with country
+  region                 String 
   logo                   String?
   websiteUrl             String
   courses                Course[]

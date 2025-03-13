@@ -1,26 +1,27 @@
-import { Application, NextFunction, Request, Response } from 'express';
+// src/controllers/authController.ts (super admin profile management)
+import { NextFunction, Request, Response } from 'express';
 import MessageResponse from '../types/messageResponse';
-
-import { SessionRequest } from '../types/sessionRequest';
 import {
   createAdminProfileService,
   deleteAdminProfileService,
   updateAdminProfileService,
 } from '../services/superAdminServices';
-// import ErrorResponse from '../types/errorResponse';
-// / New controllers for Admin Profile Management
+
 const createAdminProfile = async (
-  req: SessionRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    if (!req.user?.id) {
+    if (!(req.user as any)?.id) {
       return res
         .status(401)
         .json({ message: 'Unauthorized: User ID not found' });
     }
-    const result = await createAdminProfileService(req.user.id, req.body);
+    const result = await createAdminProfileService(
+      (req.user as any).id,
+      req.body
+    );
     res.status(result.status).json(result);
   } catch (error) {
     next(error);
@@ -28,18 +29,18 @@ const createAdminProfile = async (
 };
 
 const updateAdminProfile = async (
-  req: SessionRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    if (!req.user?.id) {
+    if (!(req.user as any)?.id) {
       return res
         .status(401)
         .json({ message: 'Unauthorized: User ID not found' });
     }
     const result = await updateAdminProfileService(
-      req.user.id,
+      (req.user as any).id,
       req.params.id,
       req.body
     );
@@ -50,17 +51,20 @@ const updateAdminProfile = async (
 };
 
 const deleteAdminProfile = async (
-  req: SessionRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    if (!req.user?.id) {
+    if (!(req.user as any)?.id) {
       return res
         .status(401)
         .json({ message: 'Unauthorized: User ID not found' });
     }
-    const result = await deleteAdminProfileService(req.user.id, req.params.id);
+    const result = await deleteAdminProfileService(
+      (req.user as any).id,
+      req.params.id
+    );
     res.status(result.status).json(result);
   } catch (error) {
     next(error);
@@ -68,7 +72,7 @@ const deleteAdminProfile = async (
 };
 
 export = {
-  createAdminProfile, // New
-  updateAdminProfile, // New
-  deleteAdminProfile, // New
+  createAdminProfile,
+  updateAdminProfile,
+  deleteAdminProfile,
 };

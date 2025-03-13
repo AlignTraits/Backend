@@ -9,10 +9,37 @@
     "noImplicitAny": true,
     "strict": true,
     "skipLibCheck": true,
+    "rootDir": ".", // Ensures it includes all source files from the root directory
+    "typeRoots": ["./src/types", "./node_modules/@types"],
+    "types": ["node", "express"]
   },
   "include": [
-    "./*.js",
     "src/**/*.ts",
     "test/**/*.ts",
+    ".prisma/client/**/*"
   ],
+  "exclude": [
+    "node_modules",
+    "dist" // Exclude output directory to avoid conflicts
+  ]
 }
+
+
+// {
+//   "compilerOptions": {
+//     "outDir": "dist",
+//     "sourceMap": true,
+//     "target": "esnext",
+//     "module": "commonjs",
+//     "esModuleInterop": true,
+//     "forceConsistentCasingInFileNames": true,
+//     "noImplicitAny": true,
+//     "strict": true,
+//     "skipLibCheck": true,
+//   },
+//   "include": [
+//     "./*.js",
+//     "src/**/*.ts",
+//     "test/**/*.ts",
+//   ],
+// }

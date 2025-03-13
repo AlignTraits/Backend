@@ -8,6 +8,7 @@ import schoolRoutes from '../routes/schoolRoutes';
 import bulkRoutes from '../routes/bulk-test-route';
 import superAdminRoutes from '../routes/superAdminRoute';
 import WaitlistRoutes from '../routes/waitistRoutes';
+import GoogleRoutes from '../routes/googleRoute';
 
 const router = express.Router();
 
@@ -25,5 +26,6 @@ router.use('/bulk', bulkRoutes);
 router.use('/super-admin', superAdminRoutes);
 router.use('/survey', surveyRoutes);
 router.use('/waitlist', WaitlistRoutes);
+router.use('/google-auth', GoogleRoutes);
 
 export default router;

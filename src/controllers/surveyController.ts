@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import * as surveyModel from '../models/surveyModel';
-import { SessionRequest } from '../types/sessionRequest';
+// import { SessionRequest } from '../types/sessionRequest';
 import {
   createAnswerOptionService,
   createQuestionService,
@@ -12,7 +12,8 @@ import {
 
 // Create a new AnswerOption
 export const createAnswerOption = async (
-  req: SessionRequest,
+  // req: SessionRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ) => {
@@ -26,7 +27,8 @@ export const createAnswerOption = async (
 
 // Get all AnswerOptions
 export const getAnswerOptions = async (
-  req: SessionRequest,
+  // req: SessionRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ) => {
@@ -40,7 +42,8 @@ export const getAnswerOptions = async (
 
 // Create a new UserResponse
 export const createUserResponse = async (
-  req: SessionRequest,
+  // req: SessionRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ) => {
@@ -54,7 +57,8 @@ export const createUserResponse = async (
 
 // Get all UserResponses
 export const getUserResponses = async (
-  req: SessionRequest,
+  // req: SessionRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ) => {
@@ -68,7 +72,8 @@ export const getUserResponses = async (
 
 // Create a new Question
 export const createQuestion = async (
-  req: SessionRequest,
+  // req: SessionRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ) => {
@@ -83,7 +88,8 @@ export const createQuestion = async (
 
 // Get all Questions
 export const getQuestions = async (
-  req: SessionRequest,
+  // req: SessionRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ) => {

@@ -3,9 +3,11 @@ import { adminLoginRequired, preventLoggedUser } from '../middlewares/auth';
 import authController from '../controllers/authController';
 import MessageResponse from '../types/messageResponse';
 import { NextFunction, Request, Response } from 'express';
+import passport from 'passport'; // Add Passport import for Google OAuth
 
 const router = express.Router();
 
+// Existing routes (unchanged)
 router.post<{}, MessageResponse>(
   '/register',
   preventLoggedUser,
@@ -36,8 +38,7 @@ router.put<{}, MessageResponse>(
   authController.resetPassword
 );
 
-// admin login route section
-
+// Admin login route section
 router.post<{}, MessageResponse>(
   '/admin/login',
   preventLoggedUser,

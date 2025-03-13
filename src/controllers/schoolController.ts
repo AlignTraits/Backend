@@ -16,12 +16,13 @@ import {
   getAllHistoryService,
   getAdminDashboardService,
 } from '../services/schoolService';
-import { SessionRequest } from '../types/sessionRequest';
+// import { SessionRequest } from '../types/sessionRequest';
 
 interface CreateCSVSchoolData {
   name: string;
   schoolType: string;
-  location: string;
+  region: string;
+  country: string;
   websiteUrl: string;
 }
 
@@ -29,7 +30,7 @@ interface CreateCSVSchoolData {
 
 export const createSchoolController = async (req: Request, res: Response) => {
   try {
-    const { name, schoolType, location, websiteUrl } = req.body;
+    const { name, schoolType, region, country, websiteUrl } = req.body;
     const logo = req.file;
 
     const userId = (req as any)?.user?.id ?? '';
@@ -37,7 +38,8 @@ export const createSchoolController = async (req: Request, res: Response) => {
       name,
       schoolType,
       logo,
-      location,
+      region,
+      country,
       websiteUrl,
       userId,
     });
@@ -212,7 +214,7 @@ export const deleteCourseController = async (req: Request, res: Response) => {
 export const updateSchoolController = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, schoolType, location, websiteUrl } = req.body;
+    const { name, schoolType, region, country, websiteUrl } = req.body;
     const logo = req.file;
 
     const userId = (req as any)?.user?.id ?? '';
@@ -222,7 +224,8 @@ export const updateSchoolController = async (req: Request, res: Response) => {
       name,
       schoolType,
       logo,
-      location,
+      country,
+      region,
       websiteUrl,
     });
     res.status(200).send(updatedSchool);
@@ -311,7 +314,8 @@ export const getAllHistoryController = async (req: Request, res: Response) => {
 
 // New controller for Admin Dashboard
 export const getAdminDashboard = async (
-  req: SessionRequest,
+  // req: SessionRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ) => {
