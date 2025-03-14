@@ -115,33 +115,57 @@ export interface newCreateSchoolData {
   logo?: string; // Make logo optional and accept URL or file
 }
 
-// interface UpdateSchoolData {
-//     id: string;
-//     name?: string;
-//     schoolType?: SchoolType;
-//     location?: string;
-//     websiteUrl?: string;
-//     logo?: string;
-//   }
+// New types for the dashboard
+export interface CourseCardData {
+  id: string;
+  title: string;
+  schoolName: string;
+  country: string;
+  region: string;
+  price: number;
+  currency: string;
+  scholarship: string;
+  ratings: number;
+  programLevel: string; // Keeping programLevel for display
+}
 
-// interface UpdateCourseData {
-//     id: string;
-//     title?: string;
-//     schoolId?: string;
-//     scholarship?: string;
-//     duration?: number;
-//     durationPeriod?: DurationPeriod;
-//     price?: number;
-//     currency?: Currency;
-//     acceptanceFee?: number;
-//     estimatedLivingCost?: number;
-//     acceptanceFeeCurrency?: Currency;
-//     description?: string;
-//     requirements?: string[];
-//     courseInformation?: string;
-//     courseWebsiteUrl?: string;
-//     programLevel?: string;
-//     careerOpportunities?: string[];
-//     loanInformation?: string;
-//     profile?: any;
-//   }
+export interface CourseDetailData {
+  id: string;
+  title: string;
+  profile: string | null;
+  school: {
+    id: string;
+    name: string;
+    country: string;
+    region: string;
+    logo: string | null;
+    websiteUrl: string;
+  };
+  scholarship: string;
+  duration: number;
+  durationPeriod: string;
+  price: number;
+  currency: string;
+  acceptanceFee: number;
+  acceptanceFeeCurrency: string;
+  description: string;
+  requirements: string[];
+  ratings: number;
+  courseInformation: string;
+  courseWebsiteUrl: string;
+  programLevel: string;
+  careerOpportunities: string[];
+  loanInformation: string;
+  estimatedLivingCost: number;
+}
+
+export interface FilterOptions {
+  scholarship?: string; // e.g., "Full Scholarship"
+  country?: string;
+  region?: string;
+  programLevel?: string; // e.g., "IT & Computer Science"
+  fieldOfStudy?: string; // Added as a query parameter (e.g., "STEM")
+  keyword?: string; // Search keyword for title or school name
+  page?: number;
+  limit?: number;
+}
