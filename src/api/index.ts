@@ -10,6 +10,7 @@ import superAdminRoutes from '../routes/superAdminRoute';
 import WaitlistRoutes from '../routes/waitistRoutes';
 import GoogleRoutes from '../routes/googleRoute';
 import DashboardRoutes from '../routes/dashboardRoutes';
+import SkillRoutes from '../routes/skillRoutes';
 
 const router = express.Router();
 
@@ -29,5 +30,6 @@ router.use('/survey', surveyRoutes);
 router.use('/waitlist', WaitlistRoutes);
 router.use('/google-auth', GoogleRoutes);
 router.use('/dashboard', DashboardRoutes);
+router.use('/skill', SkillRoutes);
 
 export default router;

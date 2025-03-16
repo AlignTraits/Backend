@@ -1,3 +1,4 @@
+// models/userModel.ts
 import { db } from '../config/db';
 import { Prisma } from '@prisma/client';
 import { DefaultArgs } from '@prisma/client/runtime/library';
@@ -13,13 +14,20 @@ const getUserByEmail = async (email: string) => {
 };
 
 const getUserById = async (userId: string) => {
-  return db.user.findUnique({ where: { id: userId } });
-  // console.log(userId);
+  return db.user.findUnique({
+    where: { id: userId },
+    include: {
+      skills: true, // Include the skills relation
+    },
+  });
 };
 
 const safeGetUserById = async (email: string) => {
   return db.user.findUnique({
     where: { email },
+    include: {
+      skills: true, // Include the skills relation
+    },
   });
 };
 
@@ -32,7 +40,10 @@ const updateUser = async (
 ) => {
   return db.user.update({
     where: { id },
-    data: updateData, // pass the update details to data to replicate on the schema
+    data: updateData,
+    include: {
+      skills: true, // Include the skills relation
+    },
   });
 };
 

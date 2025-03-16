@@ -44,6 +44,7 @@ model User {
   updatedAt      DateTime?        @updatedAt
   // cityId         String?
   // city           City?     @relation(fields: [cityId], references: [id])
+  otherSkill     String?          // New optional field for custom skill
   skills         Skill[]          @relation("UserSkills")
   interests      Interest[]       @relation("UserInterests")
   ResultDocument ResultDocument[]
