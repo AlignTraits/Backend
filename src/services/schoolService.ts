@@ -326,6 +326,7 @@ export const createCourseService = async ({
   }
 };
 
+// services/schoolService.ts (only showing the updated function)
 export const updateCourseService = async ({
   id,
   title,
@@ -422,15 +423,28 @@ export const updateCourseService = async ({
       },
     });
 
-    // Log action history
-    await db.actionHistory.create({
-      data: {
-        action: 'Update',
-        entity: 'Course',
-        entityIds: [{ id: updatedCourse.id, title: updatedCourse.title }],
-        userId: userId,
-      },
-    });
+    // Validate userId before logging action history
+    let userExists = false;
+    if (userId) {
+      const user = await db.user.findUnique({ where: { id: userId } });
+      userExists = !!user;
+    }
+
+    if (userExists) {
+      // Log action history only if user exists
+      await db.actionHistory.create({
+        data: {
+          action: 'Update',
+          entity: 'Course',
+          entityIds: [{ id: updatedCourse.id, title: updatedCourse.title }],
+          userId: userId,
+        },
+      });
+    } else {
+      console.warn(
+        `Skipping ActionHistory creation: userId ${userId} does not exist`
+      );
+    }
 
     return {
       ok: true,

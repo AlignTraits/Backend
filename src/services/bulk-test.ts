@@ -49,8 +49,8 @@ export const createBulkSchoolsService2 = async (
               id: schoolId,
               name: school.name,
               schoolType: school.schoolType,
-              country: school.country, // Updated from location to country
-              region: school.region, // New field for region
+              country: school.country,
+              region: school.region,
               logo: school.logo || null,
               websiteUrl: school.websiteUrl,
             },
@@ -80,17 +80,33 @@ export const createBulkSchoolsService2 = async (
       }));
 
     if (successfulSchools.length > 0) {
-      try {
-        await db.actionHistory.create({
-          data: {
-            action: 'Bulk Create',
-            entity: 'School',
-            entityIds: successfulSchools.map(({ id, name }) => ({ id, name })),
-            userId: userId,
-          },
-        });
-      } catch (error) {
-        console.error('Error logging action history:', error);
+      // Validate userId before logging action history
+      let userExists = false;
+      if (userId) {
+        const user = await db.user.findUnique({ where: { id: userId } });
+        userExists = !!user;
+      }
+
+      if (userExists) {
+        try {
+          await db.actionHistory.create({
+            data: {
+              action: 'Bulk Create',
+              entity: 'School',
+              entityIds: successfulSchools.map(({ id, name }) => ({
+                id,
+                name,
+              })),
+              userId: userId,
+            },
+          });
+        } catch (error) {
+          console.error('Error logging action history:', error);
+        }
+      } else {
+        console.warn(
+          `Skipping ActionHistory creation: userId ${userId} does not exist`
+        );
       }
     }
 
@@ -128,14 +144,27 @@ export const deleteBulkSchoolsService = async (
     });
 
     if (deletedSchools.count > 0) {
-      await db.actionHistory.create({
-        data: {
-          action: 'Bulk Delete',
-          entity: 'School',
-          entityIds: schoolsToDelete.map(({ id, name }) => ({ id, name })),
-          userId: userId,
-        },
-      });
+      // Validate userId before logging action history
+      let userExists = false;
+      if (userId) {
+        const user = await db.user.findUnique({ where: { id: userId } });
+        userExists = !!user;
+      }
+
+      if (userExists) {
+        await db.actionHistory.create({
+          data: {
+            action: 'Bulk Delete',
+            entity: 'School',
+            entityIds: schoolsToDelete.map(({ id, name }) => ({ id, name })),
+            userId: userId,
+          },
+        });
+      } else {
+        console.warn(
+          `Skipping ActionHistory creation: userId ${userId} does not exist`
+        );
+      }
     }
 
     return {
@@ -173,14 +202,27 @@ export const deleteBulkCoursesService = async (
     });
 
     if (deletedCourses.count > 0) {
-      await db.actionHistory.create({
-        data: {
-          action: 'Bulk Delete',
-          entity: 'Course',
-          entityIds: coursesToDelete.map(({ id, title }) => ({ id, title })),
-          userId: userId,
-        },
-      });
+      // Validate userId before logging action history
+      let userExists = false;
+      if (userId) {
+        const user = await db.user.findUnique({ where: { id: userId } });
+        userExists = !!user;
+      }
+
+      if (userExists) {
+        await db.actionHistory.create({
+          data: {
+            action: 'Bulk Delete',
+            entity: 'Course',
+            entityIds: coursesToDelete.map(({ id, title }) => ({ id, title })),
+            userId: userId,
+          },
+        });
+      } else {
+        console.warn(
+          `Skipping ActionHistory creation: userId ${userId} does not exist`
+        );
+      }
     }
 
     return {
@@ -293,14 +335,27 @@ export const createBulkCoursesService = async (
       .map((result) => result.value);
 
     if (createdCourses.length > 0) {
-      await db.actionHistory.create({
-        data: {
-          action: 'Bulk Create',
-          entity: 'Course',
-          entityIds: createdCourses.map(({ id, title }) => ({ id, title })),
-          userId: userId,
-        },
-      });
+      // Validate userId before logging action history
+      let userExists = false;
+      if (userId) {
+        const user = await db.user.findUnique({ where: { id: userId } });
+        userExists = !!user;
+      }
+
+      if (userExists) {
+        await db.actionHistory.create({
+          data: {
+            action: 'Bulk Create',
+            entity: 'Course',
+            entityIds: createdCourses.map(({ id, title }) => ({ id, title })),
+            userId: userId,
+          },
+        });
+      } else {
+        console.warn(
+          `Skipping ActionHistory creation: userId ${userId} does not exist`
+        );
+      }
     }
 
     return {
@@ -339,8 +394,8 @@ export const updateBulkSchoolsService = async (
           const updateData = {
             name: school.name ?? existingSchool.name,
             schoolType: school.schoolType ?? existingSchool.schoolType,
-            country: school.country ?? existingSchool.country, // Updated from location to country
-            region: school.region ?? existingSchool.region, // New field for region
+            country: school.country ?? existingSchool.country,
+            region: school.region ?? existingSchool.region,
             websiteUrl: school.websiteUrl ?? existingSchool.websiteUrl,
             logo: school.logo ?? existingSchool.logo,
           };
@@ -404,14 +459,27 @@ export const updateBulkSchoolsService = async (
       }));
 
     if (updatedSchools.length > 0) {
-      await db.actionHistory.create({
-        data: {
-          action: 'Bulk Update',
-          entity: 'School',
-          entityIds: updatedSchools.map(({ id, name }) => ({ id, name })),
-          userId: userId,
-        },
-      });
+      // Validate userId before logging action history
+      let userExists = false;
+      if (userId) {
+        const user = await db.user.findUnique({ where: { id: userId } });
+        userExists = !!user;
+      }
+
+      if (userExists) {
+        await db.actionHistory.create({
+          data: {
+            action: 'Bulk Update',
+            entity: 'School',
+            entityIds: updatedSchools.map(({ id, name }) => ({ id, name })),
+            userId: userId,
+          },
+        });
+      } else {
+        console.warn(
+          `Skipping ActionHistory creation: userId ${userId} does not exist`
+        );
+      }
     }
 
     return {
@@ -577,14 +645,27 @@ export const updateBulkCoursesService = async (
       }));
 
     if (updatedCourses.length > 0) {
-      await db.actionHistory.create({
-        data: {
-          action: 'Bulk Update',
-          entity: 'Course',
-          entityIds: updatedCourses.map(({ id, title }) => ({ id, title })),
-          userId: userId,
-        },
-      });
+      // Validate userId before logging action history
+      let userExists = false;
+      if (userId) {
+        const user = await db.user.findUnique({ where: { id: userId } });
+        userExists = !!user;
+      }
+
+      if (userExists) {
+        await db.actionHistory.create({
+          data: {
+            action: 'Bulk Update',
+            entity: 'Course',
+            entityIds: updatedCourses.map(({ id, title }) => ({ id, title })),
+            userId: userId,
+          },
+        });
+      } else {
+        console.warn(
+          `Skipping ActionHistory creation: userId ${userId} does not exist`
+        );
+      }
     }
 
     return {
@@ -605,8 +686,8 @@ type SchoolReportData = {
   id: string;
   name: string;
   schoolType: string;
-  country: string; // Updated from location to country
-  region: string; // New field for region
+  country: string;
+  region: string;
   websiteUrl: string;
   logo: string | null;
   createdAt: Date;
@@ -687,8 +768,8 @@ export const generateSchoolCourseReport = async (
           id: true,
           name: true,
           schoolType: true,
-          country: true, // Updated from location to country
-          region: true, // New field for region
+          country: true,
+          region: true,
           websiteUrl: true,
           logo: true,
           createdAt: true,
