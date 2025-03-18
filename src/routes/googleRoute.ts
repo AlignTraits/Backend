@@ -1,3 +1,4 @@
+// src/routes/googleAuthRouter.ts
 import express from 'express';
 import passport from 'passport';
 import googleController from '../controllers/googleCtl'; // Fixed import
@@ -13,7 +14,7 @@ router.get(
   })
 );
 
-router.get<{}, MessageResponse>(
+router.get(
   '/google/callback',
   passport.authenticate('google', {
     session: false,
@@ -23,6 +24,5 @@ router.get<{}, MessageResponse>(
 );
 
 export default router;
-
 // http://localhost:3000/api/v1/google-auth/google/callback
 // http://localhost:3000/api/v1/google-auth/google
