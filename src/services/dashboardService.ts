@@ -144,7 +144,7 @@ export const getCourseDetails = async (
       select: {
         id: true,
         title: true,
-        profile: true,
+        image: true,
         scholarship: true,
         duration: true,
         durationPeriod: true,
@@ -152,7 +152,6 @@ export const getCourseDetails = async (
         currency: true,
         acceptanceFee: true,
         acceptanceFeeCurrency: true,
-        description: true,
         requirements: true,
         ratings: true,
         courseInformation: true,
@@ -160,7 +159,12 @@ export const getCourseDetails = async (
         programLevel: true,
         careerOpportunities: true,
         loanInformation: true,
-        estimatedLivingCost: true,
+        examTypes: true,
+        examYear: true,
+        subjects: true,
+        grades: true,
+        scholarshipRequirement: true,
+        objectives: true,
         university: {
           select: {
             id: true,
@@ -181,7 +185,7 @@ export const getCourseDetails = async (
     const courseDetails: CourseDetailData = {
       id: course.id,
       title: course.title,
-      profile: course.profile,
+      image: course.image,
       school: {
         id: course.university.id,
         name: course.university.name,
@@ -197,7 +201,6 @@ export const getCourseDetails = async (
       currency: course.currency,
       acceptanceFee: course.acceptanceFee,
       acceptanceFeeCurrency: course.acceptanceFeeCurrency,
-      description: course.description,
       requirements: course.requirements,
       ratings: course.ratings,
       courseInformation: course.courseInformation,
@@ -205,7 +208,12 @@ export const getCourseDetails = async (
       programLevel: course.programLevel,
       careerOpportunities: course.careerOpportunities,
       loanInformation: course.loanInformation,
-      estimatedLivingCost: course.estimatedLivingCost,
+      scholarshipRequirement: course.scholarshipRequirement,
+      objectives: course.objectives,
+      examTypes: course.examTypes,
+      examYear: course.examYear,
+      subjects: course.subjects,
+      grades: course.grades,
     };
 
     return courseDetails;

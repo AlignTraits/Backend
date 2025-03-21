@@ -1,5 +1,39 @@
 # LearnConnect Backend
 
+<!-- New Course Model -->
+
+model Course {
+id String @id @default(dbgenerated("substring(gen_random_uuid()::text, 1, 10)"))
+title String // Course Title
+image String? // Course Image
+schoolId String // Program Location (via relation to School)
+university School @relation(fields: [schoolId], references: [id])
+scholarship String // Scholarship
+scholarshipRequirement String? // Scholarship Requirement
+duration Int // Program Duration (e.g., 4)
+durationPeriod DurationPeriod // Program Duration (e.g., YEARS)
+programLevel String // Program Level (Bachelor Degree, Masters Degree, PGD)
+price Float // Course Price
+currency Currency // Currency for Course Price
+acceptanceFee Float // Acceptance Fee
+acceptanceFeeCurrency Currency // Currency for Acceptance Fee
+objectives String // Course Objectives
+courseInformation String // Course Information
+courseWebsiteUrl String // Course website url
+loanInformation String // Loan Information
+careerOpportunities String[] // Additional info
+requirements String[] // Admission Requirements (general)
+examTypes ExamType[] // Exam Type
+examYear Int? // Exam Year
+subjects String[] // Subjects
+grades Grade[] // Grade
+ratings Float @default(0.0) // Reintroduced ratings field
+createdAt DateTime @default(now())
+updatedAt DateTime @default(now()) @updatedAt
+}
+
+<!-- New Course Model -->
+
 "postinstall": "npx prisma generate && npx prisma db push --schema prisma/schema.prisma --accept-data-loss",
 
 <!--  -->

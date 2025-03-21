@@ -12,7 +12,10 @@ import {
   newCreateSchoolData,
   UpdateCourseData,
   UpdateSchoolData,
+  UpdateCsvCourseData,
+  CourseReportData,
 } from '../types/school-course-types';
+import { Currency, DurationPeriod, ExamType, Grade } from '@prisma/client';
 
 const uploadBase64ImageToCloudinary = async (
   base64Image: string
@@ -265,6 +268,7 @@ export const createBulkCoursesService = async (
   try {
     const errors: { courseTitle: string; error: string }[] = [];
 
+    // Validate school IDs
     const schoolIds = [...new Set(courses.map((course) => course.schoolId))];
     const existingSchools = await db.school.findMany({
       where: { id: { in: schoolIds } },
@@ -276,50 +280,195 @@ export const createBulkCoursesService = async (
     const results = await Promise.allSettled(
       courses.map(async (course) => {
         try {
+          // Validate school existence
           if (!existingSchoolIds.has(course.schoolId)) {
             throw new Error(`School with ID ${course.schoolId} does not exist`);
           }
 
+          // Validate profile image
           let profileUrl: string | null = null;
-          if (course.profile) {
-            profileUrl = await processProfileImage(course.profile);
+          if (course.image) {
+            profileUrl = await processProfileImage(course.image);
+          } else {
+            throw new Error('Profile image is required');
           }
 
+          // Parse JSON fields
           const requirements = parseJsonField(course.requirements);
           const careerOpportunities = parseJsonField(
             course.careerOpportunities
           );
+          const examTypes = parseJsonField(course.examTypes);
+          const grades = parseJsonField(course.grades);
+          const subjects = parseJsonField(course.subjects);
 
+          // Validate examTypes and grades against enums
+          const validExamTypes = [
+            'JAMB',
+            'UTME',
+            'NECO',
+            'GCE',
+            'WAEC',
+            'NABTEB',
+            'A_LEVEL',
+          ] as const;
+          const validGrades = [
+            'A1',
+            'B2',
+            'B3',
+            'C4',
+            'C5',
+            'C6',
+            'D7',
+            'E8',
+            'F9',
+          ] as const;
+
+          if (
+            !examTypes.every((type: string) =>
+              validExamTypes.includes(type as any)
+            )
+          ) {
+            throw new Error(
+              'Invalid exam type. Must be one of: ' + validExamTypes.join(', ')
+            );
+          }
+          if (
+            !grades.every((grade: string) => validGrades.includes(grade as any))
+          ) {
+            throw new Error(
+              'Invalid grade. Must be one of: ' + validGrades.join(', ')
+            );
+          }
+
+          // Validate subjects and grades length match
+          if (subjects.length !== grades.length) {
+            throw new Error(
+              'The number of subjects must match the number of grades'
+            );
+          }
+
+          // Validate ratings if provided
+          if (
+            course.ratings !== undefined &&
+            (course.ratings < 0 || course.ratings > 5)
+          ) {
+            throw new Error('Ratings must be between 0 and 5');
+          }
+
+          // Map durationPeriod to Prisma's DurationPeriod
+          let mappedDurationPeriod: DurationPeriod;
+          if (course.durationPeriod === 'YEAR') {
+            mappedDurationPeriod = DurationPeriod.YEARS;
+          } else if (course.durationPeriod === 'MONTH') {
+            mappedDurationPeriod = DurationPeriod.MONTHS;
+          } else if (course.durationPeriod === 'WEEK') {
+            mappedDurationPeriod = DurationPeriod.WEEKS;
+          } else {
+            throw new Error(
+              'Invalid duration period. Must be one of: YEAR, MONTH, WEEK'
+            );
+          }
+
+          // Map currency to Prisma's Currency
+          let mappedCurrency: Currency;
+          if (course.currency === 'NAIRA') {
+            mappedCurrency = Currency.NGN;
+          } else if (course.currency === 'DOLLAR') {
+            mappedCurrency = Currency.USD;
+          } else if (course.currency === 'EURO') {
+            mappedCurrency = Currency.EUR;
+          } else {
+            throw new Error(
+              'Invalid currency. Must be one of: NAIRA, DOLLAR, EURO'
+            );
+          }
+
+          // Map acceptanceFeeCurrency to Prisma's Currency
+          let mappedAcceptanceFeeCurrency: Currency;
+          if (course.acceptanceFeeCurrency === 'NAIRA') {
+            mappedAcceptanceFeeCurrency = Currency.NGN;
+          } else if (course.acceptanceFeeCurrency === 'DOLLAR') {
+            mappedAcceptanceFeeCurrency = Currency.USD;
+          } else if (course.acceptanceFeeCurrency === 'EURO') {
+            mappedAcceptanceFeeCurrency = Currency.EUR;
+          } else {
+            throw new Error(
+              'Invalid acceptance fee currency. Must be one of: NAIRA, DOLLAR, EURO'
+            );
+          }
+
+          // Generate short ID
           const courseId = nanoid(10);
+
+          // Create the course
           const newCourse = await db.course.create({
             data: {
               id: courseId,
               title: course.title,
-              profile: profileUrl,
+              image: profileUrl,
               schoolId: course.schoolId,
               scholarship: course.scholarship,
+              scholarshipRequirement: course.scholarshipRequirement,
               duration: course.duration,
-              durationPeriod: course.durationPeriod as any,
+              durationPeriod: mappedDurationPeriod, // Use mapped value
               price: course.price,
-              currency: course.currency as any,
+              currency: mappedCurrency, // Use mapped value
               acceptanceFee: course.acceptanceFee,
-              acceptanceFeeCurrency: course.acceptanceFeeCurrency as any,
-              description: course.description,
+              acceptanceFeeCurrency: mappedAcceptanceFeeCurrency, // Use mapped value
+              objectives: course.objectives,
               requirements,
-              ratings: 0.0,
               courseInformation: course.courseInformation,
               courseWebsiteUrl: course.courseWebsiteUrl,
               programLevel: course.programLevel,
               careerOpportunities,
               loanInformation: course.loanInformation,
-              estimatedLivingCost: course.estimatedLivingCost,
+              examTypes: examTypes as ExamType[],
+              examYear: course.examYear,
+              subjects,
+              grades: grades as Grade[],
+              ratings: course.ratings ?? 0.0,
             },
           });
 
           return { id: newCourse.id, title: newCourse.title };
         } catch (error: any) {
           console.error(`Error creating course "${course.title}":`, error);
-          errors.push({ courseTitle: course.title, error: error.message });
+
+          // Beautify the error message
+          let userFriendlyMessage =
+            'An unexpected error occurred while creating the course';
+          if (error.message.includes('School with ID')) {
+            userFriendlyMessage = error.message; // Already user-friendly
+          } else if (error.message.includes('Profile image is required')) {
+            userFriendlyMessage = 'Course image is required';
+          } else if (error.message.includes('Invalid exam type')) {
+            userFriendlyMessage = error.message; // Already user-friendly
+          } else if (error.message.includes('Invalid grade')) {
+            userFriendlyMessage = error.message; // Already user-friendly
+          } else if (
+            error.message.includes('The number of subjects must match')
+          ) {
+            userFriendlyMessage = error.message; // Already user-friendly
+          } else if (error.message.includes('Ratings must be between')) {
+            userFriendlyMessage = error.message; // Already user-friendly
+          } else if (error.message.includes('Invalid duration period')) {
+            userFriendlyMessage = error.message; // Already user-friendly
+          } else if (error.message.includes('Invalid currency')) {
+            userFriendlyMessage = error.message; // Already user-friendly
+          } else if (
+            error.message.includes('Invalid acceptance fee currency')
+          ) {
+            userFriendlyMessage = error.message; // Already user-friendly
+          } else if (error.message.includes('Invalid JSON format')) {
+            userFriendlyMessage =
+              'Invalid JSON format in one of the fields (e.g., requirements, careerOpportunities)';
+          }
+
+          errors.push({
+            courseTitle: course.title,
+            error: userFriendlyMessage,
+          });
           return null;
         }
       })
@@ -365,9 +514,9 @@ export const createBulkCoursesService = async (
         errors: errors,
       },
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in createBulkCoursesService:', error);
-    throw new Error('Bulk course creation failed');
+    throw new Error(`Bulk course creation failed: ${error.message}`);
   }
 };
 
@@ -508,8 +657,22 @@ const parseJsonFieldForUpdate = (field: any): string[] => {
   }
 };
 
+const processImage = async (image: string): Promise<string | null> => {
+  if (image.startsWith('data:image/')) {
+    const result: UploadApiResponse =
+      await uploadBase64ImageToCloudinary(image);
+    return result.secure_url;
+  } else if (image.startsWith('https://')) {
+    return image;
+  } else {
+    throw new Error('Invalid image format');
+  }
+};
+
+// services/bulk-test.ts
+
 export const updateBulkCoursesService = async (
-  courses: UpdateCourseData[],
+  courses: UpdateCsvCourseData[], // Using UpdateCourseData as per previous fix
   userId: string
 ) => {
   try {
@@ -528,64 +691,191 @@ export const updateBulkCoursesService = async (
             throw new Error(`Course with ID ${course.id} not found`);
           }
 
-          const keepOldIfEmpty = (newValue: any, oldValue: any) =>
-            typeof newValue === 'string' && newValue.trim() !== ''
-              ? newValue
-              : oldValue;
+          // Validate schoolId if provided
+          if (course.schoolId) {
+            const schoolExists = await db.school.findUnique({
+              where: { id: course.schoolId },
+            });
+            if (!schoolExists) {
+              throw new Error(
+                `School with ID ${course.schoolId} does not exist`
+              );
+            }
+          }
 
-          const parsedRequirements = parseJsonFieldForUpdate(
-            course.requirements
-          );
-          const parsedCareerOpportunities = parseJsonFieldForUpdate(
-            course.careerOpportunities
-          );
+          // Process image if provided
+          let imageUrl: string | null = null;
+          if (course.image) {
+            imageUrl = await processImage(course.image);
+          }
 
-          const finalRequirements =
-            parsedRequirements.length > 0
-              ? parsedRequirements
-              : existingCourse.requirements;
-          const finalCareerOpportunities =
-            parsedCareerOpportunities.length > 0
-              ? parsedCareerOpportunities
-              : existingCourse.careerOpportunities;
+          // Parse JSON fields if provided
+          const requirements = course.requirements
+            ? parseJsonFieldForUpdate(course.requirements)
+            : undefined;
+          const careerOpportunities = course.careerOpportunities
+            ? parseJsonFieldForUpdate(course.careerOpportunities)
+            : undefined;
+          const examTypes = course.examTypes
+            ? parseJsonFieldForUpdate(course.examTypes)
+            : undefined;
+          const grades = course.grades
+            ? parseJsonFieldForUpdate(course.grades)
+            : undefined;
+          const subjects = course.subjects
+            ? parseJsonFieldForUpdate(course.subjects)
+            : undefined;
 
+          // Validate examTypes and grades if provided
+          const validExamTypes = [
+            'JAMB',
+            'UTME',
+            'NECO',
+            'GCE',
+            'WAEC',
+            'NABTEB',
+            'A_LEVEL',
+          ] as const;
+          const validGrades = [
+            'A1',
+            'B2',
+            'B3',
+            'C4',
+            'C5',
+            'C6',
+            'D7',
+            'E8',
+            'F9',
+          ] as const;
+
+          if (
+            examTypes &&
+            !examTypes.every((type: string) =>
+              validExamTypes.includes(type as any)
+            )
+          ) {
+            throw new Error(
+              'Invalid exam type. Must be one of: ' + validExamTypes.join(', ')
+            );
+          }
+          if (
+            grades &&
+            !grades.every((grade: string) => validGrades.includes(grade as any))
+          ) {
+            throw new Error(
+              'Invalid grade. Must be one of: ' + validGrades.join(', ')
+            );
+          }
+
+          // Validate subjects and grades length match if both are provided
+          if (subjects && grades && subjects.length !== grades.length) {
+            throw new Error(
+              'The number of subjects must match the number of grades'
+            );
+          }
+
+          // Validate ratings if provided
+          if (
+            course.ratings !== undefined &&
+            (course.ratings < 0 || course.ratings > 5)
+          ) {
+            throw new Error('Ratings must be between 0 and 5');
+          }
+
+          // Map durationPeriod to Prisma's DurationPeriod if provided
+          let mappedDurationPeriod: DurationPeriod | undefined;
+          if (course.durationPeriod) {
+            if (course.durationPeriod === 'YEAR') {
+              mappedDurationPeriod = DurationPeriod.YEARS;
+            } else if (course.durationPeriod === 'MONTH') {
+              mappedDurationPeriod = DurationPeriod.MONTHS;
+            } else if (course.durationPeriod === 'WEEK') {
+              mappedDurationPeriod = DurationPeriod.WEEKS;
+            } else {
+              throw new Error(
+                'Invalid duration period. Must be one of: YEAR, MONTH, WEEK'
+              );
+            }
+          }
+
+          // Map currency to Prisma's Currency if provided
+          let mappedCurrency: Currency | undefined;
+          if (course.currency) {
+            if (course.currency === 'NAIRA') {
+              mappedCurrency = Currency.NGN;
+            } else if (course.currency === 'DOLLAR') {
+              mappedCurrency = Currency.USD;
+            } else if (course.currency === 'EURO') {
+              mappedCurrency = Currency.EUR;
+            } else {
+              throw new Error(
+                'Invalid currency. Must be one of: NAIRA, DOLLAR, EURO'
+              );
+            }
+          }
+
+          // Map acceptanceFeeCurrency to Prisma's Currency if provided
+          let mappedAcceptanceFeeCurrency: Currency | undefined;
+          if (course.acceptanceFeeCurrency) {
+            if (course.acceptanceFeeCurrency === 'NAIRA') {
+              mappedAcceptanceFeeCurrency = Currency.NGN;
+            } else if (course.acceptanceFeeCurrency === 'DOLLAR') {
+              mappedAcceptanceFeeCurrency = Currency.USD;
+            } else if (course.acceptanceFeeCurrency === 'EURO') {
+              mappedAcceptanceFeeCurrency = Currency.EUR;
+            } else {
+              throw new Error(
+                'Invalid acceptance fee currency. Must be one of: NAIRA, DOLLAR, EURO'
+              );
+            }
+          }
+
+          // Prepare update data
           const updateData = {
-            title: keepOldIfEmpty(course.title, existingCourse.title),
-            profile: keepOldIfEmpty(course.profile, existingCourse.profile),
+            title: course.title ?? existingCourse.title,
+            image: imageUrl ?? existingCourse.image,
             schoolId: course.schoolId ?? existingCourse.schoolId,
             scholarship: course.scholarship ?? existingCourse.scholarship,
+            scholarshipRequirement:
+              course.scholarshipRequirement !== undefined
+                ? course.scholarshipRequirement
+                : existingCourse.scholarshipRequirement,
             duration: course.duration ?? existingCourse.duration,
             durationPeriod:
-              course.durationPeriod ?? existingCourse.durationPeriod,
+              mappedDurationPeriod ?? existingCourse.durationPeriod,
             price: course.price ?? existingCourse.price,
-            currency: course.currency ?? existingCourse.currency,
+            currency: mappedCurrency ?? existingCourse.currency,
             acceptanceFee: course.acceptanceFee ?? existingCourse.acceptanceFee,
-            estimatedLivingCost:
-              course.estimatedLivingCost ?? existingCourse.estimatedLivingCost,
             acceptanceFeeCurrency:
-              course.acceptanceFeeCurrency ??
+              mappedAcceptanceFeeCurrency ??
               existingCourse.acceptanceFeeCurrency,
-            description: keepOldIfEmpty(
-              course.description,
-              existingCourse.description
-            ),
-            requirements: finalRequirements,
-            courseInformation: keepOldIfEmpty(
-              course.courseInformation,
-              existingCourse.courseInformation
-            ),
-            courseWebsiteUrl: keepOldIfEmpty(
-              course.courseWebsiteUrl,
-              existingCourse.courseWebsiteUrl
-            ),
+            objectives: course.objectives ?? existingCourse.objectives,
+            requirements: requirements ?? existingCourse.requirements,
+            courseInformation:
+              course.courseInformation ?? existingCourse.courseInformation,
+            courseWebsiteUrl:
+              course.courseWebsiteUrl ?? existingCourse.courseWebsiteUrl,
             programLevel: course.programLevel ?? existingCourse.programLevel,
-            careerOpportunities: finalCareerOpportunities,
-            loanInformation: keepOldIfEmpty(
-              course.loanInformation,
-              existingCourse.loanInformation
-            ),
+            careerOpportunities:
+              careerOpportunities ?? existingCourse.careerOpportunities,
+            loanInformation:
+              course.loanInformation ?? existingCourse.loanInformation,
+            examTypes: examTypes
+              ? (examTypes as ExamType[])
+              : existingCourse.examTypes,
+            examYear:
+              course.examYear !== undefined
+                ? course.examYear
+                : existingCourse.examYear,
+            subjects: subjects ?? existingCourse.subjects,
+            grades: grades ? (grades as Grade[]) : existingCourse.grades,
+            ratings:
+              course.ratings !== undefined
+                ? course.ratings
+                : existingCourse.ratings,
           };
 
+          // Skip if no changes
           if (JSON.stringify(updateData) === JSON.stringify(existingCourse)) {
             return {
               status: 'skipped',
@@ -595,6 +885,7 @@ export const updateBulkCoursesService = async (
             };
           }
 
+          // Update the course
           const updatedCourse = await db.course.update({
             where: { id: course.id },
             data: updateData,
@@ -605,11 +896,65 @@ export const updateBulkCoursesService = async (
             data: { id: updatedCourse.id, title: updatedCourse.title },
           };
         } catch (error: any) {
+          console.error(
+            `Error updating course "${course.title || course.id}":`,
+            error
+          );
+
+          // Beautify the error message
+          let userFriendlyMessage =
+            'An unexpected error occurred while updating the course';
+          if (error.message.includes('Missing course ID')) {
+            userFriendlyMessage = 'Course ID is required';
+          } else if (error.message.includes('Course with ID')) {
+            userFriendlyMessage = error.message;
+          } else if (error.message.includes('School with ID')) {
+            userFriendlyMessage = error.message;
+          } else if (error.message.includes('Invalid image format')) {
+            userFriendlyMessage =
+              'Invalid image format. Must be a base64 string or a valid URL';
+          } else if (error.message.includes('Invalid exam type')) {
+            userFriendlyMessage = error.message;
+          } else if (error.message.includes('Invalid grade')) {
+            userFriendlyMessage = error.message;
+          } else if (
+            error.message.includes('The number of subjects must match')
+          ) {
+            userFriendlyMessage = error.message;
+          } else if (error.message.includes('Ratings must be between')) {
+            userFriendlyMessage = error.message;
+          } else if (error.message.includes('Invalid duration period')) {
+            userFriendlyMessage = error.message;
+          } else if (error.message.includes('Invalid currency')) {
+            userFriendlyMessage = error.message;
+          } else if (
+            error.message.includes('Invalid acceptance fee currency')
+          ) {
+            userFriendlyMessage = error.message;
+          } else if (error.message.includes('Invalid JSON format')) {
+            userFriendlyMessage =
+              'Invalid JSON format in one of the fields (e.g., requirements, careerOpportunities)';
+          } else if (error.message.includes('Invalid value for argument')) {
+            if (error.message.includes('durationPeriod')) {
+              userFriendlyMessage =
+                'Invalid duration period. Must be one of: YEAR, MONTH, WEEK';
+            } else if (error.message.includes('currency')) {
+              userFriendlyMessage =
+                'Invalid currency. Must be one of: NAIRA, DOLLAR, EURO';
+            } else if (error.message.includes('acceptanceFeeCurrency')) {
+              userFriendlyMessage =
+                'Invalid acceptance fee currency. Must be one of: NAIRA, DOLLAR, EURO';
+            } else {
+              userFriendlyMessage =
+                'Invalid data provided for the course update';
+            }
+          }
+
           return {
             status: 'failed',
             id: course.id,
             title: course.title || 'Unknown',
-            reason: error.message,
+            reason: userFriendlyMessage,
           };
         }
       })
@@ -676,9 +1021,9 @@ export const updateBulkCoursesService = async (
         skipped: skippedUpdates,
       },
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in updateBulkCoursesService:', error);
-    throw new Error('Bulk course update failed');
+    throw new Error(`Bulk course update failed: ${error.message}`);
   }
 };
 
@@ -690,29 +1035,6 @@ type SchoolReportData = {
   region: string;
   websiteUrl: string;
   logo: string | null;
-  createdAt: Date;
-};
-
-type CourseReportData = {
-  id: string;
-  title: string;
-  profile: string;
-  schoolId: string;
-  scholarship: string;
-  duration: string;
-  price: number;
-  currency: string;
-  acceptanceFee: number;
-  acceptanceFeeCurrency: string;
-  description: string;
-  requirements: string;
-  ratings: number;
-  courseInformation: string;
-  courseWebsiteUrl: string;
-  programLevel: string;
-  careerOpportunities: string;
-  loanInformation: string;
-  estimatedLivingCost: number;
   createdAt: Date;
 };
 
@@ -813,24 +1135,28 @@ export const generateSchoolCourseReport = async (
         select: {
           id: true,
           title: true,
-          profile: true,
+          image: true, // Renamed from profile to image
           schoolId: true,
           scholarship: true,
+          scholarshipRequirement: true, // Added
           duration: true,
           durationPeriod: true,
           price: true,
           currency: true,
           acceptanceFee: true,
           acceptanceFeeCurrency: true,
-          description: true,
+          objectives: true, // Renamed from description to objectives
           requirements: true,
-          ratings: true,
           courseInformation: true,
           courseWebsiteUrl: true,
           programLevel: true,
           careerOpportunities: true,
           loanInformation: true,
-          estimatedLivingCost: true,
+          examTypes: true, // Added
+          examYear: true, // Added
+          subjects: true, // Added
+          grades: true, // Added
+          ratings: true,
           createdAt: true,
         },
       });
@@ -838,23 +1164,27 @@ export const generateSchoolCourseReport = async (
       const courseData: CourseReportData[] = courses.map((course) => ({
         id: course.id,
         title: course.title,
-        profile: course.profile ?? '',
+        image: course.image ?? '', // Use image instead of profile
         schoolId: course.schoolId,
         scholarship: course.scholarship,
+        scholarshipRequirement: course.scholarshipRequirement, // Added
         duration: `${course.duration} ${course.durationPeriod.toLowerCase()}`,
         price: course.price,
         currency: course.currency,
         acceptanceFee: course.acceptanceFee,
         acceptanceFeeCurrency: course.acceptanceFeeCurrency,
-        description: course.description,
+        objectives: course.objectives, // Use objectives instead of description
         requirements: course.requirements.join(', '),
-        ratings: course.ratings,
         courseInformation: course.courseInformation,
         courseWebsiteUrl: course.courseWebsiteUrl,
         programLevel: course.programLevel,
         careerOpportunities: course.careerOpportunities.join(', '),
         loanInformation: course.loanInformation,
-        estimatedLivingCost: course.estimatedLivingCost,
+        examTypes: course.examTypes.join(', '), // Added
+        examYear: course.examYear, // Added
+        subjects: course.subjects.join(', '), // Added
+        grades: course.grades.join(', '), // Added
+        ratings: course.ratings,
         createdAt: course.createdAt,
       }));
 

@@ -13,6 +13,7 @@ import {
   CreateCSVCourseData,
   NewCreateCSVSchoolData,
   UpdateCourseData,
+  UpdateCsvCourseData,
   UpdateSchoolData,
 } from '../types/school-course-types';
 
@@ -69,6 +70,8 @@ export const createBulkSchoolsController = async (
   }
 };
 
+// controllers/schoolController.ts
+
 export const createBulkCoursesController = async (
   req: Request,
   res: Response
@@ -77,7 +80,11 @@ export const createBulkCoursesController = async (
     const csvFile = req.file;
 
     if (!csvFile) {
-      return res.status(400).send({ error: 'CSV file is required' });
+      return res.status(400).send({
+        ok: false,
+        message: 'CSV file is required',
+        errors: [{ message: 'Please upload a CSV file' }],
+      });
     }
 
     const csvData = csvFile.buffer.toString('utf-8');
@@ -90,7 +97,13 @@ export const createBulkCoursesController = async (
 
     if (parsedData.errors.length > 0) {
       console.error('CSV Parsing Errors:', parsedData.errors);
-      return res.status(400).send({ error: 'Invalid CSV data' });
+      return res.status(400).send({
+        ok: false,
+        message: 'Invalid CSV data',
+        errors: [
+          { message: 'The CSV file contains invalid data or formatting' },
+        ],
+      });
     }
 
     const courses: CreateCSVCourseData[] =
@@ -101,14 +114,17 @@ export const createBulkCoursesController = async (
     const results = await createBulkCoursesService(courses, userId);
 
     res.status(201).json({
+      ok: true,
       message: 'Courses created successfully',
       data: results,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating courses:', error);
-    res
-      .status(500)
-      .send({ error: 'An error occurred while creating the courses' });
+    res.status(500).send({
+      ok: false,
+      message: 'An unexpected error occurred while creating the courses',
+      errors: [{ message: 'Please try again later or contact support' }],
+    });
   }
 };
 
@@ -219,7 +235,7 @@ export const updateBulkCoursesController = async (
     }
 
     const csvData = file.buffer.toString('utf-8');
-    const parsedData = Papa.parse<UpdateCourseData>(csvData, {
+    const parsedData = Papa.parse<UpdateCsvCourseData>(csvData, {
       header: true,
       skipEmptyLines: true,
       dynamicTyping: true,

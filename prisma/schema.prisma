@@ -151,34 +151,6 @@ model WaitList {
   createdAt      DateTime         @default(now())
 }
 
-// school and course
-
-model Course {
-  id                     String          @id @default(dbgenerated("substring(gen_random_uuid()::text, 1, 10)"))
-  title                  String
-  profile                String?
-  schoolId               String
-  university             School          @relation(fields: [schoolId], references: [id])
-  scholarship            String
-  duration               Int
-  durationPeriod         DurationPeriod
-  price                  Float
-  currency               Currency
-  acceptanceFee          Float
-  acceptanceFeeCurrency  Currency
-  description            String
-  requirements           String[]
-  ratings                Float           @default(0.0)
-  courseInformation      String
-  courseWebsiteUrl       String
-  programLevel           String
-  careerOpportunities    String[]
-  loanInformation        String
-  estimatedLivingCost    Float
-  createdAt              DateTime        @default(now())
-  updatedAt              DateTime        @default(now()) @updatedAt
-}
-
 model School {
   id                     String          @id @default(dbgenerated("substring(gen_random_uuid()::text, 1, 10)"))
   name                   String
@@ -210,12 +182,70 @@ enum SchoolType {
   PUBLIC_UNIVERSITY
 }
 
+
+
+// Enums for Exam Type and Grade
+enum ExamType {
+  JAMB
+  UTME
+  NECO
+  GCE
+  WAEC
+  NABTEB
+  A_LEVEL
+}
+
+enum Grade {
+  A1
+  B2
+  B3
+  C4
+  C5
+  C6
+  D7
+  E8
+  F9
+}
+
 enum DurationPeriod {
-  YEAR
-  MONTH
+  YEARS
+  MONTHS
+  WEEKS
 }
 
 enum Currency {
-  NAIRA
-  DOLLAR
+  USD
+  EUR
+  NGN // Add other currencies as needed
+  CAD
+}
+
+model Course {
+  id                     String          @id @default(dbgenerated("substring(gen_random_uuid()::text, 1, 10)"))
+  title                  String          // Course Title
+  image                  String?         // Course Image
+  schoolId               String          // Program Location (via relation to School)
+  university             School          @relation(fields: [schoolId], references: [id])
+  scholarship            String          // Scholarship
+  scholarshipRequirement String?         // Scholarship Requirement
+  duration               Int             // Program Duration (e.g., 4)
+  durationPeriod         DurationPeriod  // Program Duration (e.g., YEARS)
+  programLevel           String          // Program Level (Bachelor Degree, Masters Degree, PGD)
+  price                  Float           // Course Price
+  currency               Currency        // Currency for Course Price
+  acceptanceFee          Float           // Acceptance Fee
+  acceptanceFeeCurrency  Currency        // Currency for Acceptance Fee
+  objectives             String          // Course Objectives
+  courseInformation      String          // Course Information
+  courseWebsiteUrl       String          // Course website url
+  loanInformation        String          // Loan Information
+  careerOpportunities    String[]        // Additional info
+  requirements           String[]        // Admission Requirements (general)
+  examTypes              ExamType[]      // Exam Type
+  examYear               Int?            // Exam Year
+  subjects               String[]        // Subjects
+  grades                 Grade[]         // Grade
+  ratings                Float           @default(0.0) // Reintroduced ratings field
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @default(now()) @updatedAt
 }

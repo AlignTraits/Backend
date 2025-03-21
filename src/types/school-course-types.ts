@@ -1,3 +1,5 @@
+import { DurationPeriod, Currency, ExamType, Grade } from '@prisma/client';
+
 export enum SchoolType {
   FEDERAL_UNIVERSITY = 'FEDERAL_UNIVERSITY',
   PRIVATE_UNIVERSITY = 'PRIVATE_UNIVERSITY',
@@ -10,60 +12,111 @@ export interface CreateCSVSchoolData {
   location: string;
   websiteUrl: string;
 }
-
-export enum DurationPeriod {
-  YEAR = 'YEAR',
-  MONTH = 'MONTH',
-}
-
-export enum Currency {
-  NAIRA = 'NAIRA',
-  DOLLAR = 'DOLLAR',
-}
-
-export interface CreateCSVCourseData {
-  id?: string;
+export interface CreateCourseData {
   title: string;
-  profile: any; // Consider replacing 'any' with a more specific type if possible
+  logo: Express.Multer.File | null | undefined;
   schoolId: string;
   scholarship: string;
+  scholarshipRequirement?: string;
   duration: number;
   durationPeriod: DurationPeriod;
   price: number;
   currency: Currency;
   acceptanceFee: number;
-  estimatedLivingCost: number;
   acceptanceFeeCurrency: Currency;
-  description: string;
+  objectives: string;
   requirements: string[];
   courseInformation: string;
   courseWebsiteUrl: string;
   programLevel: string;
   careerOpportunities: string[];
   loanInformation: string;
+  examTypes: string[];
+  examYear?: number;
+  subjects: string[];
+  grades: string[];
+  ratings?: number;
 }
-// interface CreateCSVCourseData {
-//   profile: any;
-//   id?: string;
-//   title: string;
-//   // logo: Express.Multer.File | null | undefined;
-//   schoolId: string;
-//   scholarship: string;
-//   duration: number;
-//   durationPeriod: DurationPeriod;
-//   price: number;
-//   currency: Currency;
-//   acceptanceFee: number;
-//   estimatedLivingCost: number;
-//   acceptanceFeeCurrency: Currency;
-//   description: string;
-//   requirements: string[];
-//   courseInformation: string; // New field
-//   courseWebsiteUrl: string; // New field
-//   programLevel: string; // New field
-//   careerOpportunities: string[]; // New field
-//   loanInformation: string; // New field
-// }
+
+// Type for updating a course (all fields optional)
+export interface UpdateCourseData {
+  id: string;
+  title?: string;
+  logo?: Express.Multer.File | null | undefined;
+  schoolId?: string;
+  scholarship?: string;
+  scholarshipRequirement?: string;
+  duration?: number;
+  durationPeriod?: DurationPeriod;
+  price?: number;
+  currency?: Currency;
+  acceptanceFee?: number;
+  acceptanceFeeCurrency?: Currency;
+  objectives?: string;
+  requirements?: string[];
+  courseInformation?: string;
+  courseWebsiteUrl?: string;
+  programLevel?: string;
+  careerOpportunities?: string[];
+  loanInformation?: string;
+  examTypes?: string[];
+  examYear?: number;
+  subjects?: string[];
+  grades?: string[];
+  ratings?: number;
+}
+export interface CreateCSVCourseData {
+  title: string;
+  image: string; // Renamed from profile to image
+  schoolId: string;
+  scholarship: string;
+  scholarshipRequirement?: string;
+  duration: number;
+  durationPeriod: 'YEAR' | 'MONTH' | 'WEEK';
+  price: number;
+  currency: 'NAIRA' | 'DOLLAR' | 'EURO';
+  acceptanceFee: number;
+  acceptanceFeeCurrency: 'NAIRA' | 'DOLLAR' | 'EURO';
+  objectives: string;
+  requirements: string[];
+  courseInformation: string;
+  courseWebsiteUrl: string;
+  programLevel: string;
+  careerOpportunities: string[];
+  loanInformation: string;
+  examTypes: ExamType[];
+  examYear?: number;
+  subjects: string[];
+  grades: Grade[];
+  ratings?: number;
+}
+
+export interface UpdateCsvCourseData {
+  id: string;
+  title?: string;
+  image?: string;
+  schoolId?: string;
+  scholarship?: string;
+  scholarshipRequirement?: string;
+  duration?: number;
+  durationPeriod?: 'YEAR' | 'MONTH' | 'WEEK';
+  price?: number;
+  currency?: 'NAIRA' | 'DOLLAR' | 'EURO';
+  acceptanceFee?: number;
+  acceptanceFeeCurrency?: 'NAIRA' | 'DOLLAR' | 'EURO';
+  objectives?: string;
+  requirements?: string[];
+  courseInformation?: string;
+  courseWebsiteUrl?: string;
+  programLevel?: string;
+  careerOpportunities?: string[];
+  loanInformation?: string;
+  examTypes?: string[];
+  examYear?: number;
+  subjects?: string[];
+  grades?: string[];
+  ratings?: number;
+}
 
 export interface NewCreateCSVSchoolData {
   name: string;
@@ -82,28 +135,6 @@ export interface UpdateSchoolData {
   region: string;
   websiteUrl?: string;
   logo?: string;
-}
-
-export interface UpdateCourseData {
-  id: string;
-  title?: string;
-  schoolId?: string;
-  scholarship?: string;
-  duration?: number;
-  durationPeriod?: DurationPeriod;
-  price?: number;
-  currency?: Currency;
-  acceptanceFee?: number;
-  estimatedLivingCost?: number;
-  acceptanceFeeCurrency?: Currency;
-  description?: string;
-  requirements?: string[];
-  courseInformation?: string;
-  courseWebsiteUrl?: string;
-  programLevel?: string;
-  careerOpportunities?: string[];
-  loanInformation?: string;
-  profile?: any;
 }
 
 export interface newCreateSchoolData {
@@ -126,13 +157,13 @@ export interface CourseCardData {
   currency: string;
   scholarship: string;
   ratings: number;
-  programLevel: string; // Keeping programLevel for display
+  programLevel: string;
 }
 
 export interface CourseDetailData {
   id: string;
   title: string;
-  profile: string | null;
+  image: string | null; // Renamed from profile
   school: {
     id: string;
     name: string;
@@ -142,13 +173,14 @@ export interface CourseDetailData {
     websiteUrl: string;
   };
   scholarship: string;
+  scholarshipRequirement: string | null; // Added
   duration: number;
-  durationPeriod: string;
+  durationPeriod: DurationPeriod;
   price: number;
-  currency: string;
+  currency: Currency;
   acceptanceFee: number;
-  acceptanceFeeCurrency: string;
-  description: string;
+  acceptanceFeeCurrency: Currency;
+  objectives: string; // Renamed from description
   requirements: string[];
   ratings: number;
   courseInformation: string;
@@ -156,16 +188,48 @@ export interface CourseDetailData {
   programLevel: string;
   careerOpportunities: string[];
   loanInformation: string;
-  estimatedLivingCost: number;
+  examTypes: ExamType[]; // Added
+  examYear: number | null; // Added
+  subjects: string[]; // Added
+  grades: Grade[]; // Added
 }
 
 export interface FilterOptions {
   scholarship?: string; // e.g., "Full Scholarship"
   country?: string;
   region?: string;
-  programLevel?: string; // e.g., "IT & Computer Science"
-  fieldOfStudy?: string; // Added as a query parameter (e.g., "STEM")
+  programLevel?: string; // e.g., "Bachelor Degree"
+  fieldOfStudy?: string; // Not in schema, might map to objectives or careerOpportunities
   keyword?: string; // Search keyword for title or school name
+  examTypes?: string[]; // New field for filtering by exam types
+  ratings?: number; // New field for filtering by minimum ratings
   page?: number;
   limit?: number;
 }
+
+export type CourseReportData = {
+  id: string;
+  title: string;
+  image: string; // Renamed from profile to image
+  schoolId: string;
+  scholarship: string;
+  scholarshipRequirement: string | null; // Added
+  duration: string; // Combined duration and durationPeriod
+  price: number;
+  currency: string;
+  acceptanceFee: number;
+  acceptanceFeeCurrency: string;
+  objectives: string; // Renamed from description to objectives
+  requirements: string; // Joined array
+  ratings: number;
+  courseInformation: string;
+  courseWebsiteUrl: string;
+  programLevel: string;
+  careerOpportunities: string; // Joined array
+  loanInformation: string;
+  examTypes: string; // Joined array, added
+  examYear: number | null; // Added
+  subjects: string; // Joined array, added
+  grades: string; // Joined array, added
+  createdAt: Date;
+};
