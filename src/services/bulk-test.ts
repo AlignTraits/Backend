@@ -61,10 +61,42 @@ export const createBulkSchoolsService2 = async (
 
           return { id: newSchool.id, name: newSchool.name };
         } catch (error: any) {
-          console.error(`Error creating school ${school.name}:`, error);
-          throw new Error(
-            `Failed to create school ${school.name}: ${error.message}`
-          );
+          console.error(`Error creating school "${school.name}":`, error);
+
+          // Beautify the error message
+          let userFriendlyMessage =
+            'An unexpected error occurred while creating the school';
+          if (error.message.includes('Unique constraint failed')) {
+            if (error.message.includes('name')) {
+              userFriendlyMessage = `A school with the name "${school.name}" already exists`;
+            } else {
+              userFriendlyMessage = 'A unique constraint was violated';
+            }
+          } else if (error.message.includes('Invalid value for argument')) {
+            if (error.message.includes('schoolType')) {
+              userFriendlyMessage =
+                'Invalid school type. Must be a valid school type (e.g., UNIVERSITY, COLLEGE)';
+            } else {
+              userFriendlyMessage = 'Invalid data provided for the school';
+            }
+          } else if (error.message.includes('Failed to create school')) {
+            userFriendlyMessage = error.message.replace(
+              `Failed to create school ${school.name}: `,
+              ''
+            );
+          }
+
+          // Log the failure to the BulkOperationFailure table
+          await db.bulkOperationFailure.create({
+            data: {
+              entity: 'School',
+              operation: 'Create',
+              itemData: school as any, // Store the failed school data as JSON
+              errorMessage: userFriendlyMessage,
+            },
+          });
+
+          throw new Error(userFriendlyMessage);
         }
       })
     );
@@ -464,7 +496,15 @@ export const createBulkCoursesService = async (
             userFriendlyMessage =
               'Invalid JSON format in one of the fields (e.g., requirements, careerOpportunities)';
           }
-
+          // Log the failure to the BulkOperationFailure table
+          await db.bulkOperationFailure.create({
+            data: {
+              entity: 'Course', // Corrected from 'School' to 'Course'
+              operation: 'Create', // Corrected from 'Update' to 'Create'
+              itemData: course as any, // Store the failed course data as JSON
+              errorMessage: userFriendlyMessage,
+            },
+          });
           errors.push({
             courseTitle: course.title,
             error: userFriendlyMessage,
@@ -568,11 +608,35 @@ export const updateBulkSchoolsService = async (
             data: { id: updatedSchool.id, name: updatedSchool.name },
           };
         } catch (error: any) {
+          console.error(
+            `Error updating school "${school.name || school.id}":`,
+            error
+          );
+
+          // Beautify the error message
+          let userFriendlyMessage =
+            'An unexpected error occurred while updating the school';
+          if (error.message.includes('Missing school ID')) {
+            userFriendlyMessage = 'School ID is required';
+          } else if (error.message.includes('School with ID')) {
+            userFriendlyMessage = error.message; // Already user-friendly
+          }
+
+          // Log the failure to the BulkOperationFailure table
+          await db.bulkOperationFailure.create({
+            data: {
+              entity: 'School',
+              operation: 'Update',
+              itemData: school as any, // Store the failed school data as JSON
+              errorMessage: userFriendlyMessage,
+            },
+          });
+
           return {
             status: 'failed',
             id: school.id,
             name: school.name || 'Unknown',
-            reason: error.message,
+            reason: userFriendlyMessage,
           };
         }
       })
@@ -950,6 +1014,16 @@ export const updateBulkCoursesService = async (
             }
           }
 
+          // Log the failure to the BulkOperationFailure table
+          await db.bulkOperationFailure.create({
+            data: {
+              entity: 'Course',
+              operation: 'Update',
+              itemData: course as any, // Store the failed course data as JSON
+              errorMessage: userFriendlyMessage,
+            },
+          });
+
           return {
             status: 'failed',
             id: course.id,
@@ -1218,5 +1292,35 @@ export const generateSchoolCourseReport = async (
   } catch (error) {
     console.error('Error generating report:', error);
     throw new Error('Error generating report');
+  }
+};
+
+// error fetching
+export const getBulkOperationFailuresService = async (
+  entity?: string,
+  operation?: string
+) => {
+  try {
+    // Build the where clause dynamically based on provided filters
+    const whereClause: any = {};
+    if (entity) {
+      whereClause.entity = entity;
+    }
+    if (operation) {
+      whereClause.operation = operation;
+    }
+
+    // Fetch the failures from the BulkOperationFailure table
+    const failures = await db.bulkOperationFailure.findMany({
+      where: whereClause,
+      orderBy: { createdAt: 'desc' }, // Sort by createdAt in descending order
+    });
+
+    return failures;
+  } catch (error: any) {
+    console.error('Error in getBulkOperationFailuresService:', error);
+    throw new Error(
+      `Failed to retrieve bulk operation failures: ${error.message}`
+    );
   }
 };

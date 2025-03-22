@@ -8,6 +8,7 @@ import {
   updateBulkCoursesService,
   updateBulkSchoolsService,
   generateSchoolCourseReport,
+  getBulkOperationFailuresService,
 } from '../services/bulk-test';
 import {
   CreateCSVCourseData,
@@ -316,5 +317,54 @@ export const downloadSchoolCourseDataController = async (
     return res
       .status(500)
       .json({ message: 'Error processing download request', data: [] });
+  }
+};
+
+export const getBulkOperationFailuresController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { entity, operation } = req.query;
+
+    // Validate query parameters
+    if (entity && typeof entity !== 'string') {
+      return res.status(400).json({
+        ok: false,
+        message: 'Invalid entity parameter',
+        errors: [
+          { message: 'Entity must be a string (e.g., Course or School)' },
+        ],
+      });
+    }
+
+    if (operation && typeof operation !== 'string') {
+      return res.status(400).json({
+        ok: false,
+        message: 'Invalid operation parameter',
+        errors: [
+          { message: 'Operation must be a string (e.g., Create or Update)' },
+        ],
+      });
+    }
+
+    // Fetch the failures using the service
+    const failures = await getBulkOperationFailuresService(
+      entity as string,
+      operation as string
+    );
+
+    res.status(200).json({
+      ok: true,
+      message: 'Bulk operation failures retrieved successfully',
+      data: failures,
+    });
+  } catch (error: any) {
+    console.error('Error retrieving bulk operation failures:', error);
+    res.status(500).json({
+      ok: false,
+      message: 'Failed to retrieve bulk operation failures',
+      errors: [{ message: error.message }],
+    });
   }
 };
