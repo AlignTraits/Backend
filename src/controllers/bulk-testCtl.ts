@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+
 import Papa from 'papaparse';
 import {
   createBulkCoursesService,
@@ -9,6 +10,7 @@ import {
   updateBulkSchoolsService,
   generateSchoolCourseReport,
   getBulkOperationFailuresService,
+  clearOldBulkOperationFailuresService,
 } from '../services/bulk-test';
 import {
   CreateCSVCourseData,
@@ -316,7 +318,10 @@ export const downloadSchoolCourseDataController = async (
     console.error('Download error:', error);
     return res
       .status(500)
-      .json({ message: 'Error processing download request', data: [] });
+      .json({
+        message: 'Error processing download request: No data found.',
+        data: [],
+      });
   }
 };
 
@@ -364,6 +369,29 @@ export const getBulkOperationFailuresController = async (
     res.status(500).json({
       ok: false,
       message: 'Failed to retrieve bulk operation failures',
+      errors: [{ message: error.message }],
+    });
+  }
+};
+
+// controllers/bulk-testCtl.ts
+
+export const clearBulkOperationFailuresController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const result = await clearOldBulkOperationFailuresService(14);
+    res.status(200).json({
+      ok: true,
+      message: result.message,
+      data: { deletedCount: result.deletedCount },
+    });
+  } catch (error: any) {
+    console.error('Error clearing BulkOperationFailures:', error);
+    res.status(500).json({
+      ok: false,
+      message: 'Failed to clear old BulkOperationFailure records',
       errors: [{ message: error.message }],
     });
   }

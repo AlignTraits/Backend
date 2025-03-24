@@ -11,6 +11,7 @@ import {
   updateBulkCoursesController,
   downloadSchoolCourseDataController,
   getBulkOperationFailuresController,
+  clearBulkOperationFailuresController,
 } from '../controllers/bulk-testCtl';
 
 const router = express.Router();
@@ -83,6 +84,13 @@ router.get(
   '/bulk-failures',
   adminLoginRequired, // Ensure only admins can access
   getBulkOperationFailuresController
+);
+
+// Route to manually clear old BulkOperationFailure records
+router.delete(
+  '/bulk-failures',
+  adminLoginRequired, // Ensure only admins can access
+  clearBulkOperationFailuresController
 );
 
 export default router;

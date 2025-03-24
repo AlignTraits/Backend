@@ -8,6 +8,7 @@ import * as middlewares from './middlewares';
 import api from './api';
 import MessageResponse from './types/messageResponse';
 import path from 'path';
+import { scheduleClearBulkOperationFailuresJob } from './jobs/clearBulkOperationFailuresJob';
 
 require('dotenv').config();
 
@@ -30,6 +31,8 @@ app.get<{}, MessageResponse>('/', (req, res) => {
 });
 
 app.use('/api/v1', api);
+// Start the cron job when the application starts
+scheduleClearBulkOperationFailuresJob();
 
 app.use(middlewares.notFound);
 app.use(middlewares.errorHandler);

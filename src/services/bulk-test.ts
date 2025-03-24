@@ -1324,3 +1324,48 @@ export const getBulkOperationFailuresService = async (
     );
   }
 };
+
+// services/bulk-test.ts
+
+export const clearOldBulkOperationFailuresService = async (
+  days: number = 25
+) => {
+  try {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+
+    const deletedRecords = await db.bulkOperationFailure.deleteMany({
+      where: {
+        createdAt: {
+          lt: cutoffDate,
+        },
+      },
+    });
+
+    console.log(
+      `Successfully deleted ${deletedRecords.count} BulkOperationFailure records older than 25 days`
+    );
+
+    // Log the cleanup action to ActionHistory (optional)
+    await db.actionHistory.create({
+      data: {
+        action: 'Clear BulkOperationFailures',
+        entity: 'BulkOperationFailure',
+        entityIds: [
+          { id: 'system', title: `Deleted ${deletedRecords.count} records` },
+        ],
+        userId: 'system', // Use a special userId for system actions
+      },
+    });
+
+    return {
+      message: 'Old BulkOperationFailure records cleared successfully',
+      deletedCount: deletedRecords.count,
+    };
+  } catch (error: any) {
+    console.error('Error in clearOldBulkOperationFailuresService:', error);
+    throw new Error(
+      `Failed to clear old BulkOperationFailure records: ${error.message}`
+    );
+  }
+};
