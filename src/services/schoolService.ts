@@ -9,13 +9,7 @@ import { createCourse, createSchool } from '../models/schoolmodel';
 import { db } from '../config/db';
 import { z } from 'zod';
 import { getUserByEmail } from '../models/userModel';
-import {
-  Prisma,
-  DurationPeriod,
-  Currency,
-  ExamType,
-  Grade,
-} from '@prisma/client';
+import { Prisma, ExamType, Grade } from '@prisma/client';
 import {
   CreateCourseData,
   UpdateCourseData,
@@ -179,6 +173,7 @@ export const createCourseService = async ({
   title,
   logo,
   schoolId,
+  programLocation, // Add programLocation
   scholarship,
   scholarshipRequirement,
   duration,
@@ -188,15 +183,15 @@ export const createCourseService = async ({
   acceptanceFee,
   acceptanceFeeCurrency,
   objectives,
-  requirements,
-  courseInformation,
   courseWebsiteUrl,
   programLevel,
-  careerOpportunities,
   loanInformation,
   examTypes,
   examYear,
   subjects,
+  ruleName,
+  ruleDescription,
+  ruleRequiredExams,
   grades,
   userId,
 }: CreateCourseData & { userId: string }) => {
@@ -255,12 +250,6 @@ export const createCourseService = async ({
     profileUrl = result.secure_url;
 
     // Parse JSON fields if needed
-    if (typeof requirements === 'string') {
-      requirements = JSON.parse(requirements);
-    }
-    if (typeof careerOpportunities === 'string') {
-      careerOpportunities = JSON.parse(careerOpportunities);
-    }
     if (typeof examTypes === 'string') {
       examTypes = JSON.parse(examTypes);
     }
@@ -348,6 +337,7 @@ export const createCourseService = async ({
         title,
         image: profileUrl,
         schoolId,
+        programLocation, // Add programLocation
         scholarship,
         scholarshipRequirement,
         duration: finalDuration,
@@ -357,16 +347,16 @@ export const createCourseService = async ({
         acceptanceFee: finalAcceptanceFee,
         acceptanceFeeCurrency,
         objectives,
-        requirements,
-        courseInformation,
         courseWebsiteUrl,
         programLevel,
-        careerOpportunities,
         loanInformation,
         examTypes: typedExamTypes,
         examYear,
         subjects,
         grades: typedGrades,
+        ruleName,
+        ruleDescription,
+        ruleRequiredExams,
       },
     });
 
@@ -403,6 +393,7 @@ export const updateCourseService = async ({
   title,
   logo,
   schoolId,
+  programLocation, // Add programLocation
   scholarship,
   scholarshipRequirement,
   duration,
@@ -412,17 +403,17 @@ export const updateCourseService = async ({
   acceptanceFee,
   acceptanceFeeCurrency,
   objectives,
-  requirements,
-  courseInformation,
   courseWebsiteUrl,
   programLevel,
-  careerOpportunities,
   loanInformation,
   examTypes,
   examYear,
   subjects,
   grades,
   ratings,
+  ruleName,
+  ruleDescription,
+  ruleRequiredExams,
   userId,
 }: UpdateCourseData & { userId: string }) => {
   let profileUrl: string | undefined;
@@ -459,7 +450,10 @@ export const updateCourseService = async ({
           status: 400,
           message: 'File upload failed',
           errors: [
-            { message: 'Invalid file type. Only JPG, JPEG & PNG are allowed.' },
+            {
+              message:
+                'Invalid file type. The file must be a JPG, JPEG, or PNG.',
+            },
           ],
         };
       }
@@ -478,12 +472,6 @@ export const updateCourseService = async ({
     }
 
     // Parse JSON fields if needed
-    if (typeof requirements === 'string') {
-      requirements = JSON.parse(requirements);
-    }
-    if (typeof careerOpportunities === 'string') {
-      careerOpportunities = JSON.parse(careerOpportunities);
-    }
     if (typeof examTypes === 'string') {
       examTypes = JSON.parse(examTypes);
     }
@@ -582,6 +570,7 @@ export const updateCourseService = async ({
         title: title || existingCourse.title,
         image: profileUrl || existingCourse.image,
         schoolId: schoolId || existingCourse.schoolId,
+        programLocation: programLocation || existingCourse.programLocation, // Add programLocation
         scholarship: scholarship || existingCourse.scholarship,
         scholarshipRequirement:
           scholarshipRequirement !== undefined
@@ -598,19 +587,18 @@ export const updateCourseService = async ({
         acceptanceFeeCurrency:
           acceptanceFeeCurrency || existingCourse.acceptanceFeeCurrency,
         objectives: objectives || existingCourse.objectives,
-        requirements: requirements || existingCourse.requirements,
-        courseInformation:
-          courseInformation || existingCourse.courseInformation,
         courseWebsiteUrl: courseWebsiteUrl || existingCourse.courseWebsiteUrl,
         programLevel: programLevel || existingCourse.programLevel,
-        careerOpportunities:
-          careerOpportunities || existingCourse.careerOpportunities,
         loanInformation: loanInformation || existingCourse.loanInformation,
         examTypes: typedExamTypes || existingCourse.examTypes,
         examYear: examYear !== undefined ? examYear : existingCourse.examYear,
         subjects: subjects || existingCourse.subjects,
         grades: typedGrades || existingCourse.grades,
         ratings: ratings !== undefined ? ratings : existingCourse.ratings,
+        ruleName: ruleName || existingCourse.ruleName,
+        ruleDescription: ruleDescription || existingCourse.ruleDescription,
+        ruleRequiredExams:
+          ruleRequiredExams || existingCourse.ruleRequiredExams,
       },
     });
 
@@ -926,24 +914,26 @@ const dashboardFilterSchema = z.object({
     .string()
     .optional()
     .transform((val) => (val ? new Date(val) : undefined)),
-  country: z.string().optional(), // Updated from location to country
-  region: z.string().optional(), // New field for region
+  country: z.string().optional(),
+  region: z.string().optional(),
 });
 
 export const getAdminDashboardService = async (filters: any) => {
   try {
     const parsedFilters = dashboardFilterSchema.parse(filters);
 
-    // Build where clauses for filtering
-    const dateFilter =
-      parsedFilters.startDate && parsedFilters.endDate
-        ? {
-            createdAt: {
-              gte: parsedFilters.startDate,
-              lte: parsedFilters.endDate,
-            },
-          }
-        : {};
+    // Build date filter compatible with Course, School, and User
+    const dateFilter: Prisma.CourseWhereInput &
+      Prisma.SchoolWhereInput &
+      Prisma.UserWhereInput = {};
+    if (parsedFilters.startDate && parsedFilters.endDate) {
+      dateFilter.createdAt = {
+        gte: parsedFilters.startDate,
+        lte: parsedFilters.endDate,
+      };
+    }
+
+    // Build school filter
     const schoolFilter: Prisma.SchoolWhereInput = {
       ...(parsedFilters.country
         ? { country: { contains: parsedFilters.country, mode: 'insensitive' } }
@@ -970,6 +960,7 @@ export const getAdminDashboardService = async (filters: any) => {
       orderBy: { _count: { schoolId: 'desc' } },
       take: 5,
     });
+
     const topSchoolsWithDetails = await Promise.all(
       topCourseSchools.map(async (course) => {
         const school = await db.school.findUnique({
@@ -978,7 +969,7 @@ export const getAdminDashboardService = async (filters: any) => {
         });
         return {
           ...school,
-          courseCount: course._count.schoolId,
+          courseCount: course._count!.schoolId, // Type assertion: _count is guaranteed to exist
         };
       })
     );
@@ -989,6 +980,7 @@ export const getAdminDashboardService = async (filters: any) => {
       _count: { schoolId: true },
       where: dateFilter,
     });
+
     const locationBreakdown = await Promise.all(
       coursesByLocation.map(async (course) => {
         const school = await db.school.findUnique({
@@ -998,7 +990,7 @@ export const getAdminDashboardService = async (filters: any) => {
         return {
           region: school?.region || 'Unknown',
           country: school?.country || 'Unknown',
-          count: course._count.schoolId,
+          count: course._count!.schoolId, // Type assertion: _count is guaranteed to exist
         };
       })
     ).then((results) =>

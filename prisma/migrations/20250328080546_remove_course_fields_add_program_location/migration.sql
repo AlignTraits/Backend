@@ -1,5 +1,5 @@
 -- CreateEnum
-CREATE TYPE "Roles" AS ENUM ('ADMIN', 'USER');
+CREATE TYPE "Roles" AS ENUM ('ADMIN', 'USER', 'SUPER_ADMIN', 'CONTENT_MANAGER', 'ANALYST');
 
 -- CreateEnum
 CREATE TYPE "Gender" AS ENUM ('MALE', 'FEMALE');
@@ -8,10 +8,16 @@ CREATE TYPE "Gender" AS ENUM ('MALE', 'FEMALE');
 CREATE TYPE "SchoolType" AS ENUM ('FEDERAL_UNIVERSITY', 'PRIVATE_UNIVERSITY', 'PUBLIC_UNIVERSITY');
 
 -- CreateEnum
-CREATE TYPE "DurationPeriod" AS ENUM ('YEAR', 'MONTH');
+CREATE TYPE "ExamType" AS ENUM ('JAMB', 'UTME', 'NECO', 'GCE', 'WAEC', 'NABTEB', 'A_LEVEL');
 
 -- CreateEnum
-CREATE TYPE "Currency" AS ENUM ('NAIRA', 'DOLLAR');
+CREATE TYPE "Grade" AS ENUM ('A1', 'B2', 'B3', 'C4', 'C5', 'C6', 'D7', 'E8', 'F9');
+
+-- CreateEnum
+CREATE TYPE "DurationPeriod" AS ENUM ('YEARS', 'MONTHS', 'WEEKS');
+
+-- CreateEnum
+CREATE TYPE "Currency" AS ENUM ('USD', 'EUR', 'NGN', 'CAD');
 
 -- CreateTable
 CREATE TABLE "User" (
@@ -23,6 +29,7 @@ CREATE TABLE "User" (
     "emailVerified" TIMESTAMP(3),
     "password" TEXT NOT NULL,
     "role" "Roles" NOT NULL DEFAULT 'USER',
+    "contactNumber" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "gender" "Gender",
     "dob" TIMESTAMP(3),
@@ -31,6 +38,7 @@ CREATE TABLE "User" (
     "bio" TEXT,
     "image" TEXT,
     "updatedAt" TIMESTAMP(3),
+    "otherSkill" TEXT,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
@@ -154,27 +162,59 @@ CREATE TABLE "WaitList" (
 );
 
 -- CreateTable
-CREATE TABLE "Course" (
+CREATE TABLE "School" (
+    "id" TEXT NOT NULL DEFAULT substring(gen_random_uuid()::text, 1, 10),
+    "name" TEXT NOT NULL,
+    "schoolType" "SchoolType" NOT NULL,
+    "country" TEXT NOT NULL,
+    "region" TEXT NOT NULL,
+    "logo" TEXT,
+    "websiteUrl" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "School_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ActionHistory" (
     "id" TEXT NOT NULL,
+    "action" TEXT NOT NULL,
+    "entity" TEXT NOT NULL,
+    "entityIds" JSONB NOT NULL,
+    "userId" TEXT,
+    "timestamp" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "ActionHistory_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Course" (
+    "id" TEXT NOT NULL DEFAULT substring(gen_random_uuid()::text, 1, 10),
     "title" TEXT NOT NULL,
-    "profile" TEXT,
+    "image" TEXT,
     "schoolId" TEXT NOT NULL,
+    "programLocation" TEXT NOT NULL,
     "scholarship" TEXT NOT NULL,
+    "scholarshipRequirement" TEXT,
     "duration" INTEGER NOT NULL,
     "durationPeriod" "DurationPeriod" NOT NULL,
+    "programLevel" TEXT NOT NULL,
     "price" DOUBLE PRECISION NOT NULL,
     "currency" "Currency" NOT NULL,
     "acceptanceFee" DOUBLE PRECISION NOT NULL,
     "acceptanceFeeCurrency" "Currency" NOT NULL,
-    "description" TEXT NOT NULL,
-    "requirements" TEXT[],
-    "ratings" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
-    "courseInformation" TEXT NOT NULL,
+    "objectives" TEXT NOT NULL,
     "courseWebsiteUrl" TEXT NOT NULL,
-    "programLevel" TEXT NOT NULL,
-    "careerOpportunities" TEXT[],
     "loanInformation" TEXT NOT NULL,
-    "estimatedLivingCost" DOUBLE PRECISION NOT NULL,
+    "examTypes" "ExamType"[],
+    "examYear" INTEGER,
+    "subjects" TEXT[],
+    "grades" "Grade"[],
+    "ratings" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+    "ruleName" TEXT,
+    "ruleDescription" TEXT,
+    "ruleRequiredExams" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -182,17 +222,15 @@ CREATE TABLE "Course" (
 );
 
 -- CreateTable
-CREATE TABLE "School" (
+CREATE TABLE "BulkOperationFailure" (
     "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "schoolType" "SchoolType" NOT NULL,
-    "location" TEXT NOT NULL,
-    "logo" TEXT,
-    "websiteUrl" TEXT NOT NULL,
+    "entity" TEXT NOT NULL,
+    "operation" TEXT NOT NULL,
+    "itemData" JSONB NOT NULL,
+    "errorMessage" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "School_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "BulkOperationFailure_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -251,6 +289,9 @@ ALTER TABLE "UserResponse" ADD CONSTRAINT "UserResponse_questionId_fkey" FOREIGN
 
 -- AddForeignKey
 ALTER TABLE "UserResponse" ADD CONSTRAINT "UserResponse_selectedOptionId_fkey" FOREIGN KEY ("selectedOptionId") REFERENCES "AnswerOption"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ActionHistory" ADD CONSTRAINT "ActionHistory_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Course" ADD CONSTRAINT "Course_schoolId_fkey" FOREIGN KEY ("schoolId") REFERENCES "School"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

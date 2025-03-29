@@ -316,12 +316,10 @@ export const downloadSchoolCourseDataController = async (
     return res.json({ message: 'Download ready', fileUrl });
   } catch (error) {
     console.error('Download error:', error);
-    return res
-      .status(500)
-      .json({
-        message: 'Error processing download request: No data found.',
-        data: [],
-      });
+    return res.status(500).json({
+      message: 'Error processing download request: No data found.',
+      data: [],
+    });
   }
 };
 

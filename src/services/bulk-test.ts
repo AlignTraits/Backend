@@ -15,7 +15,15 @@ import {
   UpdateCsvCourseData,
   CourseReportData,
 } from '../types/school-course-types';
-import { Currency, DurationPeriod, ExamType, Grade } from '@prisma/client';
+import {
+  Currency,
+  DurationPeriod,
+  ExamType,
+  Grade,
+  Prisma,
+} from '@prisma/client';
+
+// npm install @prisma/client@^5.19.1 prisma@^5.19.1
 
 const uploadBase64ImageToCloudinary = async (
   base64Image: string
@@ -317,6 +325,11 @@ export const createBulkCoursesService = async (
             throw new Error(`School with ID ${course.schoolId} does not exist`);
           }
 
+          // Validate programLocation
+          if (!course.programLocation) {
+            throw new Error('Program location is required');
+          }
+
           // Validate profile image
           let profileUrl: string | null = null;
           if (course.image) {
@@ -326,10 +339,6 @@ export const createBulkCoursesService = async (
           }
 
           // Parse JSON fields
-          const requirements = parseJsonField(course.requirements);
-          const careerOpportunities = parseJsonField(
-            course.careerOpportunities
-          );
           const examTypes = parseJsonField(course.examTypes);
           const grades = parseJsonField(course.grades);
           const subjects = parseJsonField(course.subjects);
@@ -390,43 +399,41 @@ export const createBulkCoursesService = async (
 
           // Map durationPeriod to Prisma's DurationPeriod
           let mappedDurationPeriod: DurationPeriod;
-          if (course.durationPeriod === 'YEAR') {
+          if (course.durationPeriod === 'YEARS') {
             mappedDurationPeriod = DurationPeriod.YEARS;
-          } else if (course.durationPeriod === 'MONTH') {
+          } else if (course.durationPeriod === 'MONTHS') {
             mappedDurationPeriod = DurationPeriod.MONTHS;
-          } else if (course.durationPeriod === 'WEEK') {
+          } else if (course.durationPeriod === 'WEEKS') {
             mappedDurationPeriod = DurationPeriod.WEEKS;
           } else {
             throw new Error(
-              'Invalid duration period. Must be one of: YEAR, MONTH, WEEK'
+              'Invalid duration period. Must be one of: YEARS, MONTHS, WEEKS'
             );
           }
 
           // Map currency to Prisma's Currency
           let mappedCurrency: Currency;
-          if (course.currency === 'NAIRA') {
+          if (course.currency === 'NGN') {
             mappedCurrency = Currency.NGN;
-          } else if (course.currency === 'DOLLAR') {
+          } else if (course.currency === 'USD') {
             mappedCurrency = Currency.USD;
-          } else if (course.currency === 'EURO') {
+          } else if (course.currency === 'EUR') {
             mappedCurrency = Currency.EUR;
           } else {
-            throw new Error(
-              'Invalid currency. Must be one of: NAIRA, DOLLAR, EURO'
-            );
+            throw new Error('Invalid currency. Must be one of: NGN, USD, EUR');
           }
 
           // Map acceptanceFeeCurrency to Prisma's Currency
           let mappedAcceptanceFeeCurrency: Currency;
-          if (course.acceptanceFeeCurrency === 'NAIRA') {
+          if (course.acceptanceFeeCurrency === 'NGN') {
             mappedAcceptanceFeeCurrency = Currency.NGN;
-          } else if (course.acceptanceFeeCurrency === 'DOLLAR') {
+          } else if (course.acceptanceFeeCurrency === 'USD') {
             mappedAcceptanceFeeCurrency = Currency.USD;
-          } else if (course.acceptanceFeeCurrency === 'EURO') {
+          } else if (course.acceptanceFeeCurrency === 'EUR') {
             mappedAcceptanceFeeCurrency = Currency.EUR;
           } else {
             throw new Error(
-              'Invalid acceptance fee currency. Must be one of: NAIRA, DOLLAR, EURO'
+              'Invalid acceptance fee currency. Must be one of: NGN, USD, EUR'
             );
           }
 
@@ -440,26 +447,27 @@ export const createBulkCoursesService = async (
               title: course.title,
               image: profileUrl,
               schoolId: course.schoolId,
+              programLocation: course.programLocation,
               scholarship: course.scholarship,
               scholarshipRequirement: course.scholarshipRequirement,
               duration: course.duration,
-              durationPeriod: mappedDurationPeriod, // Use mapped value
+              durationPeriod: mappedDurationPeriod,
               price: course.price,
-              currency: mappedCurrency, // Use mapped value
+              currency: mappedCurrency,
               acceptanceFee: course.acceptanceFee,
-              acceptanceFeeCurrency: mappedAcceptanceFeeCurrency, // Use mapped value
+              acceptanceFeeCurrency: mappedAcceptanceFeeCurrency,
               objectives: course.objectives,
-              requirements,
-              courseInformation: course.courseInformation,
               courseWebsiteUrl: course.courseWebsiteUrl,
               programLevel: course.programLevel,
-              careerOpportunities,
               loanInformation: course.loanInformation,
               examTypes: examTypes as ExamType[],
               examYear: course.examYear,
               subjects,
               grades: grades as Grade[],
               ratings: course.ratings ?? 0.0,
+              ruleName: course.ruleName,
+              ruleDescription: course.ruleDescription,
+              ruleRequiredExams: course.ruleRequiredExams,
             },
           });
 
@@ -471,37 +479,40 @@ export const createBulkCoursesService = async (
           let userFriendlyMessage =
             'An unexpected error occurred while creating the course';
           if (error.message.includes('School with ID')) {
-            userFriendlyMessage = error.message; // Already user-friendly
+            userFriendlyMessage = error.message;
+          } else if (error.message.includes('Program location is required')) {
+            userFriendlyMessage = 'Program location is required';
           } else if (error.message.includes('Profile image is required')) {
             userFriendlyMessage = 'Course image is required';
           } else if (error.message.includes('Invalid exam type')) {
-            userFriendlyMessage = error.message; // Already user-friendly
+            userFriendlyMessage = error.message;
           } else if (error.message.includes('Invalid grade')) {
-            userFriendlyMessage = error.message; // Already user-friendly
+            userFriendlyMessage = error.message;
           } else if (
             error.message.includes('The number of subjects must match')
           ) {
-            userFriendlyMessage = error.message; // Already user-friendly
+            userFriendlyMessage = error.message;
           } else if (error.message.includes('Ratings must be between')) {
-            userFriendlyMessage = error.message; // Already user-friendly
+            userFriendlyMessage = error.message;
           } else if (error.message.includes('Invalid duration period')) {
-            userFriendlyMessage = error.message; // Already user-friendly
+            userFriendlyMessage = error.message;
           } else if (error.message.includes('Invalid currency')) {
-            userFriendlyMessage = error.message; // Already user-friendly
+            userFriendlyMessage = error.message;
           } else if (
             error.message.includes('Invalid acceptance fee currency')
           ) {
-            userFriendlyMessage = error.message; // Already user-friendly
+            userFriendlyMessage = error.message;
           } else if (error.message.includes('Invalid JSON format')) {
             userFriendlyMessage =
-              'Invalid JSON format in one of the fields (e.g., requirements, careerOpportunities)';
+              'Invalid JSON format in one of the fields (e.g., examTypes, grades, subjects)';
           }
+
           // Log the failure to the BulkOperationFailure table
           await db.bulkOperationFailure.create({
             data: {
-              entity: 'Course', // Corrected from 'School' to 'Course'
-              operation: 'Create', // Corrected from 'Update' to 'Create'
-              itemData: course as any, // Store the failed course data as JSON
+              entity: 'Course',
+              operation: 'Create',
+              itemData: course as any,
               errorMessage: userFriendlyMessage,
             },
           });
@@ -736,7 +747,7 @@ const processImage = async (image: string): Promise<string | null> => {
 // services/bulk-test.ts
 
 export const updateBulkCoursesService = async (
-  courses: UpdateCsvCourseData[], // Using UpdateCourseData as per previous fix
+  courses: UpdateCsvCourseData[],
   userId: string
 ) => {
   try {
@@ -773,71 +784,6 @@ export const updateBulkCoursesService = async (
             imageUrl = await processImage(course.image);
           }
 
-          // Parse JSON fields if provided
-          const requirements = course.requirements
-            ? parseJsonFieldForUpdate(course.requirements)
-            : undefined;
-          const careerOpportunities = course.careerOpportunities
-            ? parseJsonFieldForUpdate(course.careerOpportunities)
-            : undefined;
-          const examTypes = course.examTypes
-            ? parseJsonFieldForUpdate(course.examTypes)
-            : undefined;
-          const grades = course.grades
-            ? parseJsonFieldForUpdate(course.grades)
-            : undefined;
-          const subjects = course.subjects
-            ? parseJsonFieldForUpdate(course.subjects)
-            : undefined;
-
-          // Validate examTypes and grades if provided
-          const validExamTypes = [
-            'JAMB',
-            'UTME',
-            'NECO',
-            'GCE',
-            'WAEC',
-            'NABTEB',
-            'A_LEVEL',
-          ] as const;
-          const validGrades = [
-            'A1',
-            'B2',
-            'B3',
-            'C4',
-            'C5',
-            'C6',
-            'D7',
-            'E8',
-            'F9',
-          ] as const;
-
-          if (
-            examTypes &&
-            !examTypes.every((type: string) =>
-              validExamTypes.includes(type as any)
-            )
-          ) {
-            throw new Error(
-              'Invalid exam type. Must be one of: ' + validExamTypes.join(', ')
-            );
-          }
-          if (
-            grades &&
-            !grades.every((grade: string) => validGrades.includes(grade as any))
-          ) {
-            throw new Error(
-              'Invalid grade. Must be one of: ' + validGrades.join(', ')
-            );
-          }
-
-          // Validate subjects and grades length match if both are provided
-          if (subjects && grades && subjects.length !== grades.length) {
-            throw new Error(
-              'The number of subjects must match the number of grades'
-            );
-          }
-
           // Validate ratings if provided
           if (
             course.ratings !== undefined &&
@@ -849,15 +795,15 @@ export const updateBulkCoursesService = async (
           // Map durationPeriod to Prisma's DurationPeriod if provided
           let mappedDurationPeriod: DurationPeriod | undefined;
           if (course.durationPeriod) {
-            if (course.durationPeriod === 'YEAR') {
+            if (course.durationPeriod === 'YEARS') {
               mappedDurationPeriod = DurationPeriod.YEARS;
-            } else if (course.durationPeriod === 'MONTH') {
+            } else if (course.durationPeriod === 'MONTHS') {
               mappedDurationPeriod = DurationPeriod.MONTHS;
-            } else if (course.durationPeriod === 'WEEK') {
+            } else if (course.durationPeriod === 'WEEKS') {
               mappedDurationPeriod = DurationPeriod.WEEKS;
             } else {
               throw new Error(
-                'Invalid duration period. Must be one of: YEAR, MONTH, WEEK'
+                'Invalid duration period. Must be one of: YEARS, MONTHS, WEEKS'
               );
             }
           }
@@ -865,15 +811,15 @@ export const updateBulkCoursesService = async (
           // Map currency to Prisma's Currency if provided
           let mappedCurrency: Currency | undefined;
           if (course.currency) {
-            if (course.currency === 'NAIRA') {
+            if (course.currency === 'NGN') {
               mappedCurrency = Currency.NGN;
-            } else if (course.currency === 'DOLLAR') {
+            } else if (course.currency === 'USD') {
               mappedCurrency = Currency.USD;
-            } else if (course.currency === 'EURO') {
+            } else if (course.currency === 'EUR') {
               mappedCurrency = Currency.EUR;
             } else {
               throw new Error(
-                'Invalid currency. Must be one of: NAIRA, DOLLAR, EURO'
+                'Invalid currency. Must be one of: NGN, USD, EUR'
               );
             }
           }
@@ -881,15 +827,15 @@ export const updateBulkCoursesService = async (
           // Map acceptanceFeeCurrency to Prisma's Currency if provided
           let mappedAcceptanceFeeCurrency: Currency | undefined;
           if (course.acceptanceFeeCurrency) {
-            if (course.acceptanceFeeCurrency === 'NAIRA') {
+            if (course.acceptanceFeeCurrency === 'NGN') {
               mappedAcceptanceFeeCurrency = Currency.NGN;
-            } else if (course.acceptanceFeeCurrency === 'DOLLAR') {
+            } else if (course.acceptanceFeeCurrency === 'USD') {
               mappedAcceptanceFeeCurrency = Currency.USD;
-            } else if (course.acceptanceFeeCurrency === 'EURO') {
+            } else if (course.acceptanceFeeCurrency === 'EUR') {
               mappedAcceptanceFeeCurrency = Currency.EUR;
             } else {
               throw new Error(
-                'Invalid acceptance fee currency. Must be one of: NAIRA, DOLLAR, EURO'
+                'Invalid acceptance fee currency. Must be one of: NGN, USD, EUR'
               );
             }
           }
@@ -899,11 +845,6 @@ export const updateBulkCoursesService = async (
             title: course.title ?? existingCourse.title,
             image: imageUrl ?? existingCourse.image,
             schoolId: course.schoolId ?? existingCourse.schoolId,
-            scholarship: course.scholarship ?? existingCourse.scholarship,
-            scholarshipRequirement:
-              course.scholarshipRequirement !== undefined
-                ? course.scholarshipRequirement
-                : existingCourse.scholarshipRequirement,
             duration: course.duration ?? existingCourse.duration,
             durationPeriod:
               mappedDurationPeriod ?? existingCourse.durationPeriod,
@@ -913,41 +854,11 @@ export const updateBulkCoursesService = async (
             acceptanceFeeCurrency:
               mappedAcceptanceFeeCurrency ??
               existingCourse.acceptanceFeeCurrency,
-            objectives: course.objectives ?? existingCourse.objectives,
-            requirements: requirements ?? existingCourse.requirements,
-            courseInformation:
-              course.courseInformation ?? existingCourse.courseInformation,
-            courseWebsiteUrl:
-              course.courseWebsiteUrl ?? existingCourse.courseWebsiteUrl,
-            programLevel: course.programLevel ?? existingCourse.programLevel,
-            careerOpportunities:
-              careerOpportunities ?? existingCourse.careerOpportunities,
-            loanInformation:
-              course.loanInformation ?? existingCourse.loanInformation,
-            examTypes: examTypes
-              ? (examTypes as ExamType[])
-              : existingCourse.examTypes,
-            examYear:
-              course.examYear !== undefined
-                ? course.examYear
-                : existingCourse.examYear,
-            subjects: subjects ?? existingCourse.subjects,
-            grades: grades ? (grades as Grade[]) : existingCourse.grades,
             ratings:
               course.ratings !== undefined
                 ? course.ratings
                 : existingCourse.ratings,
           };
-
-          // Skip if no changes
-          if (JSON.stringify(updateData) === JSON.stringify(existingCourse)) {
-            return {
-              status: 'skipped',
-              id: course.id,
-              title: existingCourse.title,
-              message: `No changes for course ID ${course.id}`,
-            };
-          }
 
           // Update the course
           const updatedCourse = await db.course.update({
@@ -961,139 +872,22 @@ export const updateBulkCoursesService = async (
           };
         } catch (error: any) {
           console.error(
-            `Error updating course "${course.title || course.id}":`,
+            `Error updating course "${course.title || course.id || 'unknown'}":`,
             error
           );
-
-          // Beautify the error message
-          let userFriendlyMessage =
-            'An unexpected error occurred while updating the course';
-          if (error.message.includes('Missing course ID')) {
-            userFriendlyMessage = 'Course ID is required';
-          } else if (error.message.includes('Course with ID')) {
-            userFriendlyMessage = error.message;
-          } else if (error.message.includes('School with ID')) {
-            userFriendlyMessage = error.message;
-          } else if (error.message.includes('Invalid image format')) {
-            userFriendlyMessage =
-              'Invalid image format. Must be a base64 string or a valid URL';
-          } else if (error.message.includes('Invalid exam type')) {
-            userFriendlyMessage = error.message;
-          } else if (error.message.includes('Invalid grade')) {
-            userFriendlyMessage = error.message;
-          } else if (
-            error.message.includes('The number of subjects must match')
-          ) {
-            userFriendlyMessage = error.message;
-          } else if (error.message.includes('Ratings must be between')) {
-            userFriendlyMessage = error.message;
-          } else if (error.message.includes('Invalid duration period')) {
-            userFriendlyMessage = error.message;
-          } else if (error.message.includes('Invalid currency')) {
-            userFriendlyMessage = error.message;
-          } else if (
-            error.message.includes('Invalid acceptance fee currency')
-          ) {
-            userFriendlyMessage = error.message;
-          } else if (error.message.includes('Invalid JSON format')) {
-            userFriendlyMessage =
-              'Invalid JSON format in one of the fields (e.g., requirements, careerOpportunities)';
-          } else if (error.message.includes('Invalid value for argument')) {
-            if (error.message.includes('durationPeriod')) {
-              userFriendlyMessage =
-                'Invalid duration period. Must be one of: YEAR, MONTH, WEEK';
-            } else if (error.message.includes('currency')) {
-              userFriendlyMessage =
-                'Invalid currency. Must be one of: NAIRA, DOLLAR, EURO';
-            } else if (error.message.includes('acceptanceFeeCurrency')) {
-              userFriendlyMessage =
-                'Invalid acceptance fee currency. Must be one of: NAIRA, DOLLAR, EURO';
-            } else {
-              userFriendlyMessage =
-                'Invalid data provided for the course update';
-            }
-          }
-
-          // Log the failure to the BulkOperationFailure table
-          await db.bulkOperationFailure.create({
-            data: {
-              entity: 'Course',
-              operation: 'Update',
-              itemData: course as any, // Store the failed course data as JSON
-              errorMessage: userFriendlyMessage,
-            },
-          });
-
           return {
             status: 'failed',
-            id: course.id,
+            id: course.id || 'unknown',
             title: course.title || 'Unknown',
-            reason: userFriendlyMessage,
+            reason: error.message,
           };
         }
       })
     );
 
-    const updatedCourses = results
-      .filter(
-        (result) =>
-          result.status === 'fulfilled' && result.value.status === 'success'
-      )
-      .map((result: any) => result.value.data);
-
-    const failedUpdates = results
-      .filter(
-        (result) =>
-          result.status === 'fulfilled' && result.value.status === 'failed'
-      )
-      .map((result: any) => ({
-        id: result.value.id,
-        title: result.value.title,
-        error: result.value.reason,
-      }));
-
-    const skippedUpdates = results
-      .filter(
-        (result) =>
-          result.status === 'fulfilled' && result.value.status === 'skipped'
-      )
-      .map((result: any) => ({
-        id: result.value.id,
-        title: result.value.title,
-        message: result.value.message,
-      }));
-
-    if (updatedCourses.length > 0) {
-      // Validate userId before logging action history
-      let userExists = false;
-      if (userId) {
-        const user = await db.user.findUnique({ where: { id: userId } });
-        userExists = !!user;
-      }
-
-      if (userExists) {
-        await db.actionHistory.create({
-          data: {
-            action: 'Bulk Update',
-            entity: 'Course',
-            entityIds: updatedCourses.map(({ id, title }) => ({ id, title })),
-            userId: userId,
-          },
-        });
-      } else {
-        console.warn(
-          `Skipping ActionHistory creation: userId ${userId} does not exist`
-        );
-      }
-    }
-
     return {
       message: 'Bulk update process completed',
-      data: {
-        updated: updatedCourses,
-        failed: failedUpdates,
-        skipped: skippedUpdates,
-      },
+      data: results.map((result: any) => result.value),
     };
   } catch (error: any) {
     console.error('Error in updateBulkCoursesService:', error);
@@ -1109,8 +903,10 @@ type SchoolReportData = {
   region: string;
   websiteUrl: string;
   logo: string | null;
-  createdAt: Date;
+  createdAt: string;
 };
+
+//
 
 export const generateSchoolCourseReport = async (
   entity: string,
@@ -1126,7 +922,13 @@ export const generateSchoolCourseReport = async (
 ): Promise<string> => {
   try {
     const start = startDate ? new Date(startDate) : undefined;
+    if (start) {
+      start.setUTCHours(0, 0, 0, 0);
+    }
     const end = endDate ? new Date(endDate) : undefined;
+    if (end) {
+      end.setUTCHours(23, 59, 59, 999);
+    }
 
     console.log('Received filters:', {
       entity,
@@ -1151,12 +953,22 @@ export const generateSchoolCourseReport = async (
     const filePath = path.join(downloadsDir, fileName);
 
     if (entity === 'school') {
-      const where: any = {};
-      if (start && end) where.createdAt = { gte: start, lte: end };
-      if (id) where.id = id;
-      if (name) where.name = { contains: name, mode: 'insensitive' };
-      if (country) where.country = { contains: country, mode: 'insensitive' };
-      if (region) where.region = { contains: region, mode: 'insensitive' };
+      const where: Prisma.SchoolWhereInput = {};
+      if (start && end) {
+        where.createdAt = { gte: start, lte: end };
+      }
+      if (id) {
+        where.id = id;
+      }
+      if (name) {
+        where.name = { contains: name, mode: 'insensitive' };
+      }
+      if (country) {
+        where.country = { contains: country, mode: 'insensitive' };
+      }
+      if (region) {
+        where.region = { contains: region, mode: 'insensitive' };
+      }
 
       const schools = await db.school.findMany({
         where,
@@ -1169,10 +981,20 @@ export const generateSchoolCourseReport = async (
           websiteUrl: true,
           logo: true,
           createdAt: true,
+          updatedAt: true,
         },
       });
 
-      const schoolData: SchoolReportData[] = schools;
+      const schoolData: SchoolReportData[] = schools.map((school) => ({
+        id: school.id,
+        name: school.name,
+        schoolType: school.schoolType,
+        country: school.country,
+        region: school.region,
+        websiteUrl: school.websiteUrl,
+        logo: school.logo,
+        createdAt: school.createdAt?.toISOString(),
+      }));
 
       if (schoolData.length === 0) {
         console.error('No school data found for the given filters:', {
@@ -1198,68 +1020,79 @@ export const generateSchoolCourseReport = async (
         throw new Error('Unsupported format');
       }
     } else if (entity === 'course') {
-      const where: any = {};
-      if (start && end) where.createdAt = { gte: start, lte: end };
-      if (id) where.id = { equals: id };
-      if (title) where.title = { contains: title, mode: 'insensitive' };
-      if (schoolId) where.schoolId = { equals: schoolId };
+      const where: Prisma.CourseWhereInput = {};
+      if (start && end) {
+        where.createdAt = { gte: start, lte: end };
+      }
+      if (id) {
+        where.id = id;
+      }
+      if (title) {
+        where.title = { contains: title, mode: 'insensitive' };
+      }
+      if (schoolId) {
+        where.schoolId = schoolId;
+      }
 
       const courses = await db.course.findMany({
         where,
         select: {
           id: true,
           title: true,
-          image: true, // Renamed from profile to image
+          image: true,
           schoolId: true,
+          programLocation: true,
           scholarship: true,
-          scholarshipRequirement: true, // Added
+          scholarshipRequirement: true,
           duration: true,
           durationPeriod: true,
           price: true,
           currency: true,
           acceptanceFee: true,
           acceptanceFeeCurrency: true,
-          objectives: true, // Renamed from description to objectives
-          requirements: true,
-          courseInformation: true,
+          objectives: true,
           courseWebsiteUrl: true,
           programLevel: true,
-          careerOpportunities: true,
           loanInformation: true,
-          examTypes: true, // Added
-          examYear: true, // Added
-          subjects: true, // Added
-          grades: true, // Added
+          examTypes: true,
+          examYear: true,
+          subjects: true,
+          grades: true,
           ratings: true,
+          ruleName: true,
+          ruleDescription: true,
+          ruleRequiredExams: true,
           createdAt: true,
+          updatedAt: true,
         },
       });
 
       const courseData: CourseReportData[] = courses.map((course) => ({
         id: course.id,
         title: course.title,
-        image: course.image ?? '', // Use image instead of profile
-        schoolId: course.schoolId,
+        image: course.image ?? '',
+        schoolId: schoolId ?? course.schoolId,
+        programLocation: course.programLocation,
         scholarship: course.scholarship,
-        scholarshipRequirement: course.scholarshipRequirement, // Added
+        scholarshipRequirement: course.scholarshipRequirement,
         duration: `${course.duration} ${course.durationPeriod.toLowerCase()}`,
         price: course.price,
         currency: course.currency,
         acceptanceFee: course.acceptanceFee,
         acceptanceFeeCurrency: course.acceptanceFeeCurrency,
-        objectives: course.objectives, // Use objectives instead of description
-        requirements: course.requirements.join(', '),
-        courseInformation: course.courseInformation,
+        objectives: course.objectives,
         courseWebsiteUrl: course.courseWebsiteUrl,
         programLevel: course.programLevel,
-        careerOpportunities: course.careerOpportunities.join(', '),
         loanInformation: course.loanInformation,
-        examTypes: course.examTypes.join(', '), // Added
-        examYear: course.examYear, // Added
-        subjects: course.subjects.join(', '), // Added
-        grades: course.grades.join(', '), // Added
+        examTypes: course.examTypes.join(', '),
+        examYear: course.examYear,
+        subjects: course.subjects.join(', '),
+        grades: course.grades.join(', '),
         ratings: course.ratings,
-        createdAt: course.createdAt,
+        ruleName: course.ruleName,
+        ruleDescription: course.ruleDescription,
+        ruleRequiredExams: course.ruleRequiredExams,
+        createdAt: course.createdAt?.toISOString(),
       }));
 
       if (courseData.length === 0) {
@@ -1291,7 +1124,7 @@ export const generateSchoolCourseReport = async (
     return `/downloads/${fileName}`;
   } catch (error) {
     console.error('Error generating report:', error);
-    throw new Error('Error generating report');
+    throw error;
   }
 };
 

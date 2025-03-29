@@ -17,6 +17,62 @@ export interface CreateCourseData {
   logo: Express.Multer.File | null | undefined;
   schoolId: string;
   scholarship: string;
+  programLocation: string; // Add programLocation
+  scholarshipRequirement?: string;
+  duration: number;
+  durationPeriod: DurationPeriod;
+  price: number;
+  currency: Currency;
+  acceptanceFee: number;
+  acceptanceFeeCurrency: Currency;
+  objectives: string;
+  courseWebsiteUrl: string;
+  programLevel: string;
+  loanInformation: string;
+  examTypes: string[];
+  examYear?: number;
+  subjects: string[];
+  grades: string[];
+  ratings?: number;
+  ruleName?: string;
+  ruleDescription?: string;
+  ruleRequiredExams?: string;
+}
+
+// Type for updating a course (all fields optional)
+export interface UpdateCourseData {
+  id: string;
+  title?: string;
+  logo?: Express.Multer.File | null | undefined;
+  schoolId?: string;
+  scholarship?: string;
+  programLocation: string; // Add programLocation
+  scholarshipRequirement?: string;
+  duration?: number;
+  durationPeriod?: DurationPeriod;
+  price?: number;
+  currency?: Currency;
+  acceptanceFee?: number;
+  acceptanceFeeCurrency?: Currency;
+  objectives?: string;
+  courseWebsiteUrl?: string;
+  programLevel?: string;
+  loanInformation?: string;
+  examTypes?: string[];
+  examYear?: number;
+  subjects?: string[];
+  grades?: string[];
+  ratings?: number;
+  ruleName?: string;
+  ruleDescription?: string;
+  ruleRequiredExams?: string;
+}
+export interface CreateCSVCourseData {
+  title: string;
+  image: string; // Renamed from profile to image
+  schoolId: string;
+  scholarship: string;
+  programLocation: string; // Add programLocation
   scholarshipRequirement?: string;
   duration: number;
   durationPeriod: DurationPeriod;
@@ -31,20 +87,23 @@ export interface CreateCourseData {
   programLevel: string;
   careerOpportunities: string[];
   loanInformation: string;
-  examTypes: string[];
+  examTypes: ExamType[];
   examYear?: number;
   subjects: string[];
-  grades: string[];
+  grades: Grade[];
   ratings?: number;
+  ruleName?: string;
+  ruleDescription?: string;
+  ruleRequiredExams?: string;
 }
 
-// Type for updating a course (all fields optional)
-export interface UpdateCourseData {
+export interface UpdateCsvCourseData {
   id: string;
   title?: string;
-  logo?: Express.Multer.File | null | undefined;
+  image?: string;
   schoolId?: string;
   scholarship?: string;
+  programLocation: string; // Add programLocation
   scholarshipRequirement?: string;
   duration?: number;
   durationPeriod?: DurationPeriod;
@@ -64,58 +123,9 @@ export interface UpdateCourseData {
   subjects?: string[];
   grades?: string[];
   ratings?: number;
-}
-export interface CreateCSVCourseData {
-  title: string;
-  image: string; // Renamed from profile to image
-  schoolId: string;
-  scholarship: string;
-  scholarshipRequirement?: string;
-  duration: number;
-  durationPeriod: 'YEAR' | 'MONTH' | 'WEEK';
-  price: number;
-  currency: 'NAIRA' | 'DOLLAR' | 'EURO';
-  acceptanceFee: number;
-  acceptanceFeeCurrency: 'NAIRA' | 'DOLLAR' | 'EURO';
-  objectives: string;
-  requirements: string[];
-  courseInformation: string;
-  courseWebsiteUrl: string;
-  programLevel: string;
-  careerOpportunities: string[];
-  loanInformation: string;
-  examTypes: ExamType[];
-  examYear?: number;
-  subjects: string[];
-  grades: Grade[];
-  ratings?: number;
-}
-
-export interface UpdateCsvCourseData {
-  id: string;
-  title?: string;
-  image?: string;
-  schoolId?: string;
-  scholarship?: string;
-  scholarshipRequirement?: string;
-  duration?: number;
-  durationPeriod?: 'YEAR' | 'MONTH' | 'WEEK';
-  price?: number;
-  currency?: 'NAIRA' | 'DOLLAR' | 'EURO';
-  acceptanceFee?: number;
-  acceptanceFeeCurrency?: 'NAIRA' | 'DOLLAR' | 'EURO';
-  objectives?: string;
-  requirements?: string[];
-  courseInformation?: string;
-  courseWebsiteUrl?: string;
-  programLevel?: string;
-  careerOpportunities?: string[];
-  loanInformation?: string;
-  examTypes?: string[];
-  examYear?: number;
-  subjects?: string[];
-  grades?: string[];
-  ratings?: number;
+  ruleName?: string;
+  ruleDescription?: string;
+  ruleRequiredExams?: string;
 }
 
 export interface NewCreateCSVSchoolData {
@@ -173,6 +183,7 @@ export interface CourseDetailData {
     websiteUrl: string;
   };
   scholarship: string;
+  programLocation: string; // Add programLocation
   scholarshipRequirement: string | null; // Added
   duration: number;
   durationPeriod: DurationPeriod;
@@ -181,12 +192,9 @@ export interface CourseDetailData {
   acceptanceFee: number;
   acceptanceFeeCurrency: Currency;
   objectives: string; // Renamed from description
-  requirements: string[];
   ratings: number;
-  courseInformation: string;
   courseWebsiteUrl: string;
   programLevel: string;
-  careerOpportunities: string[];
   loanInformation: string;
   examTypes: ExamType[]; // Added
   examYear: number | null; // Added
@@ -213,6 +221,7 @@ export type CourseReportData = {
   image: string; // Renamed from profile to image
   schoolId: string;
   scholarship: string;
+  programLocation: string; // Add programLocation
   scholarshipRequirement: string | null; // Added
   duration: string; // Combined duration and durationPeriod
   price: number;
@@ -220,16 +229,16 @@ export type CourseReportData = {
   acceptanceFee: number;
   acceptanceFeeCurrency: string;
   objectives: string; // Renamed from description to objectives
-  requirements: string; // Joined array
   ratings: number;
-  courseInformation: string;
   courseWebsiteUrl: string;
   programLevel: string;
-  careerOpportunities: string; // Joined array
   loanInformation: string;
   examTypes: string; // Joined array, added
   examYear: number | null; // Added
   subjects: string; // Joined array, added
   grades: string; // Joined array, added
-  createdAt: Date;
+  ruleName: string | null; // Add missing field
+  ruleDescription: string | null; // Add missing field
+  ruleRequiredExams: string | null; // Fix typo: ruleRequiredExams (not ruleRequiredExamsts)
+  createdAt: string; // Ensure this matches the mapped value
 };

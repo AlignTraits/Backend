@@ -79,6 +79,7 @@ export const createCourseController = async (req: Request, res: Response) => {
     const {
       title,
       schoolId,
+      programLocation, // Add programLocation
       scholarship,
       scholarshipRequirement,
       duration,
@@ -88,15 +89,15 @@ export const createCourseController = async (req: Request, res: Response) => {
       acceptanceFee,
       acceptanceFeeCurrency,
       objectives,
-      requirements,
-      courseInformation,
       courseWebsiteUrl,
       programLevel,
-      careerOpportunities,
       loanInformation,
       examTypes,
       examYear,
       subjects,
+      ruleName,
+      ruleDescription,
+      ruleRequiredExams,
       grades,
     } = req.body;
     const logo = req.file;
@@ -107,6 +108,10 @@ export const createCourseController = async (req: Request, res: Response) => {
     }
     if (!schoolId) {
       return res.status(400).send({ error: 'School ID is required' });
+    }
+    if (!programLocation) {
+      // Add validation for programLocation
+      return res.status(400).send({ error: 'Program location is required' });
     }
     if (!scholarship) {
       return res.status(400).send({ error: 'Scholarship is required' });
@@ -140,22 +145,11 @@ export const createCourseController = async (req: Request, res: Response) => {
     if (!objectives) {
       return res.status(400).send({ error: 'Objectives are required' });
     }
-    if (!requirements) {
-      return res.status(400).send({ error: 'Requirements are required' });
-    }
-    if (!courseInformation) {
-      return res.status(400).send({ error: 'Course information is required' });
-    }
     if (!courseWebsiteUrl) {
       return res.status(400).send({ error: 'Course website URL is required' });
     }
     if (!programLevel) {
       return res.status(400).send({ error: 'Program level is required' });
-    }
-    if (!careerOpportunities) {
-      return res
-        .status(400)
-        .send({ error: 'Career opportunities are required' });
     }
     if (!loanInformation) {
       return res.status(400).send({ error: 'Loan information is required' });
@@ -172,44 +166,44 @@ export const createCourseController = async (req: Request, res: Response) => {
 
     // Map durationPeriod to Prisma's DurationPeriod
     let mappedDurationPeriod: DurationPeriod;
-    if (durationPeriod === 'YEAR') {
+    if (durationPeriod === 'YEARS') {
       mappedDurationPeriod = DurationPeriod.YEARS;
-    } else if (durationPeriod === 'MONTH') {
+    } else if (durationPeriod === 'MONTHS') {
       mappedDurationPeriod = DurationPeriod.MONTHS;
-    } else if (durationPeriod === 'WEEK') {
+    } else if (durationPeriod === 'WEEKS') {
       mappedDurationPeriod = DurationPeriod.WEEKS;
     } else {
       return res.status(400).send({
-        error: 'Invalid duration period. Must be "YEAR", "MONTH", or "WEEK"',
+        error: 'Invalid duration period. Must be "YEARS", "MONTHS", or "WEEKS"',
       });
     }
 
     // Map currency to Prisma's Currency
     let mappedCurrency: Currency;
-    if (currency === 'NAIRA') {
+    if (currency === 'NGN') {
       mappedCurrency = Currency.NGN;
-    } else if (currency === 'DOLLAR') {
+    } else if (currency === 'USD') {
       mappedCurrency = Currency.USD;
-    } else if (currency === 'EURO') {
+    } else if (currency === 'EUR') {
       mappedCurrency = Currency.EUR;
     } else {
       return res.status(400).send({
-        error: 'Invalid currency. Must be "NAIRA", "DOLLAR", or "EURO"',
+        error: 'Invalid currency. Must be "NGN", "USD", or "EUR"',
       });
     }
 
     // Map acceptanceFeeCurrency to Prisma's Currency
     let mappedAcceptanceFeeCurrency: Currency;
-    if (acceptanceFeeCurrency === 'NAIRA') {
+    if (acceptanceFeeCurrency === 'NGN') {
       mappedAcceptanceFeeCurrency = Currency.NGN;
-    } else if (acceptanceFeeCurrency === 'DOLLAR') {
+    } else if (acceptanceFeeCurrency === 'USD') {
       mappedAcceptanceFeeCurrency = Currency.USD;
-    } else if (acceptanceFeeCurrency === 'EURO') {
+    } else if (acceptanceFeeCurrency === 'EUR') {
       mappedAcceptanceFeeCurrency = Currency.EUR;
     } else {
       return res.status(400).send({
         error:
-          'Invalid acceptance fee currency. Must be "NAIRA", "DOLLAR", or "EURO"',
+          'Invalid acceptance fee currency. Must be "NGN", "USD", or "EUR"',
       });
     }
 
@@ -218,6 +212,7 @@ export const createCourseController = async (req: Request, res: Response) => {
       title,
       logo,
       schoolId,
+      programLocation, // Add programLocation
       scholarship,
       scholarshipRequirement,
       duration: parseInt(duration, 10),
@@ -227,13 +222,13 @@ export const createCourseController = async (req: Request, res: Response) => {
       acceptanceFee: parseFloat(acceptanceFee),
       acceptanceFeeCurrency: mappedAcceptanceFeeCurrency,
       objectives,
-      requirements,
-      courseInformation,
       courseWebsiteUrl,
       programLevel,
-      careerOpportunities,
       loanInformation,
       examTypes,
+      ruleName,
+      ruleDescription,
+      ruleRequiredExams,
       examYear: examYear ? parseInt(examYear, 10) : undefined,
       subjects,
       grades,
@@ -254,6 +249,7 @@ export const updateCourseController = async (req: Request, res: Response) => {
     const {
       title,
       schoolId,
+      programLocation, // Add programLocation
       scholarship,
       scholarshipRequirement,
       duration,
@@ -263,15 +259,15 @@ export const updateCourseController = async (req: Request, res: Response) => {
       acceptanceFee,
       acceptanceFeeCurrency,
       objectives,
-      requirements,
-      courseInformation,
       courseWebsiteUrl,
       programLevel,
-      careerOpportunities,
       loanInformation,
       examTypes,
       examYear,
       subjects,
+      ruleName,
+      ruleDescription,
+      ruleRequiredExams,
       grades,
       ratings,
     } = req.body;
@@ -308,15 +304,16 @@ export const updateCourseController = async (req: Request, res: Response) => {
     // Map durationPeriod to Prisma's DurationPeriod if provided
     let mappedDurationPeriod: DurationPeriod | undefined;
     if (durationPeriod) {
-      if (durationPeriod === 'YEAR') {
+      if (durationPeriod === 'YEARS') {
         mappedDurationPeriod = DurationPeriod.YEARS;
-      } else if (durationPeriod === 'MONTH') {
+      } else if (durationPeriod === 'MONTHS') {
         mappedDurationPeriod = DurationPeriod.MONTHS;
-      } else if (durationPeriod === 'WEEK') {
+      } else if (durationPeriod === 'WEEKS') {
         mappedDurationPeriod = DurationPeriod.WEEKS;
       } else {
         return res.status(400).send({
-          error: 'Invalid duration period. Must be "YEAR", "MONTH", or "WEEK"',
+          error:
+            'Invalid duration period. Must be "YEARS", "MONTHS", or "WEEKS"',
         });
       }
     }
@@ -324,15 +321,15 @@ export const updateCourseController = async (req: Request, res: Response) => {
     // Map currency to Prisma's Currency if provided
     let mappedCurrency: Currency | undefined;
     if (currency) {
-      if (currency === 'NAIRA') {
+      if (currency === 'NGN') {
         mappedCurrency = Currency.NGN;
-      } else if (currency === 'DOLLAR') {
+      } else if (currency === 'USD') {
         mappedCurrency = Currency.USD;
-      } else if (currency === 'EURO') {
+      } else if (currency === 'EUR') {
         mappedCurrency = Currency.EUR;
       } else {
         return res.status(400).send({
-          error: 'Invalid currency. Must be "NAIRA", "DOLLAR", or "EURO"',
+          error: 'Invalid currency. Must be "NGN", "USD", or "EUR"',
         });
       }
     }
@@ -340,16 +337,16 @@ export const updateCourseController = async (req: Request, res: Response) => {
     // Map acceptanceFeeCurrency to Prisma's Currency if provided
     let mappedAcceptanceFeeCurrency: Currency | undefined;
     if (acceptanceFeeCurrency) {
-      if (acceptanceFeeCurrency === 'NAIRA') {
+      if (acceptanceFeeCurrency === 'NGN') {
         mappedAcceptanceFeeCurrency = Currency.NGN;
-      } else if (acceptanceFeeCurrency === 'DOLLAR') {
+      } else if (acceptanceFeeCurrency === 'USD') {
         mappedAcceptanceFeeCurrency = Currency.USD;
-      } else if (acceptanceFeeCurrency === 'EURO') {
+      } else if (acceptanceFeeCurrency === 'EUR') {
         mappedAcceptanceFeeCurrency = Currency.EUR;
       } else {
         return res.status(400).send({
           error:
-            'Invalid acceptance fee currency. Must be "NAIRA", "DOLLAR", or "EURO"',
+            'Invalid acceptance fee currency. Must be "NGN", "USD", or "EUR"',
         });
       }
     }
@@ -361,6 +358,7 @@ export const updateCourseController = async (req: Request, res: Response) => {
       title,
       logo,
       schoolId,
+      programLocation, // Add programLocation
       scholarship,
       scholarshipRequirement,
       duration: duration ? parseInt(duration, 10) : undefined,
@@ -370,13 +368,13 @@ export const updateCourseController = async (req: Request, res: Response) => {
       acceptanceFee: acceptanceFee ? parseFloat(acceptanceFee) : undefined,
       acceptanceFeeCurrency: mappedAcceptanceFeeCurrency,
       objectives,
-      requirements,
-      courseInformation,
       courseWebsiteUrl,
       programLevel,
-      careerOpportunities,
       loanInformation,
       examTypes,
+      ruleName,
+      ruleDescription,
+      ruleRequiredExams,
       examYear: examYear ? parseInt(examYear, 10) : undefined,
       subjects,
       grades,

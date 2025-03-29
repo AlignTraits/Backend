@@ -13,6 +13,8 @@ enum Roles {
   ADMIN
   USER
   SUPER_ADMIN
+  CONTENT_MANAGER
+  ANALYST
 }
 
 enum Gender {
@@ -226,6 +228,7 @@ model Course {
   image                  String?         // Course Image
   schoolId               String          // Program Location (via relation to School)
   university             School          @relation(fields: [schoolId], references: [id])
+  programLocation        String          // New field for Program Location
   scholarship            String          // Scholarship
   scholarshipRequirement String?         // Scholarship Requirement
   duration               Int             // Program Duration (e.g., 4)
@@ -236,16 +239,16 @@ model Course {
   acceptanceFee          Float           // Acceptance Fee
   acceptanceFeeCurrency  Currency        // Currency for Acceptance Fee
   objectives             String          // Course Objectives
-  courseInformation      String          // Course Information
   courseWebsiteUrl       String          // Course website url
   loanInformation        String          // Loan Information
-  careerOpportunities    String[]        // Additional info
-  requirements           String[]        // Admission Requirements (general)
   examTypes              ExamType[]      // Exam Type
   examYear               Int?            // Exam Year
   subjects               String[]        // Subjects
   grades                 Grade[]         // Grade
   ratings                Float           @default(0.0) // Reintroduced ratings field
+  ruleName               String?         // Admission Rule Name
+  ruleDescription        String?         // Admission Rule Description
+  ruleRequiredExams      String?        
   createdAt              DateTime        @default(now())
   updatedAt              DateTime        @default(now()) @updatedAt
 }
