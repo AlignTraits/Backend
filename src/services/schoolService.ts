@@ -9,7 +9,7 @@ import { createCourse, createSchool } from '../models/schoolmodel';
 import { db } from '../config/db';
 import { z } from 'zod';
 import { getUserByEmail } from '../models/userModel';
-import { Prisma, ExamType, Grade } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import {
   CreateCourseData,
   UpdateCourseData,
@@ -168,14 +168,14 @@ export const getAllSchoolsService = async () => {
 export const getSchoolByIdService = async (id: string) => {
   return db.school.findUnique({ where: { id }, include: { courses: true } });
 };
+//
 
 export const createCourseService = async ({
   title,
   logo,
   schoolId,
-  programLocation, // Add programLocation
   scholarship,
-  scholarshipRequirement,
+  scholarshipInformation,
   duration,
   durationPeriod,
   price,
@@ -186,13 +186,6 @@ export const createCourseService = async ({
   courseWebsiteUrl,
   programLevel,
   loanInformation,
-  examTypes,
-  examYear,
-  subjects,
-  ruleName,
-  ruleDescription,
-  ruleRequiredExams,
-  grades,
   userId,
 }: CreateCourseData & { userId: string }) => {
   let profileUrl: string;
@@ -249,84 +242,6 @@ export const createCourseService = async ({
 
     profileUrl = result.secure_url;
 
-    // Parse JSON fields if needed
-    if (typeof examTypes === 'string') {
-      examTypes = JSON.parse(examTypes);
-    }
-    if (typeof subjects === 'string') {
-      subjects = JSON.parse(subjects);
-    }
-    if (typeof grades === 'string') {
-      grades = JSON.parse(grades);
-    }
-
-    // Validate examTypes and grades against enums
-    const validExamTypes = [
-      'JAMB',
-      'UTME',
-      'NECO',
-      'GCE',
-      'WAEC',
-      'NABTEB',
-      'A_LEVEL',
-    ] as const;
-    const validGrades = [
-      'A1',
-      'B2',
-      'B3',
-      'C4',
-      'C5',
-      'C6',
-      'D7',
-      'E8',
-      'F9',
-    ] as const;
-    if (
-      !examTypes.every((type: string) => validExamTypes.includes(type as any))
-    ) {
-      return {
-        ok: false,
-        status: 400,
-        message: 'Invalid exam type',
-        errors: [
-          {
-            message: 'Exam types must be one of: ' + validExamTypes.join(', '),
-          },
-        ],
-      };
-    }
-    if (!grades.every((grade: string) => validGrades.includes(grade as any))) {
-      return {
-        ok: false,
-        status: 400,
-        message: 'Invalid grade',
-        errors: [
-          { message: 'Grades must be one of: ' + validGrades.join(', ') },
-        ],
-      };
-    }
-
-    // Cast examTypes and grades to Prisma's ExamType[] and Grade[]
-    const typedExamTypes = examTypes as ExamType[];
-    const typedGrades = grades as Grade[];
-
-    // Validate subjects and grades length match
-    if (subjects.length !== grades.length) {
-      return {
-        ok: false,
-        status: 400,
-        message: 'Subjects and grades mismatch',
-        errors: [
-          { message: 'The number of subjects must match the number of grades' },
-        ],
-      };
-    }
-
-    // Fallback for required numeric fields (should be validated in controller)
-    const finalDuration = duration ?? 0;
-    const finalPrice = price ?? 0;
-    const finalAcceptanceFee = acceptanceFee ?? 0;
-
     // Generate short ID using nanoid(10)
     const courseId = nanoid(10);
 
@@ -335,28 +250,20 @@ export const createCourseService = async ({
       data: {
         id: courseId,
         title,
-        image: profileUrl,
+        image: profileUrl, // Store as image in DB
         schoolId,
-        programLocation, // Add programLocation
         scholarship,
-        scholarshipRequirement,
-        duration: finalDuration,
+        scholarshipInformation,
+        duration,
         durationPeriod,
-        price: finalPrice,
+        price,
         currency,
-        acceptanceFee: finalAcceptanceFee,
+        acceptanceFee,
         acceptanceFeeCurrency,
         objectives,
         courseWebsiteUrl,
         programLevel,
         loanInformation,
-        examTypes: typedExamTypes,
-        examYear,
-        subjects,
-        grades: typedGrades,
-        ruleName,
-        ruleDescription,
-        ruleRequiredExams,
       },
     });
 
@@ -393,9 +300,8 @@ export const updateCourseService = async ({
   title,
   logo,
   schoolId,
-  programLocation, // Add programLocation
   scholarship,
-  scholarshipRequirement,
+  scholarshipInformation,
   duration,
   durationPeriod,
   price,
@@ -406,14 +312,6 @@ export const updateCourseService = async ({
   courseWebsiteUrl,
   programLevel,
   loanInformation,
-  examTypes,
-  examYear,
-  subjects,
-  grades,
-  ratings,
-  ruleName,
-  ruleDescription,
-  ruleRequiredExams,
   userId,
 }: UpdateCourseData & { userId: string }) => {
   let profileUrl: string | undefined;
@@ -471,111 +369,18 @@ export const updateCourseService = async ({
       profileUrl = result.secure_url;
     }
 
-    // Parse JSON fields if needed
-    if (typeof examTypes === 'string') {
-      examTypes = JSON.parse(examTypes);
-    }
-    if (typeof subjects === 'string') {
-      subjects = JSON.parse(subjects);
-    }
-    if (typeof grades === 'string') {
-      grades = JSON.parse(grades);
-    }
-
-    // Validate examTypes and grades if provided
-    const validExamTypes = [
-      'JAMB',
-      'UTME',
-      'NECO',
-      'GCE',
-      'WAEC',
-      'NABTEB',
-      'A_LEVEL',
-    ] as const;
-    const validGrades = [
-      'A1',
-      'B2',
-      'B3',
-      'C4',
-      'C5',
-      'C6',
-      'D7',
-      'E8',
-      'F9',
-    ] as const;
-    let typedExamTypes: ExamType[] | undefined;
-    let typedGrades: Grade[] | undefined;
-
-    if (examTypes) {
-      if (
-        !examTypes.every((type: string) => validExamTypes.includes(type as any))
-      ) {
-        return {
-          ok: false,
-          status: 400,
-          message: 'Invalid exam type',
-          errors: [
-            {
-              message:
-                'Exam types must be one of: ' + validExamTypes.join(', '),
-            },
-          ],
-        };
-      }
-      typedExamTypes = examTypes as ExamType[];
-    }
-
-    if (grades) {
-      if (
-        !grades.every((grade: string) => validGrades.includes(grade as any))
-      ) {
-        return {
-          ok: false,
-          status: 400,
-          message: 'Invalid grade',
-          errors: [
-            { message: 'Grades must be one of: ' + validGrades.join(', ') },
-          ],
-        };
-      }
-      typedGrades = grades as Grade[];
-    }
-
-    // Validate subjects and grades length match if both are provided
-    if (subjects && grades && subjects.length !== grades.length) {
-      return {
-        ok: false,
-        status: 400,
-        message: 'Subjects and grades mismatch',
-        errors: [
-          { message: 'The number of subjects must match the number of grades' },
-        ],
-      };
-    }
-
-    // Validate ratings if provided
-    if (ratings !== undefined && (ratings < 0 || ratings > 5)) {
-      return {
-        ok: false,
-        status: 400,
-        message: 'Invalid ratings value',
-        errors: [{ message: 'Ratings must be between 0 and 5' }],
-      };
-    }
-
     // Update the course
     const updatedCourse = await db.course.update({
       where: { id },
       data: {
         title: title || existingCourse.title,
-        image: profileUrl || existingCourse.image,
+        image: profileUrl || existingCourse.image, // Store as image in DB
         schoolId: schoolId || existingCourse.schoolId,
-        programLocation: programLocation || existingCourse.programLocation, // Add programLocation
         scholarship: scholarship || existingCourse.scholarship,
-        scholarshipRequirement:
-          scholarshipRequirement !== undefined
-            ? scholarshipRequirement
-            : existingCourse.scholarshipRequirement,
+        scholarshipInformation:
+          scholarshipInformation !== undefined
+            ? scholarshipInformation
+            : existingCourse.scholarshipInformation,
         duration: duration !== undefined ? duration : existingCourse.duration,
         durationPeriod: durationPeriod || existingCourse.durationPeriod,
         price: price !== undefined ? price : existingCourse.price,
@@ -590,15 +395,6 @@ export const updateCourseService = async ({
         courseWebsiteUrl: courseWebsiteUrl || existingCourse.courseWebsiteUrl,
         programLevel: programLevel || existingCourse.programLevel,
         loanInformation: loanInformation || existingCourse.loanInformation,
-        examTypes: typedExamTypes || existingCourse.examTypes,
-        examYear: examYear !== undefined ? examYear : existingCourse.examYear,
-        subjects: subjects || existingCourse.subjects,
-        grades: typedGrades || existingCourse.grades,
-        ratings: ratings !== undefined ? ratings : existingCourse.ratings,
-        ruleName: ruleName || existingCourse.ruleName,
-        ruleDescription: ruleDescription || existingCourse.ruleDescription,
-        ruleRequiredExams:
-          ruleRequiredExams || existingCourse.ruleRequiredExams,
       },
     });
 
@@ -643,6 +439,7 @@ export const updateCourseService = async ({
   }
 };
 
+//
 export const deleteSchoolsService = async (
   schoolId: string,
   userId: string

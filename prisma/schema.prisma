@@ -228,9 +228,8 @@ model Course {
   image                  String?         // Course Image
   schoolId               String          // Program Location (via relation to School)
   university             School          @relation(fields: [schoolId], references: [id])
-  programLocation        String          // New field for Program Location
   scholarship            String          // Scholarship
-  scholarshipRequirement String?         // Scholarship Requirement
+  scholarshipInformation String?         // Scholarship Information
   duration               Int             // Program Duration (e.g., 4)
   durationPeriod         DurationPeriod  // Program Duration (e.g., YEARS)
   programLevel           String          // Program Level (Bachelor Degree, Masters Degree, PGD)
@@ -241,14 +240,7 @@ model Course {
   objectives             String          // Course Objectives
   courseWebsiteUrl       String          // Course website url
   loanInformation        String          // Loan Information
-  examTypes              ExamType[]      // Exam Type
-  examYear               Int?            // Exam Year
-  subjects               String[]        // Subjects
-  grades                 Grade[]         // Grade
-  ratings                Float           @default(0.0) // Reintroduced ratings field
-  ruleName               String?         // Admission Rule Name
-  ruleDescription        String?         // Admission Rule Description
-  ruleRequiredExams      String?        
+  ratings                Float?          @default(0.0) // Optional ratings field with default
   createdAt              DateTime        @default(now())
   updatedAt              DateTime        @default(now()) @updatedAt
 }

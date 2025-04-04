@@ -42,7 +42,7 @@ const adminProfileSchema = z.object({
     .regex(/^\d+$/, 'Contact Number must be numeric')
     .min(10, 'Contact Number must be at least 10 digits')
     .max(15, 'Contact Number must not exceed 15 digits'),
-  role: z.enum(['ADMIN', 'SUPER_ADMIN'], {
+  role: z.enum(['ADMIN', 'SUPER_ADMIN', 'ANALYST', 'CONTENT_MANAGER'], {
     message: 'Role must be either ADMIN or SUPER_ADMIN',
   }),
   password: z.string().min(8, 'Password must be at least 8 characters'),

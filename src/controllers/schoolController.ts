@@ -16,7 +16,7 @@ import {
   getAllHistoryService,
   getAdminDashboardService,
 } from '../services/schoolService';
-import { DurationPeriod, Currency, ExamType, Grade } from '@prisma/client';
+import { DurationPeriod, Currency } from '@prisma/client';
 // import { SessionRequest } from '../types/sessionRequest';
 
 export const createSchoolController = async (req: Request, res: Response) => {
@@ -79,9 +79,8 @@ export const createCourseController = async (req: Request, res: Response) => {
     const {
       title,
       schoolId,
-      programLocation, // Add programLocation
       scholarship,
-      scholarshipRequirement,
+      scholarshipInformation,
       duration,
       durationPeriod,
       price,
@@ -92,13 +91,7 @@ export const createCourseController = async (req: Request, res: Response) => {
       courseWebsiteUrl,
       programLevel,
       loanInformation,
-      examTypes,
-      examYear,
-      subjects,
-      ruleName,
-      ruleDescription,
-      ruleRequiredExams,
-      grades,
+      ratings, // Add ratings since it's in the model
     } = req.body;
     const logo = req.file;
 
@@ -108,10 +101,6 @@ export const createCourseController = async (req: Request, res: Response) => {
     }
     if (!schoolId) {
       return res.status(400).send({ error: 'School ID is required' });
-    }
-    if (!programLocation) {
-      // Add validation for programLocation
-      return res.status(400).send({ error: 'Program location is required' });
     }
     if (!scholarship) {
       return res.status(400).send({ error: 'Scholarship is required' });
@@ -154,14 +143,15 @@ export const createCourseController = async (req: Request, res: Response) => {
     if (!loanInformation) {
       return res.status(400).send({ error: 'Loan information is required' });
     }
-    if (!examTypes) {
-      return res.status(400).send({ error: 'Exam types are required' });
-    }
-    if (!subjects) {
-      return res.status(400).send({ error: 'Subjects are required' });
-    }
-    if (!grades) {
-      return res.status(400).send({ error: 'Grades are required' });
+    if (
+      ratings &&
+      (isNaN(parseFloat(ratings)) ||
+        parseFloat(ratings) < 0 ||
+        parseFloat(ratings) > 5)
+    ) {
+      return res.status(400).send({
+        error: 'Ratings must be a valid number between 0 and 5 if provided',
+      });
     }
 
     // Map durationPeriod to Prisma's DurationPeriod
@@ -212,9 +202,8 @@ export const createCourseController = async (req: Request, res: Response) => {
       title,
       logo,
       schoolId,
-      programLocation, // Add programLocation
       scholarship,
-      scholarshipRequirement,
+      scholarshipInformation,
       duration: parseInt(duration, 10),
       durationPeriod: mappedDurationPeriod,
       price: parseFloat(price),
@@ -225,13 +214,7 @@ export const createCourseController = async (req: Request, res: Response) => {
       courseWebsiteUrl,
       programLevel,
       loanInformation,
-      examTypes,
-      ruleName,
-      ruleDescription,
-      ruleRequiredExams,
-      examYear: examYear ? parseInt(examYear, 10) : undefined,
-      subjects,
-      grades,
+      ratings: ratings ? parseFloat(ratings) : undefined,
       userId,
     });
 
@@ -249,9 +232,8 @@ export const updateCourseController = async (req: Request, res: Response) => {
     const {
       title,
       schoolId,
-      programLocation, // Add programLocation
       scholarship,
-      scholarshipRequirement,
+      scholarshipInformation,
       duration,
       durationPeriod,
       price,
@@ -262,13 +244,6 @@ export const updateCourseController = async (req: Request, res: Response) => {
       courseWebsiteUrl,
       programLevel,
       loanInformation,
-      examTypes,
-      examYear,
-      subjects,
-      ruleName,
-      ruleDescription,
-      ruleRequiredExams,
-      grades,
       ratings,
     } = req.body;
     const logo = req.file;
@@ -358,9 +333,8 @@ export const updateCourseController = async (req: Request, res: Response) => {
       title,
       logo,
       schoolId,
-      programLocation, // Add programLocation
       scholarship,
-      scholarshipRequirement,
+      scholarshipInformation,
       duration: duration ? parseInt(duration, 10) : undefined,
       durationPeriod: mappedDurationPeriod,
       price: price ? parseFloat(price) : undefined,
@@ -371,13 +345,6 @@ export const updateCourseController = async (req: Request, res: Response) => {
       courseWebsiteUrl,
       programLevel,
       loanInformation,
-      examTypes,
-      ruleName,
-      ruleDescription,
-      ruleRequiredExams,
-      examYear: examYear ? parseInt(examYear, 10) : undefined,
-      subjects,
-      grades,
       ratings: ratings ? parseFloat(ratings) : undefined,
     });
     res.status(updatedCourse.status).send(updatedCourse);

@@ -1,4 +1,4 @@
-import { DurationPeriod, Currency, ExamType, Grade } from '@prisma/client';
+import { DurationPeriod, Currency } from '@prisma/client';
 
 export enum SchoolType {
   FEDERAL_UNIVERSITY = 'FEDERAL_UNIVERSITY',
@@ -14,11 +14,10 @@ export interface CreateCSVSchoolData {
 }
 export interface CreateCourseData {
   title: string;
-  logo: Express.Multer.File | null | undefined;
+  logo: Express.Multer.File | null | undefined; // Keep as logo
   schoolId: string;
   scholarship: string;
-  programLocation: string; // Add programLocation
-  scholarshipRequirement?: string;
+  scholarshipInformation?: string;
   duration: number;
   durationPeriod: DurationPeriod;
   price: number;
@@ -29,25 +28,17 @@ export interface CreateCourseData {
   courseWebsiteUrl: string;
   programLevel: string;
   loanInformation: string;
-  examTypes: string[];
-  examYear?: number;
-  subjects: string[];
-  grades: string[];
-  ratings?: number;
-  ruleName?: string;
-  ruleDescription?: string;
-  ruleRequiredExams?: string;
+  ratings?: number; // Optional as per model
 }
 
 // Type for updating a course (all fields optional)
 export interface UpdateCourseData {
   id: string;
   title?: string;
-  logo?: Express.Multer.File | null | undefined;
+  logo?: Express.Multer.File | null | undefined; // Keep as logo
   schoolId?: string;
   scholarship?: string;
-  programLocation: string; // Add programLocation
-  scholarshipRequirement?: string;
+  scholarshipInformation?: string; // Allow null for updates
   duration?: number;
   durationPeriod?: DurationPeriod;
   price?: number;
@@ -58,22 +49,15 @@ export interface UpdateCourseData {
   courseWebsiteUrl?: string;
   programLevel?: string;
   loanInformation?: string;
-  examTypes?: string[];
-  examYear?: number;
-  subjects?: string[];
-  grades?: string[];
-  ratings?: number;
-  ruleName?: string;
-  ruleDescription?: string;
-  ruleRequiredExams?: string;
+  ratings?: number; // Optional
 }
+
 export interface CreateCSVCourseData {
   title: string;
   image: string; // Renamed from profile to image
   schoolId: string;
   scholarship: string;
-  programLocation: string; // Add programLocation
-  scholarshipRequirement?: string;
+  scholarshipInformation?: string;
   duration: number;
   durationPeriod: DurationPeriod;
   price: number;
@@ -85,16 +69,8 @@ export interface CreateCSVCourseData {
   courseInformation: string;
   courseWebsiteUrl: string;
   programLevel: string;
-  careerOpportunities: string[];
   loanInformation: string;
-  examTypes: ExamType[];
-  examYear?: number;
-  subjects: string[];
-  grades: Grade[];
   ratings?: number;
-  ruleName?: string;
-  ruleDescription?: string;
-  ruleRequiredExams?: string;
 }
 
 export interface UpdateCsvCourseData {
@@ -103,8 +79,7 @@ export interface UpdateCsvCourseData {
   image?: string;
   schoolId?: string;
   scholarship?: string;
-  programLocation: string; // Add programLocation
-  scholarshipRequirement?: string;
+  scholarshipInformation?: string;
   duration?: number;
   durationPeriod?: DurationPeriod;
   price?: number;
@@ -112,20 +87,11 @@ export interface UpdateCsvCourseData {
   acceptanceFee?: number;
   acceptanceFeeCurrency?: Currency;
   objectives?: string;
-  requirements?: string[];
   courseInformation?: string;
   courseWebsiteUrl?: string;
   programLevel?: string;
-  careerOpportunities?: string[];
   loanInformation?: string;
-  examTypes?: string[];
-  examYear?: number;
-  subjects?: string[];
-  grades?: string[];
   ratings?: number;
-  ruleName?: string;
-  ruleDescription?: string;
-  ruleRequiredExams?: string;
 }
 
 export interface NewCreateCSVSchoolData {
@@ -173,8 +139,9 @@ export interface CourseCardData {
 export interface CourseDetailData {
   id: string;
   title: string;
-  image: string | null; // Renamed from profile
-  school: {
+  image: string | null;
+  university: {
+    // Changed from 'school' to 'university' to match Prisma relation
     id: string;
     name: string;
     country: string;
@@ -183,23 +150,18 @@ export interface CourseDetailData {
     websiteUrl: string;
   };
   scholarship: string;
-  programLocation: string; // Add programLocation
-  scholarshipRequirement: string | null; // Added
+  scholarshipInformation: string | null; // Correct field name
   duration: number;
   durationPeriod: DurationPeriod;
   price: number;
   currency: Currency;
   acceptanceFee: number;
   acceptanceFeeCurrency: Currency;
-  objectives: string; // Renamed from description
-  ratings: number;
+  objectives: string;
+  ratings: number | null; // Allow null to match Prisma model
   courseWebsiteUrl: string;
   programLevel: string;
   loanInformation: string;
-  examTypes: ExamType[]; // Added
-  examYear: number | null; // Added
-  subjects: string[]; // Added
-  grades: Grade[]; // Added
 }
 
 export interface FilterOptions {
@@ -221,8 +183,7 @@ export type CourseReportData = {
   image: string; // Renamed from profile to image
   schoolId: string;
   scholarship: string;
-  programLocation: string; // Add programLocation
-  scholarshipRequirement: string | null; // Added
+  scholarshipInformation: string | null; // Added
   duration: string; // Combined duration and durationPeriod
   price: number;
   currency: string;
@@ -233,12 +194,5 @@ export type CourseReportData = {
   courseWebsiteUrl: string;
   programLevel: string;
   loanInformation: string;
-  examTypes: string; // Joined array, added
-  examYear: number | null; // Added
-  subjects: string; // Joined array, added
-  grades: string; // Joined array, added
-  ruleName: string | null; // Add missing field
-  ruleDescription: string | null; // Add missing field
-  ruleRequiredExams: string | null; // Fix typo: ruleRequiredExams (not ruleRequiredExamsts)
   createdAt: string; // Ensure this matches the mapped value
 };

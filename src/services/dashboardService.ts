@@ -1,4 +1,5 @@
 // services/dashboardService.ts
+import { Prisma } from '@prisma/client';
 import { db } from '../config/db';
 import {
   FilterOptions,
@@ -24,10 +25,8 @@ export const getCoursesForDashboard = async (
       limit = 10,
     } = filters;
 
-    // Build the where clause for filtering
-    const where: any = {};
+    const where: Prisma.CourseWhereInput = {};
 
-    // Search by keyword in course title or school name
     if (keyword) {
       where.OR = [
         { title: { contains: keyword, mode: 'insensitive' } },
@@ -35,12 +34,10 @@ export const getCoursesForDashboard = async (
       ];
     }
 
-    // Filter by scholarship
     if (scholarship) {
       where.scholarship = { contains: scholarship, mode: 'insensitive' };
     }
 
-    // Filter by country and region (on the School model)
     if (country || region) {
       where.university = {};
       if (country) {
@@ -51,41 +48,31 @@ export const getCoursesForDashboard = async (
       }
     }
 
-    // Filter by programLevel and/or fieldOfStudy, matching with programLevel and title
     const categoryFilters: any[] = [];
-
     if (programLevel) {
       categoryFilters.push(
         { programLevel: { contains: programLevel, mode: 'insensitive' } },
         { title: { contains: programLevel, mode: 'insensitive' } }
       );
     }
-
     if (fieldOfStudy) {
       categoryFilters.push(
         { programLevel: { contains: fieldOfStudy, mode: 'insensitive' } },
         { title: { contains: fieldOfStudy, mode: 'insensitive' } }
       );
     }
-
     if (categoryFilters.length > 0) {
       if (where.OR) {
-        // If keyword filter already exists, combine with AND
-        where.AND = [
-          { OR: where.OR }, // Existing keyword filter
-          { OR: categoryFilters }, // New category filter
-        ];
-        delete where.OR; // Remove the top-level OR to avoid conflicts
+        where.AND = [{ OR: where.OR }, { OR: categoryFilters }];
+        delete where.OR;
       } else {
         where.OR = categoryFilters;
       }
     }
 
-    // Calculate pagination
     const skip = (page - 1) * limit;
     const take = limit;
 
-    // Fetch courses with pagination and filters
     const courses = await db.course.findMany({
       where,
       skip,
@@ -108,10 +95,8 @@ export const getCoursesForDashboard = async (
       },
     });
 
-    // Count total courses for pagination
     const total = await db.course.count({ where });
 
-    // Map to CourseCardData format
     const courseCards: CourseCardData[] = courses.map((course) => ({
       id: course.id,
       title: course.title,
@@ -121,7 +106,7 @@ export const getCoursesForDashboard = async (
       price: course.price,
       currency: course.currency,
       scholarship: course.scholarship,
-      ratings: course.ratings,
+      ratings: course.ratings ?? 0, // Default to 0 if null
       programLevel: course.programLevel,
     }));
 
@@ -146,6 +131,7 @@ export const getCourseDetails = async (
         title: true,
         image: true,
         scholarship: true,
+        scholarshipInformation: true,
         duration: true,
         durationPeriod: true,
         price: true,
@@ -153,15 +139,9 @@ export const getCourseDetails = async (
         acceptanceFee: true,
         acceptanceFeeCurrency: true,
         ratings: true,
-        programLocation: true,
         courseWebsiteUrl: true,
         programLevel: true,
         loanInformation: true,
-        examTypes: true,
-        examYear: true,
-        subjects: true,
-        grades: true,
-        scholarshipRequirement: true,
         objectives: true,
         university: {
           select: {
@@ -184,7 +164,7 @@ export const getCourseDetails = async (
       id: course.id,
       title: course.title,
       image: course.image,
-      school: {
+      university: {
         id: course.university.id,
         name: course.university.name,
         country: course.university.country,
@@ -192,24 +172,19 @@ export const getCourseDetails = async (
         logo: course.university.logo,
         websiteUrl: course.university.websiteUrl,
       },
-      programLocation: course.programLocation,
       scholarship: course.scholarship,
+      scholarshipInformation: course.scholarshipInformation,
       duration: course.duration,
       durationPeriod: course.durationPeriod,
       price: course.price,
       currency: course.currency,
       acceptanceFee: course.acceptanceFee,
       acceptanceFeeCurrency: course.acceptanceFeeCurrency,
-      ratings: course.ratings,
+      ratings: course.ratings ?? 0, // Default to 0 if null
       courseWebsiteUrl: course.courseWebsiteUrl,
       programLevel: course.programLevel,
       loanInformation: course.loanInformation,
-      scholarshipRequirement: course.scholarshipRequirement,
       objectives: course.objectives,
-      examTypes: course.examTypes,
-      examYear: course.examYear,
-      subjects: course.subjects,
-      grades: course.grades,
     };
 
     return courseDetails;
@@ -223,7 +198,6 @@ export const getSearchSuggestions = async (
   keyword: string
 ): Promise<string[]> => {
   try {
-    // Fetch courses and schools matching the keyword
     const courses = await db.course.findMany({
       where: {
         OR: [
@@ -238,7 +212,6 @@ export const getSearchSuggestions = async (
       take: 5,
     });
 
-    // Extract suggestions (course titles and school names)
     const suggestions = new Set<string>();
     courses.forEach((course) => {
       suggestions.add(course.title);
