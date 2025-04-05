@@ -663,15 +663,103 @@ export const deleteCourseService = async (courseId: string, userId: string) => {
   }
 };
 
+// export const getCourseByIdService = async (id: string) => {
+//   try {
+//     const course = await db.course.findUnique({
+//       where: { id },
+//       include: { university: true }, // Assuming 'university' is a typo and should be 'school'
+//     });
+//     return course;
+//   } catch (e) {
+//     throw e;
+//   }
+// };
+
 export const getCourseByIdService = async (id: string) => {
   try {
     const course = await db.course.findUnique({
       where: { id },
-      include: { university: true }, // Assuming 'university' is a typo and should be 'school'
+      include: { university: true },
     });
-    return course;
-  } catch (e) {
-    throw e;
+
+    if (!course) return null;
+
+    const parsedCourse = {
+      ...course,
+      ExamType1Subjects: course.ExamType1Subjects
+        ? JSON.parse(course.ExamType1Subjects)
+        : null,
+      ExamType1SubGrades: course.ExamType1SubGrades
+        ? JSON.parse(course.ExamType1SubGrades)
+        : null,
+
+      ExamType2Subjects: course.ExamType2Subjects
+        ? JSON.parse(course.ExamType2Subjects)
+        : null,
+      ExamType2SubGrades: course.ExamType2SubGrades
+        ? JSON.parse(course.ExamType2SubGrades)
+        : null,
+
+      ExamType3Subjects: course.ExamType3Subjects
+        ? JSON.parse(course.ExamType3Subjects)
+        : null,
+      ExamType3SubGrades: course.ExamType3SubGrades
+        ? JSON.parse(course.ExamType3SubGrades)
+        : null,
+
+      ExamType4Subjects: course.ExamType4Subjects
+        ? JSON.parse(course.ExamType4Subjects)
+        : null,
+      ExamType4SubGrades: course.ExamType4SubGrades
+        ? JSON.parse(course.ExamType4SubGrades)
+        : null,
+
+      ExamType5Subjects: course.ExamType5Subjects
+        ? JSON.parse(course.ExamType5Subjects)
+        : null,
+      ExamType5SubGrades: course.ExamType5SubGrades
+        ? JSON.parse(course.ExamType5SubGrades)
+        : null,
+
+      ExamType6Subjects: course.ExamType6Subjects
+        ? JSON.parse(course.ExamType6Subjects)
+        : null,
+      ExamType6SubGrades: course.ExamType6SubGrades
+        ? JSON.parse(course.ExamType6SubGrades)
+        : null,
+
+      ExamType7Subjects: course.ExamType7Subjects
+        ? JSON.parse(course.ExamType7Subjects)
+        : null,
+      ExamType7SubGrades: course.ExamType7SubGrades
+        ? JSON.parse(course.ExamType7SubGrades)
+        : null,
+
+      ExamType8Subjects: course.ExamType8Subjects
+        ? JSON.parse(course.ExamType8Subjects)
+        : null,
+      ExamType8SubGrades: course.ExamType8SubGrades
+        ? JSON.parse(course.ExamType8SubGrades)
+        : null,
+
+      ExamType9Subjects: course.ExamType9Subjects
+        ? JSON.parse(course.ExamType9Subjects)
+        : null,
+      ExamType9SubGrades: course.ExamType9SubGrades
+        ? JSON.parse(course.ExamType9SubGrades)
+        : null,
+
+      ExamType10Subjects: course.ExamType10Subjects
+        ? JSON.parse(course.ExamType10Subjects)
+        : null,
+      ExamType10SubGrades: course.ExamType10SubGrades
+        ? JSON.parse(course.ExamType10SubGrades)
+        : null,
+    };
+
+    return parsedCourse;
+  } catch (error) {
+    throw error;
   }
 };
 

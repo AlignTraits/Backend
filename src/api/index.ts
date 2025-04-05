@@ -11,6 +11,7 @@ import WaitlistRoutes from '../routes/waitistRoutes';
 import GoogleRoutes from '../routes/googleRoute';
 import DashboardRoutes from '../routes/dashboardRoutes';
 import SkillRoutes from '../routes/skillRoutes';
+import AdmissionLogicRoutes from '../routes/admissionLogicRoute';
 
 const router = express.Router();
 
@@ -31,5 +32,6 @@ router.use('/waitlist', WaitlistRoutes);
 router.use('/google-auth', GoogleRoutes);
 router.use('/dashboard', DashboardRoutes);
 router.use('/skill', SkillRoutes);
+router.use('/admission-logic', AdmissionLogicRoutes);
 
 export default router;

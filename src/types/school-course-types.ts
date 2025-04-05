@@ -196,3 +196,64 @@ export type CourseReportData = {
   loanInformation: string;
   createdAt: string; // Ensure this matches the mapped value
 };
+
+// New type for updating only admission logic
+export interface UpdateCourseAdmissionData {
+  id: string;
+
+  ExamCountry1?: string;
+  ExamType1?: string;
+  ExamType1Subjects?: string[]; // Accept array of strings
+  ExamType1SubGrades?: string[]; // Accept array of strings
+
+  ExamCountry2?: string;
+  ExamType2?: string;
+  ExamType2Subjects?: string[];
+  ExamType2SubGrades?: string[];
+
+  ExamCountry3?: string;
+  ExamType3?: string;
+  ExamType3Subjects?: string[];
+  ExamType3SubGrades?: string[];
+
+  ExamCountry4?: string;
+  ExamType4?: string;
+  ExamType4Subjects?: string[];
+  ExamType4SubGrades?: string[];
+
+  ExamCountry5?: string;
+  ExamType5?: string;
+  ExamType5Subjects?: string[];
+  ExamType5SubGrades?: string[];
+
+  ExamCountry6?: string;
+  ExamType6?: string;
+  ExamType6Subjects?: string[];
+  ExamType6SubGrades?: string[];
+
+  ExamCountry7?: string;
+  ExamType7?: string;
+  ExamType7Subjects?: string[];
+  ExamType7SubGrades?: string[];
+
+  ExamCountry8?: string;
+  ExamType8?: string;
+  ExamType8Subjects?: string[];
+  ExamType8SubGrades?: string[];
+
+  ExamCountry9?: string;
+  ExamType9?: string;
+  ExamType9Subjects?: string[];
+  ExamType9SubGrades?: string[];
+
+  ExamCountry10?: string;
+  ExamType10?: string;
+  ExamType10Subjects?: string[];
+  ExamType10SubGrades?: string[];
+
+  Adminrule1?: string;
+  Adminrule2?: string;
+  Adminrule3?: string;
+  Adminrule4?: string;
+  Adminrule5?: string;
+}

@@ -176,9 +176,13 @@ export const createCourseController = async (req: Request, res: Response) => {
       mappedCurrency = Currency.USD;
     } else if (currency === 'EUR') {
       mappedCurrency = Currency.EUR;
+    } else if (currency === 'EUR') {
+      mappedCurrency = Currency.EUR;
+    } else if (currency === 'CAD') {
+      mappedCurrency = Currency.CAD;
     } else {
       return res.status(400).send({
-        error: 'Invalid currency. Must be "NGN", "USD", or "EUR"',
+        error: 'Invalid currency. Must be "NGN", "USD","CAD", or "EUR"',
       });
     }
 
@@ -190,10 +194,12 @@ export const createCourseController = async (req: Request, res: Response) => {
       mappedAcceptanceFeeCurrency = Currency.USD;
     } else if (acceptanceFeeCurrency === 'EUR') {
       mappedAcceptanceFeeCurrency = Currency.EUR;
+    } else if (acceptanceFeeCurrency === 'CAD') {
+      mappedAcceptanceFeeCurrency = Currency.CAD;
     } else {
       return res.status(400).send({
         error:
-          'Invalid acceptance fee currency. Must be "NGN", "USD", or "EUR"',
+          'Invalid acceptance fee currency. Must be "NGN", "USD", "CAD", or "EUR"',
       });
     }
 
@@ -302,9 +308,11 @@ export const updateCourseController = async (req: Request, res: Response) => {
         mappedCurrency = Currency.USD;
       } else if (currency === 'EUR') {
         mappedCurrency = Currency.EUR;
+      } else if (currency === 'CAD') {
+        mappedCurrency = Currency.CAD;
       } else {
         return res.status(400).send({
-          error: 'Invalid currency. Must be "NGN", "USD", or "EUR"',
+          error: 'Invalid currency. Must be "NGN", "USD","CAD", or "EUR"',
         });
       }
     }
@@ -318,10 +326,12 @@ export const updateCourseController = async (req: Request, res: Response) => {
         mappedAcceptanceFeeCurrency = Currency.USD;
       } else if (acceptanceFeeCurrency === 'EUR') {
         mappedAcceptanceFeeCurrency = Currency.EUR;
+      } else if (acceptanceFeeCurrency === 'CAD') {
+        mappedAcceptanceFeeCurrency = Currency.CAD;
       } else {
         return res.status(400).send({
           error:
-            'Invalid acceptance fee currency. Must be "NGN", "USD", or "EUR"',
+            'Invalid acceptance fee currency. Must be "NGN", "USD","CAD", or "EUR"',
         });
       }
     }

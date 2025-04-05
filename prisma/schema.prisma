@@ -241,6 +241,65 @@ model Course {
   courseWebsiteUrl       String          // Course website url
   loanInformation        String          // Loan Information
   ratings                Float?          @default(0.0) // Optional ratings field with default
+
+  // Admission Logic (Optional)
+  ExamCountry1           String?         // Country for first exam requirement (e.g., "Nigeria")
+  ExamType1             String?         // Exam type for first requirement (e.g., "WAEC")
+  ExamType1Subjects     String?         // JSON string of subjects (e.g., "[\"Math\", \"English\"]")
+  ExamType1SubGrades    String?         // JSON string of grades (e.g., "[\"A1\", \"B2\"]")
+
+  ExamCountry2           String?
+  ExamType2             String?
+  ExamType2Subjects     String?
+  ExamType2SubGrades    String?
+
+  ExamCountry3           String?
+  ExamType3             String?
+  ExamType3Subjects     String?
+  ExamType3SubGrades    String?
+
+  ExamCountry4           String?
+  ExamType4             String?
+  ExamType4Subjects     String?
+  ExamType4SubGrades    String?
+
+  ExamCountry5           String?
+  ExamType5             String?
+  ExamType5Subjects     String?
+  ExamType5SubGrades    String?
+
+  ExamCountry6           String?
+  ExamType6             String?
+  ExamType6Subjects     String?
+  ExamType6SubGrades    String?
+
+  ExamCountry7           String?
+  ExamType7             String?
+  ExamType7Subjects     String?
+  ExamType7SubGrades    String?
+
+  ExamCountry8           String?
+  ExamType8             String?
+  ExamType8Subjects     String?
+  ExamType8SubGrades    String?
+
+  ExamCountry9           String?
+  ExamType9             String?
+  ExamType9Subjects     String?
+  ExamType9SubGrades    String?
+
+  ExamCountry10          String?
+  ExamType10            String?
+  ExamType10Subjects    String?
+  ExamType10SubGrades   String?
+
+  Adminrule1            String?         // e.g., "WAEC"
+  Adminrule2            String?         // e.g., "WAEC | NECO"
+  Adminrule3            String?         // e.g., "WAEC + NECO"
+  Adminrule4            String?         // e.g., "WAEC + NECO | JAMB"
+  Adminrule5            String?         // e.g., "WAEC + NECO | JAMB + GCE"
+  // End of Admission Logic (Optional)
+
   createdAt              DateTime        @default(now())
   updatedAt              DateTime        @default(now()) @updatedAt
 }
