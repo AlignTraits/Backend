@@ -429,8 +429,14 @@ export const deleteSchoolsController = async (req: Request, res: Response) => {
 // Search schools by location
 export const searchSchoolsController = async (req: Request, res: Response) => {
   try {
-    const { location } = req.params;
-    const schools = await searchSchoolsService(location);
+    const { country, region } = req.query;
+
+    // Convert to string to avoid TS issues
+    const schools = await searchSchoolsService(
+      String(country),
+      region ? String(region) : undefined
+    );
+
     res.status(200).send(schools);
   } catch (error) {
     console.error(error);
