@@ -140,9 +140,7 @@ export const createCourseController = async (req: Request, res: Response) => {
     if (!programLevel) {
       return res.status(400).send({ error: 'Program level is required' });
     }
-    if (!loanInformation) {
-      return res.status(400).send({ error: 'Loan information is required' });
-    }
+    // Removed: if (!loanInformation) { ... } - now optional
     if (
       ratings &&
       (isNaN(parseFloat(ratings)) ||
@@ -174,8 +172,6 @@ export const createCourseController = async (req: Request, res: Response) => {
       mappedCurrency = Currency.NGN;
     } else if (currency === 'USD') {
       mappedCurrency = Currency.USD;
-    } else if (currency === 'EUR') {
-      mappedCurrency = Currency.EUR;
     } else if (currency === 'EUR') {
       mappedCurrency = Currency.EUR;
     } else if (currency === 'CAD') {
@@ -219,7 +215,7 @@ export const createCourseController = async (req: Request, res: Response) => {
       objectives,
       courseWebsiteUrl,
       programLevel,
-      loanInformation,
+      loanInformation, // Now optional, can be undefined
       ratings: ratings ? parseFloat(ratings) : undefined,
       userId,
     });

@@ -239,7 +239,7 @@ model Course {
   acceptanceFeeCurrency  Currency        // Currency for Acceptance Fee
   objectives             String          // Course Objectives
   courseWebsiteUrl       String          // Course website url
-  loanInformation        String          // Loan Information
+  loanInformation        String?          // Loan Information
   ratings                Float?          @default(0.0) // Optional ratings field with default
 
   // Admission Logic (Optional)

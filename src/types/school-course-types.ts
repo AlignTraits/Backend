@@ -27,7 +27,7 @@ export interface CreateCourseData {
   objectives: string;
   courseWebsiteUrl: string;
   programLevel: string;
-  loanInformation: string;
+  loanInformation?: string;
   ratings?: number; // Optional as per model
 }
 
@@ -69,7 +69,7 @@ export interface CreateCSVCourseData {
   courseInformation: string;
   courseWebsiteUrl: string;
   programLevel: string;
-  loanInformation: string;
+  loanInformation?: string;
   ratings?: number;
 }
 
@@ -161,7 +161,7 @@ export interface CourseDetailData {
   ratings: number | null; // Allow null to match Prisma model
   courseWebsiteUrl: string;
   programLevel: string;
-  loanInformation: string;
+  loanInformation: string | null;
 }
 
 export interface FilterOptions {
@@ -183,7 +183,7 @@ export type CourseReportData = {
   image: string; // Renamed from profile to image
   schoolId: string;
   scholarship: string;
-  scholarshipInformation: string | null; // Added
+  scholarshipInformation: string | null; // Already correct
   duration: string; // Combined duration and durationPeriod
   price: number;
   currency: string;
@@ -193,7 +193,7 @@ export type CourseReportData = {
   ratings: number;
   courseWebsiteUrl: string;
   programLevel: string;
-  loanInformation: string;
+  loanInformation: string | null; // Changed from string to string | null
   createdAt: string; // Ensure this matches the mapped value
 };
 

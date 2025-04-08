@@ -762,7 +762,7 @@ export const createBulkCoursesService = async (
               objectives: course.objectives,
               courseWebsiteUrl: course.courseWebsiteUrl,
               programLevel: course.programLevel,
-              loanInformation: course.loanInformation,
+              loanInformation: course.loanInformation, // Now optional, can be undefined
               ratings: course.ratings ?? 0.0,
             },
           });

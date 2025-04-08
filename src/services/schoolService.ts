@@ -185,7 +185,7 @@ export const createCourseService = async ({
   objectives,
   courseWebsiteUrl,
   programLevel,
-  loanInformation,
+  loanInformation, // Already optional in interface, no change needed here
   userId,
 }: CreateCourseData & { userId: string }) => {
   let profileUrl: string;
@@ -263,7 +263,7 @@ export const createCourseService = async ({
         objectives,
         courseWebsiteUrl,
         programLevel,
-        loanInformation,
+        loanInformation, // Now optional, can be undefined
       },
     });
 
