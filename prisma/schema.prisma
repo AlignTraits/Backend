@@ -52,7 +52,18 @@ model User {
   ResultDocument ResultDocument[]
   UserResponse   UserResponse[]
   actionHistories ActionHistory[]
+  careerResults  CareerResult[]
 }
+
+model CareerResult {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id])
+  recommendedCareers String[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
 
 model City {
   id        String  @id @default(uuid())

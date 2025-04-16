@@ -609,12 +609,14 @@ const profileSchema = z.object({
   firstname: z
     .string()
     .min(1, 'First Name is required')
-    .regex(/^[a-zA-Z\s]+$/, 'First Name must contain only letters'),
+    .regex(/^[a-zA-Z\s]+$/, 'First Name must contain only letters')
+    .optional(),
   lastname: z
     .string()
     .min(1, 'Last Name is required')
-    .regex(/^[a-zA-Z\s]+$/, 'Last Name must contain only letters'),
-  email: z.string().email('Please enter a valid email address'),
+    .regex(/^[a-zA-Z\s]+$/, 'Last Name must contain only letters')
+    .optional(),
+  email: z.string().email('Please enter a valid email address').optional(),
   contactNumber: z
     .string()
     .regex(/^\d+$/, 'Contact Number must be numeric')
@@ -633,24 +635,55 @@ const updateAdminProfileService = async (adminId: string, requestData: any) => {
     const { data } = requestSchema.parse(requestData);
     const parsedData = profileSchema.parse(data); // Validate the inner data
 
-    const currentUser = await getUserByEmail(parsedData.email);
-    if (
-      !currentUser ||
-      currentUser.id !== adminId ||
-      currentUser.role !== 'ADMIN'
-    ) {
+    // Find user by ID
+    const currentUser = await getUserById(adminId);
+
+    // Check if user exists and is an admin
+    if (!currentUser || currentUser.role !== 'ADMIN') {
       return {
         status: 404,
-        message: 'User not found or not authorized',
+        message: 'Admin user not found or not authorized',
       };
     }
 
-    const updatedUser = await updateUser(adminId, {
-      firstname: parsedData.firstname,
-      lastname: parsedData.lastname,
-      email: parsedData.email,
-      contactNumber: parsedData.contactNumber,
-    });
+    // Prepare update data, only including fields that were provided
+    const updateData: Partial<typeof parsedData> = {};
+
+    if (parsedData.firstname !== undefined) {
+      updateData.firstname = parsedData.firstname;
+    }
+    if (parsedData.lastname !== undefined) {
+      updateData.lastname = parsedData.lastname;
+    }
+
+    if (
+      parsedData.email !== undefined &&
+      parsedData.email !== currentUser.email
+    ) {
+      // Check if the new email is already in use
+      const emailCheck = await getUserByEmail(parsedData.email);
+      if (emailCheck && emailCheck.id !== adminId) {
+        return {
+          status: 400,
+          message: 'Email is already in use by another user',
+        };
+      }
+      updateData.email = parsedData.email;
+    }
+
+    if (parsedData.contactNumber !== undefined) {
+      updateData.contactNumber = parsedData.contactNumber;
+    }
+
+    // Only proceed with update if there's something to update
+    if (Object.keys(updateData).length === 0) {
+      return {
+        status: 400,
+        message: 'No valid fields provided for update',
+      };
+    }
+
+    const updatedUser = await updateUser(adminId, updateData);
 
     if (!updatedUser) {
       return {
