@@ -3,25 +3,20 @@
     "outDir": "dist",
     "sourceMap": true,
     "target": "esnext",
-    "module": "commonjs",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": true,
     "strict": true,
     "skipLibCheck": true,
-    "rootDir": ".", // Ensures it includes all source files from the root directory
+    "rootDir": ".",
     "typeRoots": ["./src/types", "./node_modules/@types"],
     "types": ["node", "express"]
   },
-  "include": [
-    "src/**/*.ts",
-    "test/**/*.ts",
-    ".prisma/client/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist" // Exclude output directory to avoid conflicts
-  ]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
 }
 
 

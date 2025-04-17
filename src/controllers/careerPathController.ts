@@ -2,13 +2,20 @@ import { NextFunction, Request, Response } from 'express';
 import MessageResponse from '../types/messageResponse';
 import ErrorResponse from '../types/errorResponse';
 import {
-  submitAnswersService,
   getCareerPathService,
+  submitAnswersService,
+  // getCareerPathService,
 } from '../services/careerPathService';
 
+interface WetrocloudResponse {
+  career_path?: string;
+  reason?: string;
+  // Add other possible properties from the response if needed
+  [key: string]: any; // This allows for additional properties if the API returns more
+}
 export const submitCareerAnswers = async (
   req: Request,
-  res: Response<MessageResponse | ErrorResponse>,
+  res: Response<WetrocloudResponse | ErrorResponse>,
   next: NextFunction
 ) => {
   try {
@@ -23,7 +30,7 @@ export const submitCareerAnswers = async (
 
 export const getCareerPath = async (
   req: Request,
-  res: Response<MessageResponse | ErrorResponse>,
+  res: Response<WetrocloudResponse | ErrorResponse>,
   next: NextFunction
 ) => {
   try {

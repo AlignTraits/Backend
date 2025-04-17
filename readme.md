@@ -1,5 +1,9 @@
 # LearnConnect Backend
 
+wetrocloud
+npm run build # Runs tsc to compile to JS
+npm run start:dist
+
 <!-- New Course Model -->
 
 model Course {

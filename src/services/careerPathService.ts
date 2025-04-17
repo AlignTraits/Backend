@@ -1,217 +1,420 @@
 import { PrismaClient } from '@prisma/client';
+import dotenv from 'dotenv';
+import Wetrocloud from 'wetro-sdk';
+import MessageResponse from '../types/messageResponse';
 
+dotenv.config();
+
+if (!process.env.WETRO_API_KEY) {
+  console.warn('WETRO_API_KEY is not set; falling back to careerPathMapping');
+}
+
+// Initialize Prisma client
 const prisma = new PrismaClient();
 
-// Mapping of question responses to career paths
-const careerPathMapping: Record<string, any> = {
-  personality_mbti: {
-    learning_style: {
-      S: ['Engineering', 'Accounting', 'IT'],
-      N: ['Psychology', 'Social Work'],
-    },
-    group_project: {
-      J: ['Law', 'Finance'],
-      P: ['Marketing', 'Startups'],
-    },
-    decision_making: {
-      T: ['Data Science', 'Engineering'],
-      F: ['HR', 'Teaching'],
-    },
-    energy_source: {
-      E: ['Sales', 'PR', 'Business'],
-      I: ['Research', 'Writing', 'IT'],
-    },
-  },
-  work_behavior_disc: {
-    challenge_approach: {
-      D: ['Leadership', 'Law', 'Business'],
-      I: ['Marketing', 'PR', 'Sales'],
-      S: ['HR', 'Teaching'],
-      C: ['Data Analysis', 'Engineering'],
-    },
-    project_management: {
-      D: ['Business', 'Law', 'Management'],
-      I: ['Marketing', 'Social Careers'],
-      S: ['Healthcare', 'HR'],
-      C: ['Finance', 'IT'],
-    },
-  },
-  career_values_schein: {
-    job_feature: {
-      Technical: ['Engineering', 'IT'],
-      Managerial: ['Business', 'Economics'],
-      Stability: ['Banking', 'Government'],
-      Service: ['Social Work', 'Teaching'],
-    },
-    job_offer_choice: {
-      Stable: ['Government', 'Accounting'],
-      HighRisk: ['Entrepreneurship', 'Marketing'],
-    },
-  },
-  emotional_intelligence_eq: {
-    negative_feedback: {
-      Constructive: ['Public Relations', 'Leadership'],
-      Discouraged: ['Research', 'Data Science'],
-      Defensive: ['Research', 'Data Science'],
-    },
-    conflict_handling: {
-      Immediate: ['HR', 'Teaching', 'Counseling'],
-      Mediate: ['HR', 'Teaching', 'Counseling'],
-      Avoid: ['Independent Roles'],
-    },
-    stress_source: {
-      Social: ['Analytical Work'],
-      Alone: ['Dynamic Fields'],
-      Unpredictable: ['Stable Roles'],
-      Repetitive: ['Dynamic Fields'],
-    },
-  },
-  motivation_career_drive: {
-    goal_pursuit: {
-      Persistent: ['Law', 'Medicine'],
-      Steady: ['Business', 'Marketing'],
-      LoseInterest: ['Support', 'Admin'],
-    },
-    setback_response: {
-      Harder: ['Finance', 'Startups'],
-      Reevaluate: ['Consulting', 'Mid-Level Management'],
-      Discouraged: ['Routine Roles'],
-    },
-    work_environment: {
-      HighPressure: ['Law', 'Medicine'],
-      Balanced: ['Creative Fields'],
-      LowStress: ['Government', 'Admin'],
-    },
-  },
-};
-
-// Function to calculate career paths based on user answers
-async function calculateCareerPath(userId: string) {
-  try {
-    // Fetch user answers from the database
-    const userAnswers = await prisma.userResponse.findMany({
-      where: { userId },
-      include: {
-        question: {
-          include: {
-            section: true, // Include SurveySection to access section name
-          },
-        },
-        selectedOption: true, // Include AnswerOption to access text
-      },
-    });
-
-    if (!userAnswers.length) {
-      throw new Error('No answers found for this user');
-    }
-
-    // Initialize career path scores
-    const careerScores: Record<string, number> = {};
-
-    // Group answers by questionId to handle multiple answers per question
-    const answersByQuestion: Record<string, typeof userAnswers> = {};
-    userAnswers.forEach((userResponse) => {
-      const questionId = userResponse.questionId;
-      if (!answersByQuestion[questionId]) {
-        answersByQuestion[questionId] = [];
-      }
-      answersByQuestion[questionId].push(userResponse);
-    });
-
-    // Process each question and its answers
-    Object.values(answersByQuestion).forEach((responses) => {
-      const { question } = responses[0]; // All responses share the same question
-      const section = question.section.name.toLowerCase().replace(/\s/g, '_');
-      const questionKey = question.text.toLowerCase().replace(/\s/g, '_');
-
-      // Collect all selected option texts for this question
-      const selectedOptions = responses.map(
-        (response) => response.selectedOption.text
-      );
-
-      // Get career paths for each selected option
-      selectedOptions.forEach((selectedOption) => {
-        const paths =
-          careerPathMapping[section]?.[questionKey]?.[selectedOption] || [];
-
-        // Increment scores for each career path
-        paths.forEach((path: string) => {
-          careerScores[path] = (careerScores[path] ?? 0) + 1;
-        });
-      });
-    });
-
-    // Sort career paths by score and limit to top 3
-    const sortedCareers = Object.entries(careerScores)
-      .sort(([, scoreA], [, scoreB]) => scoreB - scoreA)
-      .slice(0, 3)
-      .map(([career]) => career);
-
-    // Store or update career path result in the database
-    await prisma.careerResult.upsert({
-      where: { userId },
-      update: {
-        recommendedCareers: sortedCareers,
-        updatedAt: new Date(),
-      },
-      create: {
-        userId,
-        recommendedCareers: sortedCareers,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    });
-
-    return {
-      ok: true,
-      message: 'Career path calculated successfully',
-      data: { recommendedCareers: sortedCareers },
-    };
-  } catch (error) {
-    console.error('Error calculating career path:', error);
-    throw new Error('Failed to calculate career path');
-  }
+// Initialize Wetrocloud client
+let wetroClient: Wetrocloud | null = null;
+try {
+  wetroClient = new Wetrocloud({
+    apiKey: process.env.WETRO_API_KEY!,
+  });
+  console.log('Wetrocloud client initialized successfully');
+} catch (error) {
+  console.error('Failed to initialize Wetrocloud client:', error);
 }
 
-// Function to handle user answer submission
+// Fallback mapping
+// const careerPathMapping: Record<string, any> = {
+//   personality_mbti: {
+//     when_learning_something_new_do_you_prefer: {
+//       'Practical, hands-on experience': ['Engineering', 'Accounting', 'IT'],
+//       'Exploring theories and possibilities': ['Psychology', 'Social Work'],
+//     },
+//     when_working_on_a_group_project_do_you: {
+//       'Prefer structured plans and clear goals': ['Law', 'Finance'],
+//       'Adapt as you go and keep things flexible': ['Marketing', 'Startups'],
+//     },
+//     when_making_a_decision_do_you: {
+//       'Focus on facts and logic': ['Data Science', 'Engineering'],
+//       'Consider how it affects people emotionally': ['HR', 'Teaching'],
+//     },
+//     do_you_feel_energized_by: {
+//       'Socializing and working with groups': ['Sales', 'PR', 'Business'],
+//       'Working alone or in quiet environments': ['Research', 'Writing', 'IT'],
+//     },
+//   },
+//   work_behavior_disc: {
+//     how_do_you_approach_challenges_at_work: {
+//       'Take control and solve problems quickly': [
+//         'Leadership',
+//         'Law',
+//         'Business',
+//       ],
+//       'Persuade and inspire others to contribute': ['Marketing', 'PR', 'Sales'],
+//       'Work patiently and maintain team harmony': ['HR', 'Teaching'],
+//       'Analyze all details before making a decision': [
+//         'Data Analysis',
+//         'Engineering',
+//       ],
+//     },
+//     when_managing_a_project_you_prefer: {
+//       'Setting ambitious goals and leading from the front': [
+//         'Business',
+//         'Law',
+//         'Management',
+//       ],
+//       'Engaging people and ensuring collaboration': [
+//         'Marketing',
+//         'Social Careers',
+//       ],
+//       'Maintaining a stable workflow and supporting the team': [
+//         'Healthcare',
+//         'HR',
+//       ],
+//       'Creating detailed plans and ensuring accuracy': ['Finance', 'IT'],
+//     },
+//   },
+//   career_values_schein: {
+//     which_of_these_job_features_is_most_important_to_you: {
+//       'Becoming an expert in my field': ['Engineering', 'IT'],
+//       'Leading teams and making decisions': ['Business', 'Economics'],
+//       'Having job security and stability': ['Banking', 'Government'],
+//       'Helping people and making a difference': ['Social Work', 'Teaching'],
+//     },
+//     if_you_had_to_choose_between_two_job_offers_you_would_pick: {
+//       'A stable job with a clear career path': ['Government', 'Accounting'],
+//       'A high-risk, high-reward opportunity': ['Entrepreneurship', 'Marketing'],
+//     },
+//   },
+//   emotional_intelligence_eq: {
+//     when_you_receive_negative_feedback_you: {
+//       'Take it constructively and improve': ['Public Relations', 'Leadership'],
+//       'Feel discouraged but eventually bounce back': [
+//         'Research',
+//         'Data Science',
+//       ],
+//       'Get defensive and justify your actions': ['Research', 'Data Science'],
+//     },
+//     how_do_you_handle_workplace_conflict: {
+//       'Address it immediately and resolve the issue': [
+//         'HR',
+//         'Teaching',
+//         'Counseling',
+//       ],
+//       'Try to mediate and find common ground': ['HR', 'Teaching', 'Counseling'],
+//       'Avoid confrontation and let it pass': ['Independent Roles'],
+//     },
+//     which_situation_would_stress_you_the_most: {
+//       'Constantly having to network and socialize': ['Analytical Work'],
+//       'Working alone for long periods without interaction': ['Dynamic Fields'],
+//       'Being in an unpredictable and rapidly changing job': ['Stable Roles'],
+//       'Doing the same repetitive tasks every day': ['Dynamic Fields'],
+//     },
+//   },
+//   motivation_career_drive: {
+//     when_you_set_a_goal_how_do_you_pursue_it: {
+//       'Push myself to achieve it, no matter the obstacles': ['Law', 'Medicine'],
+//       'Work steadily but adjust if necessary': ['Business', 'Marketing'],
+//       'Lose interest if it takes too long': ['Support', 'Admin'],
+//     },
+//     if_faced_with_a_major_career_setback_what_would_you_do: {
+//       'Work even harder and find another way': ['Finance', 'Startups'],
+//       'Reevaluate my options and adjust my plans': [
+//         'Consulting',
+//         'Mid-Level Management',
+//       ],
+//       'Feel discouraged and consider quitting': ['Routine Roles'],
+//     },
+//     what_type_of_work_environment_suits_you_best: {
+//       'High-pressure, competitive fields': ['Law', 'Medicine'],
+//       'Balanced work-life environment': ['Creative Fields'],
+//       'Low-stress, stable careers': ['Government', 'Admin'],
+//     },
+//   },
+// };
+
+interface CareerPathResponse {
+  career_path: string;
+  reason: string;
+}
+
+interface CategorizePayload {
+  resource: string;
+  type: string;
+  json_schema: { career_path: string; reason: string };
+  categories: string[];
+  prompt: string;
+}
+
+interface WetrocloudResponse {
+  career_path?: string;
+  reason?: string;
+  // Add other possible properties from the response if needed
+  [key: string]: any; // This allows for additional properties if the API returns more
+}
+
+async function calculateCareerPath(
+  userId: string,
+  formResponses: { question: string; answer: string }[]
+): Promise<WetrocloudResponse> {
+  if (!userId) {
+    return {
+      ok: false,
+      message: 'Invalid user ID',
+    };
+  }
+
+  if (!formResponses?.length) {
+    return {
+      ok: false,
+      message: 'No answers provided',
+    };
+  }
+
+  try {
+    if (wetroClient) {
+      console.log('Calling Wetrocloud categorize API');
+
+      const categorizePayload: CategorizePayload = {
+        resource: JSON.stringify(formResponses),
+        type: 'text',
+        json_schema: { career_path: '', reason: '' },
+        categories: [
+          'Engineering',
+          'Data Science',
+          'IT',
+          'Psychology',
+          'Social Work',
+          'Law',
+          'Finance',
+          'Marketing',
+          'Startups',
+          'HR',
+          'Teaching',
+        ],
+        prompt: `
+          Analyze these career assessment responses and recommend the best career path:
+          ${JSON.stringify(formResponses, null, 2)}
+
+          Consider:
+          - Skills and interests shown
+          - Personality traits revealed
+          - Work style preferences
+          - Long-term career goals
+
+          Return JSON with:
+          - career_path: The recommended career
+          - reason: Detailed explanation including required skills
+        `,
+      };
+
+      const aiRawResponse = (await wetroClient.categorize(
+        categorizePayload
+      )) as {
+        response?: {
+          career_path?: string;
+          reason?: string;
+        };
+        success?: boolean;
+        tokens?: number;
+      };
+
+      // ✅ Correctly extract nested values
+      const career_path = aiRawResponse?.response?.career_path;
+      const reason = aiRawResponse?.response?.reason;
+
+      if (career_path) {
+        const recommendedCareer = career_path;
+        const reasoning = reason || 'No detailed reason provided.';
+
+        console.log('AI recommendation:', { recommendedCareer, reasoning });
+
+        try {
+          await prisma.careerResult.upsert({
+            where: { userId },
+            update: { recommendedCareers: [recommendedCareer], reasoning },
+            create: {
+              userId,
+              recommendedCareers: [recommendedCareer],
+              reasoning,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            },
+          });
+        } catch (dbError) {
+          console.error('Database save failed:', dbError);
+          return {
+            ok: false,
+            message: 'Failed to save career results',
+          };
+        }
+
+        return {
+          ok: true,
+          message: 'Career path calculated successfully',
+          data: { recommendedCareer, reasoning },
+        };
+      } else {
+        console.warn('No career_path in AI response:', aiRawResponse);
+      }
+    }
+  } catch (apiError) {
+    console.error('Wetrocloud API failed:', apiError);
+  }
+
+  return {
+    ok: false,
+    message: 'Unable to generate career path recommendation at this time.',
+  };
+}
+
+//old
+// async function calculateCareerPath(
+//   userId: string,
+//   formResponses: { question: string; answer: string }[]
+// ): Promise<WetrocloudResponse> {
+//   if (!userId) {
+//     return {
+//       ok: false,
+//       message: 'Invalid user ID',
+//     };
+//   }
+
+//   if (!formResponses?.length) {
+//     return {
+//       ok: false,
+//       message: 'No answers provided',
+//     };
+//   }
+
+//   // Initialize with default values
+//   let recommendedCareer = 'Engineering';
+//   let reasoning = 'Generated using fallback mapping based on user responses.';
+
+//   try {
+//     // console.log(wetroClient);
+
+//     if (wetroClient) {
+//       console.log('Calling Wetrocloud categorize API');
+//       const categorizePayload: CategorizePayload = {
+//         resource: JSON.stringify(formResponses),
+//         type: 'text',
+//         json_schema: { career_path: '', reason: '' },
+//         categories: [
+//           'Engineering',
+//           'Data Science',
+//           'IT',
+//           'Psychology',
+//           'Social Work',
+//           'Law',
+//           'Finance',
+//           'Marketing',
+//           'Startups',
+//           'HR',
+//           'Teaching',
+//         ],
+//         prompt: `
+//           Analyze these career assessment responses and recommend the best career path:
+//           ${JSON.stringify(formResponses, null, 2)}
+
+//           Consider:
+//           - Skills and interests shown
+//           - Personality traits revealed
+//           - Work style preferences
+//           - Long-term career goals
+
+//           Return JSON with:
+//           - career_path: The recommended career
+//           - reason: Detailed explanation including required skills
+//         `,
+//       };
+//       // console.log(
+//       //   'Data sent to Wetrocloud AI:',
+//       //   JSON.stringify(categorizePayload, null, 2)
+//       // );
+//       const response = (await wetroClient.categorize(
+//         categorizePayload
+//       )) as WetrocloudResponse;
+
+//       if (response?.career_path) {
+//         recommendedCareer = response.career_path;
+//         reasoning = response.reason || '';
+//         console.log('AI recommendation:', { recommendedCareer, reasoning });
+//       }
+//       console.log(response);
+
+//       return response;
+//     }
+//   } catch (apiError) {
+//     console.error('Wetrocloud API failed, using fallback:', apiError);
+//   }
+
+//   // Save results
+//   console.log(`logged recommended 1 befor response: ${recommendedCareer}`);
+//   console.log('logged reason 1 befor response:', reasoning);
+
+//   try {
+//     await prisma.careerResult.upsert({
+//       where: { userId },
+//       update: { recommendedCareers: [recommendedCareer], reasoning },
+//       create: {
+//         userId,
+//         recommendedCareers: [recommendedCareer],
+//         reasoning,
+//         createdAt: new Date(),
+//         updatedAt: new Date(),
+//       },
+//     });
+
+//     return {
+//       ok: true,
+//       message: 'Career path calculated successfully',
+//       data: { recommendedCareer, reasoning },
+//     };
+//   } catch (dbError) {
+//     console.error('Database save failed:', dbError);
+//     return {
+//       ok: false,
+//       message: 'Failed to save career results',
+//     };
+//   }
+// }
+
 async function submitAnswersService(
   userId: string,
-  answers: {
-    questionId: string;
-    selectedOptionId: string;
-  }[]
-) {
+  answers: { question: string; answer: string }[]
+): Promise<WetrocloudResponse> {
+  if (!userId) {
+    return {
+      ok: false,
+      message: 'Invalid user ID',
+    };
+  }
+
   try {
-    // Validate answers
     if (!Array.isArray(answers) || !answers.length) {
-      throw new Error('Invalid answers provided');
+      return {
+        ok: false,
+        message: 'Invalid answers provided',
+      };
     }
 
-    // Save answers to the database
-    const answerPromises = answers.map(async (answer) => {
-      const { questionId, selectedOptionId } = answer;
-      return prisma.userResponse.create({
-        data: {
-          userId,
-          questionId,
-          selectedOptionId,
-          createdAt: new Date(),
-        },
-      });
-    });
-
-    await Promise.all(answerPromises);
-
-    // Calculate career path after saving answers
-    return await calculateCareerPath(userId);
+    return await calculateCareerPath(userId, answers);
   } catch (error) {
     console.error('Error submitting answers:', error);
-    throw new Error('Failed to submit answers');
+    return {
+      ok: false,
+      message:
+        error instanceof Error ? error.message : 'Failed to submit answers',
+    };
   }
 }
 
-// Function to get career path results
 async function getCareerPathService(userId: string) {
+  if (!userId) {
+    throw new Error('Invalid user ID');
+  }
+
   try {
     const careerResult = await prisma.careerResult.findUnique({
       where: { userId },
@@ -232,7 +435,10 @@ async function getCareerPathService(userId: string) {
       ok: true,
       status: 200,
       message: 'Career path retrieved successfully',
-      data: { recommendedCareers: careerResult.recommendedCareers },
+      data: {
+        recommendedCareer: careerResult.recommendedCareers[0] || '',
+        reasoning: careerResult.reasoning || 'No reasoning provided.',
+      },
     };
   } catch (error) {
     console.error('Error retrieving career path:', error);

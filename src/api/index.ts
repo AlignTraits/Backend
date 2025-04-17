@@ -13,6 +13,7 @@ import DashboardRoutes from '../routes/dashboardRoutes';
 import SkillRoutes from '../routes/skillRoutes';
 import AdmissionLogicRoutes from '../routes/admissionLogicRoute';
 import AdminResetRoutes from '../routes/admin/adminPasswordResetRoutes';
+import CareerRoutes from '../routes/careerPathRoutes';
 
 const router = express.Router();
 
@@ -35,5 +36,6 @@ router.use('/dashboard', DashboardRoutes);
 router.use('/skill', SkillRoutes);
 router.use('/admission-logic', AdmissionLogicRoutes);
 router.use('/admin-reset', AdminResetRoutes);
+router.use('/career', CareerRoutes);
 
 export default router;
