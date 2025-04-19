@@ -42,7 +42,8 @@ const uploadBase64ImageToCloudinary = async (
 
 export const createBulkSchoolsService2 = async (
   schools: newCreateSchoolData[],
-  userId: string
+  userId: string,
+  fileName: string // <-- pass the file name here
 ) => {
   try {
     const results = await Promise.allSettled(
@@ -135,6 +136,12 @@ export const createBulkSchoolsService2 = async (
                 name,
               })),
               userId: userId,
+              metadata: {
+                successCount: successfulSchools.length,
+                failedCount: failedSchools.length,
+                fileName,
+                failedMessages: failedSchools.map((f) => f.error),
+              },
             },
           });
         } catch (error) {
@@ -180,6 +187,12 @@ export const deleteBulkSchoolsService = async (
       where: { id: { in: validSchoolIds } },
     });
 
+    // Prepare fake failed records (those not found)
+    const failedSchools = invalidSchoolIds.map((id) => ({
+      id,
+      error: `School with ID "${id}" not found.`,
+    }));
+
     if (deletedSchools.count > 0) {
       // Validate userId before logging action history
       let userExists = false;
@@ -195,6 +208,12 @@ export const deleteBulkSchoolsService = async (
             entity: 'School',
             entityIds: schoolsToDelete.map(({ id, name }) => ({ id, name })),
             userId: userId,
+            metadata: {
+              successCount: deletedSchools.count,
+              failedCount: failedSchools.length,
+              fileName: 'delete', // You can dynamically pass filename if needed
+              failedMessages: failedSchools.map((f) => f.error),
+            },
           },
         });
       } else {
@@ -238,6 +257,11 @@ export const deleteBulkCoursesService = async (
       where: { id: { in: validCourseIds } },
     });
 
+    const failedCourses = invalidCourseIds.map((id) => ({
+      id,
+      reason: 'Course not found',
+    }));
+
     if (deletedCourses.count > 0) {
       // Validate userId before logging action history
       let userExists = false;
@@ -253,6 +277,12 @@ export const deleteBulkCoursesService = async (
             entity: 'Course',
             entityIds: coursesToDelete.map(({ id, title }) => ({ id, title })),
             userId: userId,
+            metadata: {
+              successCount: deletedCourses.count,
+              failedCount: failedCourses.length,
+              fileName: 'courses-delete',
+              failedMessages: failedCourses.map((item) => item.reason),
+            },
           },
         });
       } else {
@@ -297,7 +327,8 @@ const parseJsonField = (field: any): any[] => {
 
 export const updateBulkSchoolsService = async (
   schools: UpdateSchoolData[],
-  userId: string
+  userId: string,
+  fileName: string
 ) => {
   try {
     const results = await Promise.allSettled(
@@ -421,6 +452,12 @@ export const updateBulkSchoolsService = async (
             entity: 'School',
             entityIds: updatedSchools.map(({ id, name }) => ({ id, name })),
             userId: userId,
+            metadata: {
+              successCount: updatedSchools.length,
+              failedCount: failedUpdates.length,
+              fileName: fileName, // You can replace this with actual filename if passed from controller
+              failedMessages: failedUpdates.map((f) => f.error),
+            },
           },
         });
       } else {
@@ -710,7 +747,8 @@ export const clearOldBulkOperationFailuresService = async (
 // course
 export const createBulkCoursesService = async (
   courses: CreateCSVCourseData[],
-  userId: string
+  userId: string,
+  fileName: string
 ) => {
   try {
     const errors: { courseTitle: string; error: string }[] = [];
@@ -762,7 +800,7 @@ export const createBulkCoursesService = async (
               objectives: course.objectives,
               courseWebsiteUrl: course.courseWebsiteUrl,
               programLevel: course.programLevel,
-              loanInformation: course.loanInformation, // Now optional, can be undefined
+              loanInformation: course.loanInformation,
               ratings: course.ratings ?? 0.0,
             },
           });
@@ -816,6 +854,12 @@ export const createBulkCoursesService = async (
             entity: 'Course',
             entityIds: createdCourses.map(({ id, title }) => ({ id, title })),
             userId: userId,
+            metadata: {
+              successCount: createdCourses.length,
+              failedCount: errors.length,
+              fileName: fileName,
+              failedMessages: errors.map((e) => e.error),
+            },
           },
         });
       } else {
@@ -837,7 +881,8 @@ export const createBulkCoursesService = async (
 
 export const updateBulkCoursesService = async (
   courses: UpdateCsvCourseData[],
-  userId: string
+  userId: string,
+  fileName: string
 ) => {
   try {
     const results = await Promise.allSettled(
@@ -941,6 +986,19 @@ export const updateBulkCoursesService = async (
       )
       .map((result) => result.value.data);
 
+    const failedCourses = results
+      .filter(
+        (
+          result
+        ): result is PromiseFulfilledResult<{
+          status: 'failed';
+          id: string;
+          title: string;
+          reason: string;
+        }> => result.status === 'fulfilled' && result.value.status === 'failed'
+      )
+      .map((result) => result.value);
+
     if (updatedCourses.length > 0) {
       let userExists = false;
       if (userId) {
@@ -954,6 +1012,12 @@ export const updateBulkCoursesService = async (
             entity: 'Course',
             entityIds: updatedCourses.map(({ id, title }) => ({ id, title })),
             userId: userId,
+            metadata: {
+              successCount: updatedCourses.length,
+              failedCount: failedCourses.length,
+              fileName: fileName,
+              failedMessages: failedCourses.map((item) => item.reason),
+            },
           },
         });
       } else {

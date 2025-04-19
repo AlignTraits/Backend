@@ -184,6 +184,7 @@ model ActionHistory {
   action    String
   entity    String
   entityIds Json
+  metadata  Json?    // <-- Add this line
   userId    String?
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   timestamp DateTime @default(now())

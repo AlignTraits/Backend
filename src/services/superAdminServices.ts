@@ -9,6 +9,7 @@ import {
   getUserByEmail,
   getUserById,
   updateUser,
+  // getUsersByRoles,
 } from '../models/userModel';
 import {
   getEmailVerificationTokenByEmail,
@@ -262,6 +263,52 @@ export const deleteAdminProfileService = async (
   } catch (e) {
     throw e;
   }
+};
+
+export const getAdminByIdService = async (id: string) => {
+  const user = await getUserById(id);
+
+  if (!user || user.role === 'USER') {
+    return { status: 404, message: 'Admin not found or access denied' };
+  }
+
+  return {
+    status: 200,
+    message: 'Admin found',
+    data: {
+      id: user.id,
+      firstname: user.firstname,
+      lastname: user.lastname,
+      email: user.email,
+      contactNumber: user.contactNumber,
+      role: user.role,
+    },
+  };
+};
+
+export const listAdminsService = async () => {
+  const roles = ['ADMIN', 'SUPER_ADMIN', 'ANALYST', 'CONTENT_MANAGER'];
+
+  const users = await db.user.findMany({
+    where: {
+      role: {
+        in: roles as any, // use 'as any' to bypass Prisma enum type check
+      },
+    },
+  });
+
+  return {
+    status: 200,
+    message: 'Admin list retrieved',
+    data: users.map((user) => ({
+      id: user.id,
+      firstname: user.firstname,
+      lastname: user.lastname,
+      email: user.email,
+      contactNumber: user.contactNumber,
+      role: user.role,
+    })),
+  };
 };
 
 // Export all services (append these)

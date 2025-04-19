@@ -27,4 +27,16 @@ router.delete<{ id: string }, MessageResponse>(
   superAdminController.deleteAdminProfile
 );
 
+router.get<{ id: string }, MessageResponse>(
+  '/admin/profiles/:id',
+  superAdminLoginRequired,
+  superAdminController.getAdminById
+);
+
+router.get<{}, MessageResponse>(
+  '/admin/profiles',
+  superAdminLoginRequired,
+  superAdminController.listAdmins
+);
+
 export default router;

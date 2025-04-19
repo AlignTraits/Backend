@@ -269,7 +269,8 @@ export const updateCourseAdmissionService = async ({
 // bulk admission logic update
 export const updateBulkCourseAdmissionsService = async (
   admissions: UpdateCourseAdmissionData[],
-  userId: string
+  userId: string,
+  fileName: string
 ) => {
   try {
     const results = await Promise.allSettled(
@@ -540,12 +541,23 @@ export const updateBulkCourseAdmissionsService = async (
       )
       .map((result) => result.value.data);
 
+    const failedAdmissions = results
+      .filter(
+        (result): result is PromiseRejectedResult =>
+          result.status === 'rejected'
+      )
+      .map((result) => ({
+        id: result.reason.id || 'unknown',
+        reason: result.reason.message,
+      }));
+
     if (updatedAdmissions.length > 0) {
       let userExists = false;
       if (userId) {
         const user = await db.user.findUnique({ where: { id: userId } });
         userExists = !!user;
       }
+
       if (userExists) {
         await db.actionHistory.create({
           data: {
@@ -556,6 +568,12 @@ export const updateBulkCourseAdmissionsService = async (
               title,
             })),
             userId: userId,
+            metadata: {
+              successCount: updatedAdmissions.length,
+              failedCount: failedAdmissions.length,
+              fileName: fileName,
+              failedMessages: failedAdmissions.map((item) => item.reason),
+            },
           },
         });
       } else {

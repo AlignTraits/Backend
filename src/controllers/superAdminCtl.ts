@@ -4,6 +4,8 @@ import MessageResponse from '../types/messageResponse';
 import {
   createAdminProfileService,
   deleteAdminProfileService,
+  getAdminByIdService,
+  listAdminsService,
   updateAdminProfileService,
 } from '../services/superAdminServices';
 
@@ -71,8 +73,34 @@ const deleteAdminProfile = async (
   }
 };
 
+// Get one admin/profile by ID (not regular user)
+const getAdminById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const result = await getAdminByIdService(req.params.id);
+    res.status(result.status).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get all admins (not regular users)
+const listAdmins = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await listAdminsService();
+    res.status(result.status).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export = {
   createAdminProfile,
   updateAdminProfile,
   deleteAdminProfile,
+  listAdmins,
+  getAdminById,
 };

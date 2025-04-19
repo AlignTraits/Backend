@@ -139,6 +139,8 @@ export const updateBulkCourseAdmissionsController = async (
       return res.status(400).send({ error: 'CSV file is required' });
     }
 
+    const fileName = file.originalname;
+
     const csvData = file.buffer.toString('utf-8');
     const parsedData = Papa.parse<UpdateCourseAdmissionData>(csvData, {
       header: true,
@@ -178,7 +180,8 @@ export const updateBulkCourseAdmissionsController = async (
     const userId = (req as any)?.user?.id ?? '';
     const updatedAdmissions = await updateBulkCourseAdmissionsService(
       admissionsToUpdate,
-      userId
+      userId,
+      fileName
     );
 
     res.status(200).json({

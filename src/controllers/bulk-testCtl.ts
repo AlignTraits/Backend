@@ -31,6 +31,8 @@ export const createBulkSchoolsController = async (
       return res.status(400).send({ error: 'CSV file is required' });
     }
 
+    const fileName = file.originalname;
+
     const csvData = file.buffer.toString('utf-8');
     const parsedData = Papa.parse<NewCreateCSVSchoolData>(csvData, {
       header: true,
@@ -59,7 +61,11 @@ export const createBulkSchoolsController = async (
 
     const userId = (req as any)?.user?.id ?? '';
 
-    const results = await createBulkSchoolsService2(transformedSchools, userId);
+    const results = await createBulkSchoolsService2(
+      transformedSchools,
+      userId,
+      fileName
+    );
 
     res.status(201).json({
       message: 'Schools created successfully',
@@ -89,6 +95,7 @@ export const createBulkCoursesController = async (
         errors: [{ message: 'Please upload a CSV file' }],
       });
     }
+    const fileName = csvFile.originalname;
 
     const csvData = csvFile.buffer.toString('utf-8');
 
@@ -114,7 +121,7 @@ export const createBulkCoursesController = async (
 
     const userId = (req as any)?.user?.id ?? '';
 
-    const results = await createBulkCoursesService(courses, userId);
+    const results = await createBulkCoursesService(courses, userId, fileName);
 
     res.status(201).json({
       ok: true,
@@ -193,6 +200,7 @@ export const updateBulkSchoolsController = async (
     if (!file) {
       return res.status(400).send({ error: 'CSV file is required' });
     }
+    const fileName = file.originalname;
 
     const csvData = file.buffer.toString('utf-8');
     const parsedData = Papa.parse<UpdateSchoolData>(csvData, {
@@ -211,7 +219,8 @@ export const updateBulkSchoolsController = async (
     const userId = (req as any)?.user?.id ?? '';
     const updatedSchools = await updateBulkSchoolsService(
       schoolsToUpdate,
-      userId
+      userId,
+      fileName
     );
 
     res.status(200).json({
@@ -237,6 +246,8 @@ export const updateBulkCoursesController = async (
       return res.status(400).send({ error: 'CSV file is required' });
     }
 
+    const fileName = file.originalname;
+
     const csvData = file.buffer.toString('utf-8');
     const parsedData = Papa.parse<UpdateCsvCourseData>(csvData, {
       header: true,
@@ -253,7 +264,8 @@ export const updateBulkCoursesController = async (
     const userId = (req as any)?.user?.id ?? '';
     const updatedCourses = await updateBulkCoursesService(
       coursesToUpdate,
-      userId
+      userId,
+      fileName
     );
 
     res.status(200).json({
