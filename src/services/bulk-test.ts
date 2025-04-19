@@ -530,7 +530,8 @@ export const generateSchoolCourseReport = async (
   title?: string,
   country?: string,
   region?: string,
-  schoolId?: string
+  schoolId?: string,
+  userId?: string
 ): Promise<string> => {
   try {
     const start = startDate ? new Date(startDate) : undefined;
@@ -592,6 +593,30 @@ export const generateSchoolCourseReport = async (
         XLSX.writeFile(wb, filePath);
       } else {
         throw new Error('Unsupported format');
+      }
+
+      if (userId) {
+        await db.actionHistory.create({
+          data: {
+            action: 'Generate Report',
+            entity: 'School',
+            entityIds: schoolData.map(({ id, name }) => ({ id, title: name })),
+            userId: userId,
+            metadata: {
+              successCount: schoolData.length,
+              failedCount: 0,
+              fileName: fileName,
+              filters: {
+                id,
+                name,
+                country,
+                region,
+                startDate,
+                endDate,
+              },
+            },
+          },
+        });
       }
     } else if (entity === 'course') {
       const where: Prisma.CourseWhereInput = {};
@@ -657,6 +682,29 @@ export const generateSchoolCourseReport = async (
         XLSX.writeFile(wb, filePath);
       } else {
         throw new Error('Unsupported format');
+      }
+
+      if (userId) {
+        await db.actionHistory.create({
+          data: {
+            action: 'Generate Report',
+            entity: 'Course',
+            entityIds: courseData.map(({ id, title }) => ({ id, title })),
+            userId: userId,
+            metadata: {
+              successCount: courseData.length,
+              failedCount: 0,
+              fileName: fileName,
+              filters: {
+                id,
+                title,
+                schoolId,
+                startDate,
+                endDate,
+              },
+            },
+          },
+        });
       }
     } else {
       throw new Error('Invalid entity type');

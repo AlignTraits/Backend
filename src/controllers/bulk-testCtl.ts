@@ -312,6 +312,8 @@ export const downloadSchoolCourseDataController = async (
         .json({ message: 'Invalid entity type. Choose school or course.' });
     }
 
+    const userId = (req as any)?.user?.id ?? '';
+
     const fileUrl = await generateSchoolCourseReport(
       entity as string,
       format as string,
@@ -322,7 +324,8 @@ export const downloadSchoolCourseDataController = async (
       title as string,
       country as string, // Updated from location to country
       region as string, // New field for region
-      schoolId as string
+      schoolId as string,
+      userId as string
     );
 
     return res.json({ message: 'Download ready', fileUrl });
