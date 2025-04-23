@@ -1,5 +1,8 @@
 import express from 'express';
-import { adminLoginRequired } from '../middlewares/auth';
+import {
+  adminContCrtorLoginRequired,
+  adminLoginRequired,
+} from '../middlewares/auth';
 import {
   createCourseController,
   createSchoolController,
@@ -50,7 +53,12 @@ router.get('/course/:id', getCourseByIdController); // Add this route
 router.get('/courses', getAllCoursesController); // Add this route
 
 // update course
-router.patch('/course/:id', upload.single('image'), updateCourseController);
+router.patch(
+  '/course/:id',
+  adminContCrtorLoginRequired,
+  upload.single('image'),
+  updateCourseController
+);
 
 // delete course
 router.delete('/course/delete/:id', adminLoginRequired, deleteCourseController);
@@ -58,7 +66,7 @@ router.delete('/course/delete/:id', adminLoginRequired, deleteCourseController);
 // update school
 router.patch(
   '/update/:id',
-  adminLoginRequired,
+  adminContCrtorLoginRequired,
   upload.single('logo'),
   updateSchoolController
 );

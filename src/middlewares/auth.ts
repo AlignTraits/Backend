@@ -72,6 +72,36 @@ export const adminLoginRequired = async (
     return res.status(400).send('Invalid token');
   }
 };
+export const adminContCrtorLoginRequired = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).send('Access denied, empty token');
+
+  const token = authHeader.split(' ')[1] ?? '';
+  try {
+    const verified = jwt.verify(token, process.env.JWT_SECRET as string) as {
+      userId: string;
+    };
+    const user = await getUserById(verified.userId);
+    if (!user) return res.status(404).send('User not found');
+    if (
+      user.role !== 'ADMIN' &&
+      user.role !== 'SUPER_ADMIN' &&
+      user.role !== 'CONTENT_MANAGER'
+    ) {
+      // Allow both roles
+      return res.status(403).send('Access denied, not an admin');
+    }
+    req.user = user; // Set full Prisma User object
+    next();
+  } catch (err) {
+    console.log(err);
+    return res.status(400).send('Invalid token');
+  }
+};
 
 export const superAdminLoginRequired = async (
   req: Request,

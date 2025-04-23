@@ -47,7 +47,12 @@ const loginAdminService = async ({
     }
 
     // Check if the user has an admin role
-    if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
+    if (
+      user.role !== 'ADMIN' &&
+      user.role !== 'SUPER_ADMIN' &&
+      user.role !== 'CONTENT_MANAGER' &&
+      user.role !== 'ANALYST'
+    ) {
       return {
         ok: false,
         status: 403,

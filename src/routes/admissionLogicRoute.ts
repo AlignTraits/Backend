@@ -1,7 +1,10 @@
 // routes/admissionRoutes.ts
 import express from 'express';
 import multer from 'multer';
-import { adminLoginRequired } from '../middlewares/auth';
+import {
+  adminContCrtorLoginRequired,
+  adminLoginRequired,
+} from '../middlewares/auth';
 import MessageResponse from '../types/messageResponse';
 import {
   updateBulkCourseAdmissionsController,
@@ -15,14 +18,14 @@ const upload = multer({ storage });
 // Route for updating course admission logic
 router.patch(
   '/course/:id',
-  adminLoginRequired,
+  adminContCrtorLoginRequired,
   updateCourseAdmissionController
 );
 
 // In your router file
 router.put<{}, MessageResponse>(
   '/bulk-update-admission-logic',
-  adminLoginRequired,
+  adminContCrtorLoginRequired,
   upload.single('csvFile'),
   updateBulkCourseAdmissionsController
 );

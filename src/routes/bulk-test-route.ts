@@ -1,5 +1,8 @@
 import express from 'express';
-import { adminLoginRequired } from '../middlewares/auth';
+import {
+  adminContCrtorLoginRequired,
+  adminLoginRequired,
+} from '../middlewares/auth';
 import multer from 'multer';
 import MessageResponse from '../types/messageResponse';
 import {
@@ -34,7 +37,7 @@ router.post<{}, MessageResponse>(
 // Bulk school update route with CSV
 router.put<{}, MessageResponse>(
   '/bulk-update-schools',
-  adminLoginRequired,
+  adminContCrtorLoginRequired,
   upload.single('csvFile'),
   updateBulkSchoolsController
 );
@@ -57,7 +60,7 @@ router.post<{}, MessageResponse>(
 // Bulk course update route with CSV
 router.put<{}, MessageResponse>(
   '/bulk-update-courses',
-  adminLoginRequired,
+  adminContCrtorLoginRequired,
   upload.single('csvFile'),
   updateBulkCoursesController
 );
