@@ -1,5 +1,9 @@
 import express from 'express';
-import { adminLoginRequired, preventLoggedUser } from '../middlewares/auth';
+import {
+  adminContCrtorLoginRequired,
+  adminLoginRequired,
+  preventLoggedUser,
+} from '../middlewares/auth';
 import authController from '../controllers/authController';
 import MessageResponse from '../types/messageResponse';
 import { NextFunction, Request, Response } from 'express';
@@ -71,7 +75,7 @@ router.patch<{}, MessageResponse>(
 
 router.patch<{}, MessageResponse>(
   '/admin/password',
-  adminLoginRequired,
+  adminContCrtorLoginRequired,
   authController.updateAdminPassword
 );
 

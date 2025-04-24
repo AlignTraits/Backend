@@ -753,7 +753,13 @@ const updateAdminPasswordService = async (adminId: string, data: any) => {
     const parsedData = passwordSchema.parse(data);
 
     const user = await getUserByEmail(data.email);
-    if (!user || user.id !== adminId || user.role !== 'ADMIN') {
+    if (
+      !user ||
+      user.id !== adminId ||
+      (user.role !== 'ADMIN' &&
+        user.role !== 'CONTENT_MANAGER' &&
+        user.role !== 'SUPER_ADMIN')
+    ) {
       return {
         status: 404,
         message: 'User not found or not authorized',
