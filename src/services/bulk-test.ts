@@ -111,13 +111,26 @@ export const createBulkSchoolsService2 = async (
           result.value
       );
 
+    // const failedSchools = results
+    //   .filter((result) => result.status === 'rejected')
+    //   .map((result: PromiseRejectedResult) => ({
+    //     error: result.reason.message,
+    //   }));
     const failedSchools = results
-      .filter((result) => result.status === 'rejected')
-      .map((result: PromiseRejectedResult) => ({
-        error: result.reason.message,
-      }));
+      .map((result, index) => {
+        if (result.status === 'rejected') {
+          const school = schools[index];
+          return {
+            ...school,
+            error: result.reason.message,
+          };
+        }
+        return null;
+      })
+      .filter((item) => item !== null);
 
-    if (successfulSchools.length > 0) {
+    // if (successfulSchools.length > 0) {
+    if (successfulSchools.length > 0 || failedSchools.length > 0) {
       // Validate userId before logging action history
       let userExists = false;
       if (userId) {
@@ -141,6 +154,7 @@ export const createBulkSchoolsService2 = async (
                 failedCount: failedSchools.length,
                 fileName,
                 failedMessages: failedSchools.map((f) => f.error),
+                failedItems: failedSchools,
               },
             },
           });
@@ -213,6 +227,7 @@ export const deleteBulkSchoolsService = async (
               failedCount: failedSchools.length,
               fileName: 'delete', // You can dynamically pass filename if needed
               failedMessages: failedSchools.map((f) => f.error),
+              failedItems: failedSchools,
             },
           },
         });
@@ -282,6 +297,7 @@ export const deleteBulkCoursesService = async (
               failedCount: failedCourses.length,
               fileName: 'courses-delete',
               failedMessages: failedCourses.map((item) => item.reason),
+              failedItems: failedCourses,
             },
           },
         });
@@ -423,6 +439,10 @@ export const updateBulkSchoolsService = async (
       .map((result: any) => ({
         id: result.value.id,
         name: result.value.name,
+        country: result.value.country,
+        region: result.value.region,
+        logo: result.value.logo,
+        websiteUrl: result.value.websiteUrl,
         error: result.value.reason,
       }));
 
@@ -437,7 +457,12 @@ export const updateBulkSchoolsService = async (
         message: result.value.message,
       }));
 
-    if (updatedSchools.length > 0) {
+    // if (updatedSchools.length > 0) {
+    if (
+      updatedSchools.length > 0 ||
+      failedUpdates.length > 0 ||
+      skippedUpdates.length > 0
+    ) {
       // Validate userId before logging action history
       let userExists = false;
       if (userId) {
@@ -457,6 +482,7 @@ export const updateBulkSchoolsService = async (
               failedCount: failedUpdates.length,
               fileName: fileName, // You can replace this with actual filename if passed from controller
               failedMessages: failedUpdates.map((f) => f.error),
+              failedItems: failedUpdates,
             },
           },
         });
@@ -799,7 +825,7 @@ export const createBulkCoursesService = async (
   fileName: string
 ) => {
   try {
-    const errors: { courseTitle: string; error: string }[] = [];
+    const errors: (CreateCSVCourseData & { error: string })[] = [];
 
     const schoolIds = [...new Set(courses.map((course) => course.schoolId))];
     const existingSchools = await db.school.findMany({
@@ -871,10 +897,12 @@ export const createBulkCoursesService = async (
               errorMessage: userFriendlyMessage,
             },
           });
+
           errors.push({
-            courseTitle: course.title,
+            ...course,
             error: userFriendlyMessage,
           });
+
           return null;
         }
       })
@@ -889,7 +917,8 @@ export const createBulkCoursesService = async (
       )
       .map((result) => result.value);
 
-    if (createdCourses.length > 0) {
+    // if (createdCourses.length > 0) {
+    if (createdCourses.length > 0 || errors.length > 0) {
       let userExists = false;
       if (userId) {
         const user = await db.user.findUnique({ where: { id: userId } });
@@ -900,13 +929,17 @@ export const createBulkCoursesService = async (
           data: {
             action: 'Bulk Create',
             entity: 'Course',
-            entityIds: createdCourses.map(({ id, title }) => ({ id, title })),
-            userId: userId,
+            entityIds: createdCourses.map(({ id, title }) => ({
+              id,
+              name: title,
+            })),
+            userId,
             metadata: {
               successCount: createdCourses.length,
               failedCount: errors.length,
-              fileName: fileName,
+              fileName,
               failedMessages: errors.map((e) => e.error),
+              failedItems: errors.map((item) => ({ ...item })),
             },
           },
         });
@@ -925,6 +958,12 @@ export const createBulkCoursesService = async (
     console.error('Error in createBulkCoursesService:', error);
     throw new Error(`Bulk course creation failed: ${error.message}`);
   }
+};
+
+// failed result type
+type FailedCourseItem = UpdateCsvCourseData & {
+  status: 'failed';
+  reason: string;
 };
 
 export const updateBulkCoursesService = async (
@@ -1042,12 +1081,23 @@ export const updateBulkCoursesService = async (
           status: 'failed';
           id: string;
           title: string;
+          schoolId: string;
+          scholarshipInformation: string;
+          duration: string;
+          durationPeriod: string;
+          price: string;
+          currency: string;
+          acceptanceFee: string;
+          acceptanceFeeCurrency: string;
+          objectives: string;
+          courseWebsiteUrl: string;
           reason: string;
         }> => result.status === 'fulfilled' && result.value.status === 'failed'
       )
       .map((result) => result.value);
 
-    if (updatedCourses.length > 0) {
+    // if (updatedCourses.length > 0) {
+    if (updatedCourses.length > 0 || failedCourses.length > 0) {
       let userExists = false;
       if (userId) {
         const user = await db.user.findUnique({ where: { id: userId } });
@@ -1065,6 +1115,7 @@ export const updateBulkCoursesService = async (
               failedCount: failedCourses.length,
               fileName: fileName,
               failedMessages: failedCourses.map((item) => item.reason),
+              failedItems: failedCourses,
             },
           },
         });

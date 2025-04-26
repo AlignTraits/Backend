@@ -402,6 +402,11 @@ export const updateBulkCourseAdmissionsService = async (
           status: 'failed';
           id: string;
           title: string;
+          ExamCountry1: string;
+          ExamType1: string;
+          ExamType1Subjects: string;
+          ExamType1SubGrades: string;
+          Adminrule1: string;
           reason: string;
         }> => result.status === 'fulfilled' && result.value.status === 'failed'
       )
@@ -428,6 +433,7 @@ export const updateBulkCourseAdmissionsService = async (
             failedCount: failedAdmissions.length,
             fileName: fileName,
             failedMessages: failedAdmissions.map((item) => item.reason),
+            failedItems: failedAdmissions,
           },
         },
       });
