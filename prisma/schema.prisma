@@ -53,6 +53,17 @@ model User {
   UserResponse   UserResponse[]
   actionHistories ActionHistory[]
   careerResults  CareerResult[]
+  eligibilityResults     EligibilityResult[] // Link to eligibility results
+}
+
+model EligibilityResult {
+  id                     String           @id @default(cuid())
+  user                   User             @relation(fields: [userId], references: [id])
+  userId                 String
+  results                Json[]         
+
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
 }
 
 model CareerResult {
