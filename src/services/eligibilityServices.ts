@@ -490,20 +490,12 @@ async function calculateEligibility(
             if (!req) return false;
             if (req.subjects.length !== exam.subjects.length) return false;
             const validGrades = ['A1', 'B2', 'B3', 'C4', 'C5', 'C6'];
-            for (let i = 0; i < req.subjects.length; i++) {
-              if (
-                req.subjects[i].toLowerCase() !== exam.subjects[i].toLowerCase()
-              )
-                return false;
-              if (
-                !validGrades.includes(exam.grades[i]) ||
-                validGrades.indexOf(exam.grades[i]) >
-                  validGrades.indexOf(req.grades[i])
-              ) {
-                return false;
-              }
-            }
-            return true;
+            return req.subjects.every((subject, i) => {
+              return (
+                subject.toLowerCase() === exam.subjects[i].toLowerCase() &&
+                validGrades.includes(exam.grades[i].toUpperCase())
+              );
+            });
           });
 
           if (!olevelEligible) {

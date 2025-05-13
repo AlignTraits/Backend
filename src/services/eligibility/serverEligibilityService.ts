@@ -78,7 +78,7 @@ function extractCriteria(course: any) {
 
 function matchExamEligibility(
   required: { examType: string; subjects: string[]; grades: string[] },
-  studentExam: ExamInput
+  studentExam: { examType: string; subjects: string[]; grades: string[] }
 ): { eligible: boolean; details: string } {
   if (required.examType.toUpperCase() !== studentExam.examType.toUpperCase()) {
     return {
@@ -92,9 +92,11 @@ function matchExamEligibility(
   const matchedSubjects: string[] = [];
   let details = '';
 
+  // Check if lengths match
   if (
     required.subjects.length !== studentExam.subjects.length ||
-    required.subjects.length !== studentExam.grades.length
+    required.subjects.length !== studentExam.grades.length ||
+    studentExam.subjects.length !== studentExam.grades.length
   ) {
     return {
       eligible: false,
@@ -102,16 +104,30 @@ function matchExamEligibility(
     };
   }
 
+  // Create a map of student subjects to grades for lookup
+  const studentSubjectGradeMap = new Map<string, string>();
+  for (let i = 0; i < studentExam.subjects.length; i++) {
+    const subject = studentExam.subjects[i].toLowerCase();
+    if (studentSubjectGradeMap.has(subject)) {
+      details += `Duplicate student subject: ${studentExam.subjects[i]}. `;
+      return { eligible: false, details };
+    }
+    studentSubjectGradeMap.set(subject, studentExam.grades[i]);
+  }
+
+  // Check if all required subjects are present and validate grades
   for (let i = 0; i < required.subjects.length; i++) {
     const reqSubject = required.subjects[i].toLowerCase();
     const reqGrade = required.grades[i];
-    const studentSubject = studentExam.subjects[i]?.toLowerCase();
-    const studentGrade = studentExam.grades[i];
 
-    if (reqSubject !== studentSubject) {
-      details += `Subject mismatch: expected ${required.subjects[i]}, got ${studentExam.subjects[i] || 'none'}. `;
+    // Check if the required subject exists in student's submission
+    if (!studentSubjectGradeMap.has(reqSubject)) {
+      details += `Missing required subject: ${required.subjects[i]}. `;
       continue;
     }
+
+    // Get the student's grade for the subject
+    const studentGrade = studentSubjectGradeMap.get(reqSubject)!;
 
     if (isUtme) {
       const studentScore = parseFloat(studentGrade);
