@@ -191,42 +191,90 @@ async function calculateServerEligibility(
   input: ServerQualificationInput
 ): Promise<WetrocloudResponse> {
   if (!userId) {
-    return { ok: false, message: 'Invalid user ID', status: 400 };
-  }
-
-  const { courseId, exams, preferences } = input;
-
-  // Validation
-  if (!courseId) {
-    return { ok: false, message: 'Course ID is required', status: 400 };
-  }
-  if (!exams || !Array.isArray(exams) || exams.length === 0) {
-    return { ok: false, message: 'At least one exam is required', status: 400 };
-  }
-  if (
-    !exams.some(
-      (e) =>
-        ['UTME', 'JAMB'].includes(e.examType.toUpperCase()) &&
-        e.subjects.length >= 4 &&
-        e.subjects.some((s) => s.toLowerCase() === 'english')
-    )
-  ) {
-    return {
-      ok: false,
-      message:
-        'JAMB/UTME exam with at least 4 subjects including English is required',
-      status: 400,
-    };
-  }
-  if (exams.some((e) => e.subjects.length !== e.grades.length)) {
-    return {
-      ok: false,
-      message: 'Each exam must have equal numbers of subjects and grades',
-      status: 400,
-    };
+    return { ok: false, message: 'Invalid user ID', status: 400, tokens: null };
   }
 
   try {
+    // Fetch user payment plan and expiration
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        payment_plan: true,
+        payment_plan_expires_at: true,
+        firstname: true,
+        email: true,
+      },
+    });
+
+    console.log('Calculating server eligibility for user:', user);
+
+    if (!user) {
+      return {
+        ok: false,
+        message: 'User not found',
+        status: 404,
+        tokens: null,
+      };
+    }
+
+    const paymentPlan = user.payment_plan;
+    const expiresAt = user.payment_plan_expires_at;
+    const currentDate = new Date();
+
+    // Check if payment plan is valid
+    if (!paymentPlan || (expiresAt && expiresAt < currentDate)) {
+      return {
+        ok: false,
+        message: 'No valid payment plan or plan has expired',
+        status: 403,
+        tokens: null,
+      };
+    }
+
+    const { courseId, exams, preferences } = input;
+
+    // Validation
+    if (!courseId) {
+      return {
+        ok: false,
+        message: 'Course ID is required',
+        status: 400,
+        tokens: null,
+      };
+    }
+    if (!exams || !Array.isArray(exams) || exams.length === 0) {
+      return {
+        ok: false,
+        message: 'At least one exam is required',
+        status: 400,
+        tokens: null,
+      };
+    }
+    if (
+      !exams.some(
+        (e) =>
+          ['UTME', 'JAMB'].includes(e.examType.toUpperCase()) &&
+          e.subjects.length >= 4 &&
+          e.subjects.some((s) => s.toLowerCase() === 'english')
+      )
+    ) {
+      return {
+        ok: false,
+        message:
+          'JAMB/UTME exam with at least 4 subjects including English is required',
+        status: 400,
+        tokens: null,
+      };
+    }
+    if (exams.some((e) => e.subjects.length !== e.grades.length)) {
+      return {
+        ok: false,
+        message: 'Each exam must have equal numbers of subjects and grades',
+        status: 400,
+        tokens: null,
+      };
+    }
+
     // Fetch selected course
     const selectedCourse = await prisma.course.findUnique({
       where: { id: courseId },
@@ -238,6 +286,7 @@ async function calculateServerEligibility(
         ok: false,
         message: `Course with ID ${courseId} not found`,
         status: 404,
+        tokens: null,
       };
     }
 
@@ -288,6 +337,8 @@ async function calculateServerEligibility(
       utmeResults
     );
 
+    let allSuggestedCourses: EligibilityResult[] = [];
+
     if (selectedCourseResult.eligibility.status === 'Eligible') {
       await prisma.eligibilityResult.upsert({
         where: { id: userId },
@@ -303,6 +354,30 @@ async function calculateServerEligibility(
         },
       });
 
+      /*
+      // TODO: Send email with results
+      const emailData = {
+        to: user.email,
+        subject: 'Your Course Eligibility Results',
+        body: {
+          greeting: `Hello ${user.firstname || 'User'}`,
+          eligibility: {
+            course: selectedCourseResult.course,
+            university: selectedCourseResult.university,
+            status: selectedCourseResult.eligibility.status,
+            details: selectedCourseResult.eligibility.details,
+          },
+          suggestions: [],
+          planStatus: {
+            plan: paymentPlan || 'None',
+            expiresAt: expiresAt ? expiresAt.toISOString() : 'N/A',
+          },
+          footer: 'Thank you for using our platform! For further assistance, contact support@example.com.',
+        },
+        loginLink: paymentPlan === 'LOCAL_MONTHLY' || paymentPlan === 'GLOBAL_MONTHLY' ? 'https://example.com/login' : undefined,
+      };
+      */
+
       return {
         ok: true,
         message: 'Eligibility test completed successfully',
@@ -311,89 +386,113 @@ async function calculateServerEligibility(
           selectedCourse: selectedCourseResult,
           suggestedCourses: [],
         },
+        tokens: null,
       };
     }
 
-    // Find alternative courses
-    const courses = await prisma.course.findMany({
-      where: { id: { not: courseId } },
-      include: { university: true },
-    });
+    // Find alternative courses only for monthly plans
+    if (paymentPlan !== 'BASIC_ONETIME') {
+      const courses = await prisma.course.findMany({
+        where: { id: { not: courseId } },
+        include: { university: true },
+      });
 
-    const preferredCourses: EligibilityResult[] = [];
-    const suggestedCourses: EligibilityResult[] = [];
+      const preferredCourses: EligibilityResult[] = [];
+      const suggestedCourses: EligibilityResult[] = [];
 
-    for (const course of courses) {
-      const criteria = extractCriteria(course);
-      if (criteria.olevel.length === 0 && criteria.utme.length === 0) {
-        console.log(
-          `Skipping course ${course.id} (${course.title}): no requirements specified`
-        );
-        continue; // Skip courses with no requirements
-      }
-
-      const olevelResults: { eligible: boolean; details: string }[] = [];
-      const utmeResults: { eligible: boolean; details: string }[] = [];
-
-      for (const req of criteria.olevel) {
-        const studentExam = exams.find(
-          (e) => e.examType.toUpperCase() === req.examType.toUpperCase()
-        );
-        if (!studentExam) {
-          olevelResults.push({
-            eligible: false,
-            details: `No ${req.examType} exam provided`,
-          });
+      for (const course of courses) {
+        const criteria = extractCriteria(course);
+        if (criteria.olevel.length === 0 && criteria.utme.length === 0) {
+          console.log(
+            `Skipping course ${course.id} (${course.title}): no requirements specified`
+          );
           continue;
         }
-        olevelResults.push(matchExamEligibility(req, studentExam));
+
+        const olevelResults: { eligible: boolean; details: string }[] = [];
+        const utmeResults: { eligible: boolean; details: string }[] = [];
+
+        for (const req of criteria.olevel) {
+          const studentExam = exams.find(
+            (e) => e.examType.toUpperCase() === req.examType.toUpperCase()
+          );
+          if (!studentExam) {
+            olevelResults.push({
+              eligible: false,
+              details: `No ${req.examType} exam provided`,
+            });
+            continue;
+          }
+          olevelResults.push(matchExamEligibility(req, studentExam));
+        }
+
+        for (const req of criteria.utme) {
+          const studentExam = exams.find(
+            (e) => e.examType.toUpperCase() === req.examType.toUpperCase()
+          );
+          if (!studentExam) {
+            utmeResults.push({
+              eligible: false,
+              details: `No ${req.examType} exam provided`,
+            });
+            continue;
+          }
+          utmeResults.push(matchExamEligibility(req, studentExam));
+        }
+
+        if (
+          utmeResults.every((r) => r.eligible) &&
+          olevelResults.some((r) => r.eligible)
+        ) {
+          const result = createEligibilityResult(
+            course,
+            olevelResults,
+            utmeResults
+          );
+          const matchesPreferences =
+            (!preferences?.university ||
+              course.university.name
+                .toLowerCase()
+                .includes(preferences.university.toLowerCase())) &&
+            (!preferences?.field ||
+              course.title
+                .toLowerCase()
+                .includes(preferences.field.toLowerCase())) &&
+            (!preferences?.location ||
+              course.university.region?.toLowerCase() ===
+                preferences.location.toLowerCase());
+
+          if (matchesPreferences) {
+            preferredCourses.push(result);
+          } else {
+            suggestedCourses.push(result);
+          }
+        }
       }
 
-      for (const req of criteria.utme) {
-        const studentExam = exams.find(
-          (e) => e.examType.toUpperCase() === req.examType.toUpperCase()
-        );
-        if (!studentExam) {
-          utmeResults.push({
-            eligible: false,
-            details: `No ${req.examType} exam provided`,
+      allSuggestedCourses = [...preferredCourses, ...suggestedCourses];
+
+      // Filter for LOCAL_MONTHLY
+      if (paymentPlan === 'LOCAL_MONTHLY') {
+        const schoolCountry = selectedCourse.university.country;
+        const filteredCourses: EligibilityResult[] = [];
+        for (const course of allSuggestedCourses) {
+          const courseSchool = await prisma.course.findFirst({
+            where: { title: course.course },
+            include: { university: true },
           });
-          continue;
+          if (
+            courseSchool &&
+            courseSchool.university.country === schoolCountry
+          ) {
+            filteredCourses.push(course);
+          }
         }
-        utmeResults.push(matchExamEligibility(req, studentExam));
+        allSuggestedCourses = filteredCourses;
       }
-
-      if (
-        utmeResults.every((r) => r.eligible) &&
-        olevelResults.some((r) => r.eligible)
-      ) {
-        const result = createEligibilityResult(
-          course,
-          olevelResults,
-          utmeResults
-        );
-        const matchesPreferences =
-          (!preferences?.university ||
-            course.university.name
-              .toLowerCase()
-              .includes(preferences.university.toLowerCase())) &&
-          (!preferences?.field ||
-            course.title
-              .toLowerCase()
-              .includes(preferences.field.toLowerCase())) &&
-          (!preferences?.location ||
-            course.university.region?.toLowerCase() ===
-              preferences.location.toLowerCase());
-
-        if (matchesPreferences) {
-          preferredCourses.push(result);
-        } else {
-          suggestedCourses.push(result);
-        }
-      }
+      // GLOBAL_MONTHLY: Keep all suggestedCourses
     }
 
-    const allSuggestedCourses = [...preferredCourses, ...suggestedCourses];
     console.log(
       'Suggested Courses:',
       allSuggestedCourses.map((c) => ({
@@ -407,16 +506,51 @@ async function calculateServerEligibility(
     await prisma.eligibilityResult.upsert({
       where: { id: userId },
       update: {
-        results: allSuggestedCourses as unknown as Prisma.InputJsonValue[],
+        results: [
+          selectedCourseResult,
+          ...allSuggestedCourses,
+        ] as unknown as Prisma.InputJsonValue[],
         updatedAt: new Date(),
       },
       create: {
         userId,
-        results: allSuggestedCourses as unknown as Prisma.InputJsonValue[],
+        results: [
+          selectedCourseResult,
+          ...allSuggestedCourses,
+        ] as unknown as Prisma.InputJsonValue[],
         createdAt: new Date(),
         updatedAt: new Date(),
       },
     });
+
+    /*
+    // TODO: Send email with results
+    const emailData = {
+      to: user.email,
+      subject: 'Your Course Eligibility Results',
+      body: {
+        greeting: `Hello ${user.firstname || 'User'}`,
+        eligibility: {
+          course: selectedCourseResult.course,
+          university: selectedCourseResult.university,
+          status: selectedCourseResult.eligibility.status,
+          details: selectedCourseResult.eligibility.details,
+        },
+        suggestions: allSuggestedCourses.map((course) => ({
+          course: course.course,
+          university: course.university,
+          requirements: course.admission_requirements,
+          why: course.eligibility.details,
+        })),
+        planStatus: {
+          plan: paymentPlan || 'None',
+          expiresAt: expiresAt ? expiresAt.toISOString() : 'N/A',
+        },
+        footer: 'Thank you for using our platform! For further assistance, contact support@example.com.',
+      },
+      loginLink: paymentPlan === 'LOCAL_MONTHLY' || paymentPlan === 'GLOBAL_MONTHLY' ? 'https://example.com/login' : undefined,
+    };
+    */
 
     return {
       ok: true,
@@ -429,6 +563,7 @@ async function calculateServerEligibility(
         selectedCourse: selectedCourseResult,
         suggestedCourses: allSuggestedCourses,
       },
+      tokens: null,
     };
   } catch (error) {
     console.error('Error in server eligibility check:', error);
@@ -436,9 +571,264 @@ async function calculateServerEligibility(
       ok: false,
       message: 'Failed to process eligibility test',
       status: 500,
+      tokens: null,
     };
   }
 }
+
+// async function calculateServerEligibility(
+//   userId: string,
+//   input: ServerQualificationInput
+// ): Promise<WetrocloudResponse> {
+//   if (!userId) {
+//     return { ok: false, message: 'Invalid user ID', status: 400 };
+//   }
+
+//   const { courseId, exams, preferences } = input;
+
+//   // Validation
+//   if (!courseId) {
+//     return { ok: false, message: 'Course ID is required', status: 400 };
+//   }
+//   if (!exams || !Array.isArray(exams) || exams.length === 0) {
+//     return { ok: false, message: 'At least one exam is required', status: 400 };
+//   }
+//   if (
+//     !exams.some(
+//       (e) =>
+//         ['UTME', 'JAMB'].includes(e.examType.toUpperCase()) &&
+//         e.subjects.length >= 4 &&
+//         e.subjects.some((s) => s.toLowerCase() === 'english')
+//     )
+//   ) {
+//     return {
+//       ok: false,
+//       message:
+//         'JAMB/UTME exam with at least 4 subjects including English is required',
+//       status: 400,
+//     };
+//   }
+//   if (exams.some((e) => e.subjects.length !== e.grades.length)) {
+//     return {
+//       ok: false,
+//       message: 'Each exam must have equal numbers of subjects and grades',
+//       status: 400,
+//     };
+//   }
+
+//   try {
+//     // Fetch selected course
+//     const selectedCourse = await prisma.course.findUnique({
+//       where: { id: courseId },
+//       include: { university: true },
+//     });
+
+//     if (!selectedCourse) {
+//       return {
+//         ok: false,
+//         message: `Course with ID ${courseId} not found`,
+//         status: 404,
+//       };
+//     }
+
+//     const selectedCriteria = extractCriteria(selectedCourse);
+//     console.log('Selected Course:', {
+//       id: selectedCourse.id,
+//       title: selectedCourse.title,
+//       criteria: selectedCriteria,
+//     });
+
+//     // Check eligibility for selected course
+//     const olevelResults: { eligible: boolean; details: string }[] = [];
+//     const utmeResults: { eligible: boolean; details: string }[] = [];
+
+//     for (const req of selectedCriteria.olevel) {
+//       const studentExam = exams.find(
+//         (e) => e.examType.toUpperCase() === req.examType.toUpperCase()
+//       );
+//       if (!studentExam) {
+//         olevelResults.push({
+//           eligible: false,
+//           details: `No ${req.examType} exam provided`,
+//         });
+//         continue;
+//       }
+//       olevelResults.push(matchExamEligibility(req, studentExam));
+//     }
+
+//     for (const req of selectedCriteria.utme) {
+//       const studentExam = exams.find(
+//         (e) => e.examType.toUpperCase() === req.examType.toUpperCase()
+//       );
+//       if (!studentExam) {
+//         utmeResults.push({
+//           eligible: false,
+//           details: `No ${req.examType} exam provided`,
+//         });
+//         continue;
+//       }
+//       utmeResults.push(matchExamEligibility(req, studentExam));
+//     }
+
+//     console.log('Selected Course Eligibility:', { olevelResults, utmeResults });
+
+//     const selectedCourseResult = createEligibilityResult(
+//       selectedCourse,
+//       olevelResults,
+//       utmeResults
+//     );
+
+//     if (selectedCourseResult.eligibility.status === 'Eligible') {
+//       await prisma.eligibilityResult.upsert({
+//         where: { id: userId },
+//         update: {
+//           results: [selectedCourseResult] as unknown as Prisma.InputJsonValue[],
+//           updatedAt: new Date(),
+//         },
+//         create: {
+//           userId,
+//           results: [selectedCourseResult] as unknown as Prisma.InputJsonValue[],
+//           createdAt: new Date(),
+//           updatedAt: new Date(),
+//         },
+//       });
+
+//       return {
+//         ok: true,
+//         message: 'Eligibility test completed successfully',
+//         status: 200,
+//         data: {
+//           selectedCourse: selectedCourseResult,
+//           suggestedCourses: [],
+//         },
+//       };
+//     }
+
+//     // Find alternative courses
+//     const courses = await prisma.course.findMany({
+//       where: { id: { not: courseId } },
+//       include: { university: true },
+//     });
+
+//     const preferredCourses: EligibilityResult[] = [];
+//     const suggestedCourses: EligibilityResult[] = [];
+
+//     for (const course of courses) {
+//       const criteria = extractCriteria(course);
+//       if (criteria.olevel.length === 0 && criteria.utme.length === 0) {
+//         console.log(
+//           `Skipping course ${course.id} (${course.title}): no requirements specified`
+//         );
+//         continue; // Skip courses with no requirements
+//       }
+
+//       const olevelResults: { eligible: boolean; details: string }[] = [];
+//       const utmeResults: { eligible: boolean; details: string }[] = [];
+
+//       for (const req of criteria.olevel) {
+//         const studentExam = exams.find(
+//           (e) => e.examType.toUpperCase() === req.examType.toUpperCase()
+//         );
+//         if (!studentExam) {
+//           olevelResults.push({
+//             eligible: false,
+//             details: `No ${req.examType} exam provided`,
+//           });
+//           continue;
+//         }
+//         olevelResults.push(matchExamEligibility(req, studentExam));
+//       }
+
+//       for (const req of criteria.utme) {
+//         const studentExam = exams.find(
+//           (e) => e.examType.toUpperCase() === req.examType.toUpperCase()
+//         );
+//         if (!studentExam) {
+//           utmeResults.push({
+//             eligible: false,
+//             details: `No ${req.examType} exam provided`,
+//           });
+//           continue;
+//         }
+//         utmeResults.push(matchExamEligibility(req, studentExam));
+//       }
+
+//       if (
+//         utmeResults.every((r) => r.eligible) &&
+//         olevelResults.some((r) => r.eligible)
+//       ) {
+//         const result = createEligibilityResult(
+//           course,
+//           olevelResults,
+//           utmeResults
+//         );
+//         const matchesPreferences =
+//           (!preferences?.university ||
+//             course.university.name
+//               .toLowerCase()
+//               .includes(preferences.university.toLowerCase())) &&
+//           (!preferences?.field ||
+//             course.title
+//               .toLowerCase()
+//               .includes(preferences.field.toLowerCase())) &&
+//           (!preferences?.location ||
+//             course.university.region?.toLowerCase() ===
+//               preferences.location.toLowerCase());
+
+//         if (matchesPreferences) {
+//           preferredCourses.push(result);
+//         } else {
+//           suggestedCourses.push(result);
+//         }
+//       }
+//     }
+
+//     const allSuggestedCourses = [...preferredCourses, ...suggestedCourses];
+//     console.log(
+//       'Suggested Courses:',
+//       allSuggestedCourses.map((c) => ({
+//         id: c.course,
+//         title: c.course,
+//         university: c.university,
+//         eligibility: c.eligibility,
+//       }))
+//     );
+
+//     await prisma.eligibilityResult.upsert({
+//       where: { id: userId },
+//       update: {
+//         results: allSuggestedCourses as unknown as Prisma.InputJsonValue[],
+//         updatedAt: new Date(),
+//       },
+//       create: {
+//         userId,
+//         results: allSuggestedCourses as unknown as Prisma.InputJsonValue[],
+//         createdAt: new Date(),
+//         updatedAt: new Date(),
+//       },
+//     });
+
+//     return {
+//       ok: true,
+//       message:
+//         allSuggestedCourses.length > 0
+//           ? 'You are not eligible for the selected course. Here are some recommendations.'
+//           : 'You are not eligible for the selected course, and no alternative courses match your qualifications.',
+//       status: 200,
+//       data: {
+//         selectedCourse: selectedCourseResult,
+//         suggestedCourses: allSuggestedCourses,
+//       },
+//     };
+//   } catch (error) {
+//     console.error('Error in server eligibility check:', error);
+//     return {
+//       ok: false,
+//       message: 'Failed to process eligibility test',
+//       status: 500,
+//     };
+//   }
+// }
 
 async function submitServerEligibilityAnswersService(
   userId: string,

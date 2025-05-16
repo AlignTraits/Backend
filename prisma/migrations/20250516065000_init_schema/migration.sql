@@ -5,6 +5,9 @@ CREATE TYPE "Roles" AS ENUM ('ADMIN', 'USER', 'SUPER_ADMIN', 'CONTENT_MANAGER', 
 CREATE TYPE "Gender" AS ENUM ('MALE', 'FEMALE');
 
 -- CreateEnum
+CREATE TYPE "PaymentPlan" AS ENUM ('BASIC_ONETIME', 'LOCAL_MONTHLY', 'GLOBAL_MONTHLY');
+
+-- CreateEnum
 CREATE TYPE "SchoolType" AS ENUM ('FEDERAL_UNIVERSITY', 'PRIVATE_UNIVERSITY', 'PUBLIC_UNIVERSITY');
 
 -- CreateEnum
@@ -39,8 +42,33 @@ CREATE TABLE "User" (
     "image" TEXT,
     "updatedAt" TIMESTAMP(3),
     "otherSkill" TEXT,
+    "payment_plan" "PaymentPlan",
+    "payment_plan_expires_at" TIMESTAMP(3),
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "EligibilityResult" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "results" JSONB[],
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "EligibilityResult_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "CareerResult" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "recommendedCareers" TEXT[],
+    "reasoning" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "CareerResult_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -182,6 +210,7 @@ CREATE TABLE "ActionHistory" (
     "action" TEXT NOT NULL,
     "entity" TEXT NOT NULL,
     "entityIds" JSONB NOT NULL,
+    "metadata" JSONB,
     "userId" TEXT,
     "timestamp" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -194,9 +223,8 @@ CREATE TABLE "Course" (
     "title" TEXT NOT NULL,
     "image" TEXT,
     "schoolId" TEXT NOT NULL,
-    "programLocation" TEXT NOT NULL,
     "scholarship" TEXT NOT NULL,
-    "scholarshipRequirement" TEXT,
+    "scholarshipInformation" TEXT,
     "duration" INTEGER NOT NULL,
     "durationPeriod" "DurationPeriod" NOT NULL,
     "programLevel" TEXT NOT NULL,
@@ -206,15 +234,53 @@ CREATE TABLE "Course" (
     "acceptanceFeeCurrency" "Currency" NOT NULL,
     "objectives" TEXT NOT NULL,
     "courseWebsiteUrl" TEXT NOT NULL,
-    "loanInformation" TEXT NOT NULL,
-    "examTypes" "ExamType"[],
-    "examYear" INTEGER,
-    "subjects" TEXT[],
-    "grades" "Grade"[],
-    "ratings" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
-    "ruleName" TEXT,
-    "ruleDescription" TEXT,
-    "ruleRequiredExams" TEXT,
+    "loanInformation" TEXT,
+    "ratings" DOUBLE PRECISION DEFAULT 0.0,
+    "ExamCountry1" TEXT,
+    "ExamType1" TEXT,
+    "ExamType1Subjects" TEXT,
+    "ExamType1SubGrades" TEXT,
+    "ExamCountry2" TEXT,
+    "ExamType2" TEXT,
+    "ExamType2Subjects" TEXT,
+    "ExamType2SubGrades" TEXT,
+    "ExamCountry3" TEXT,
+    "ExamType3" TEXT,
+    "ExamType3Subjects" TEXT,
+    "ExamType3SubGrades" TEXT,
+    "ExamCountry4" TEXT,
+    "ExamType4" TEXT,
+    "ExamType4Subjects" TEXT,
+    "ExamType4SubGrades" TEXT,
+    "ExamCountry5" TEXT,
+    "ExamType5" TEXT,
+    "ExamType5Subjects" TEXT,
+    "ExamType5SubGrades" TEXT,
+    "ExamCountry6" TEXT,
+    "ExamType6" TEXT,
+    "ExamType6Subjects" TEXT,
+    "ExamType6SubGrades" TEXT,
+    "ExamCountry7" TEXT,
+    "ExamType7" TEXT,
+    "ExamType7Subjects" TEXT,
+    "ExamType7SubGrades" TEXT,
+    "ExamCountry8" TEXT,
+    "ExamType8" TEXT,
+    "ExamType8Subjects" TEXT,
+    "ExamType8SubGrades" TEXT,
+    "ExamCountry9" TEXT,
+    "ExamType9" TEXT,
+    "ExamType9Subjects" TEXT,
+    "ExamType9SubGrades" TEXT,
+    "ExamCountry10" TEXT,
+    "ExamType10" TEXT,
+    "ExamType10Subjects" TEXT,
+    "ExamType10SubGrades" TEXT,
+    "Adminrule1" TEXT,
+    "Adminrule2" TEXT,
+    "Adminrule3" TEXT,
+    "Adminrule4" TEXT,
+    "Adminrule5" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -249,6 +315,9 @@ CREATE TABLE "_UserInterests" (
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "CareerResult_userId_key" ON "CareerResult"("userId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "AnswerOption_questionId_key" ON "AnswerOption"("questionId");
 
 -- CreateIndex
@@ -265,6 +334,12 @@ CREATE UNIQUE INDEX "_UserInterests_AB_unique" ON "_UserInterests"("A", "B");
 
 -- CreateIndex
 CREATE INDEX "_UserInterests_B_index" ON "_UserInterests"("B");
+
+-- AddForeignKey
+ALTER TABLE "EligibilityResult" ADD CONSTRAINT "EligibilityResult_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CareerResult" ADD CONSTRAINT "CareerResult_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "City" ADD CONSTRAINT "City_countryId_fkey" FOREIGN KEY ("countryId") REFERENCES "Country"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

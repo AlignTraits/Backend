@@ -26,6 +26,13 @@ enum Gender {
 //   // 1624
 // }
 
+// Enum for payment plans
+enum PaymentPlan {
+  BASIC_ONETIME
+  LOCAL_MONTHLY
+  GLOBAL_MONTHLY
+}
+
 model User {
   id             String           @id @default(cuid())
   firstname      String
@@ -54,6 +61,8 @@ model User {
   actionHistories ActionHistory[]
   careerResults  CareerResult[]
   eligibilityResults     EligibilityResult[] // Link to eligibility results
+  payment_plan           PaymentPlan?     // User's payment plan
+  payment_plan_expires_at DateTime?       // Expiration date for the payment plan
 }
 
 model EligibilityResult {
