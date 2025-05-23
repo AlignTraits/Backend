@@ -187,6 +187,7 @@ export const createCourseService = async ({
   programLevel,
   loanInformation, // Already optional in interface, no change needed here
   userId,
+  categoryId, // Add categoryId
 }: CreateCourseData & { userId: string }) => {
   let profileUrl: string;
 
@@ -202,6 +203,21 @@ export const createCourseService = async ({
         message: 'School not found',
         errors: [{ message: 'The specified school does not exist' }],
       };
+    }
+
+    // Validate categoryId if provided
+    if (categoryId) {
+      const categoryExists = await db.courseCategory.findUnique({
+        where: { id: categoryId },
+      });
+      if (!categoryExists) {
+        return {
+          ok: false,
+          status: 404,
+          message: 'Course category not found',
+          errors: [{ message: 'The specified course category does not exist' }],
+        };
+      }
     }
 
     // Validate and upload logo (image)
@@ -264,6 +280,7 @@ export const createCourseService = async ({
         courseWebsiteUrl,
         programLevel,
         loanInformation, // Now optional, can be undefined
+        categoryId, // Add categoryId
       },
     });
 
@@ -313,6 +330,7 @@ export const updateCourseService = async ({
   programLevel,
   loanInformation,
   userId,
+  categoryId, // Add categoryId
 }: UpdateCourseData & { userId: string }) => {
   let profileUrl: string | undefined;
 
@@ -334,6 +352,21 @@ export const updateCourseService = async ({
           status: 404,
           message: 'School not found',
           errors: [{ message: 'The specified school does not exist' }],
+        };
+      }
+    }
+
+    // Validate categoryId if provided
+    if (categoryId) {
+      const categoryExists = await db.courseCategory.findUnique({
+        where: { id: categoryId },
+      });
+      if (!categoryExists) {
+        return {
+          ok: false,
+          status: 404,
+          message: 'Course category not found',
+          errors: [{ message: 'The specified course category does not exist' }],
         };
       }
     }
@@ -376,6 +409,7 @@ export const updateCourseService = async ({
         title: title || existingCourse.title,
         image: profileUrl || existingCourse.image, // Store as image in DB
         schoolId: schoolId || existingCourse.schoolId,
+        categoryId: categoryId || existingCourse.categoryId,
         scholarship: scholarship || existingCourse.scholarship,
         scholarshipInformation:
           scholarshipInformation !== undefined

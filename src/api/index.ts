@@ -16,6 +16,7 @@ import AdminResetRoutes from '../routes/admin/adminPasswordResetRoutes';
 import CareerRoutes from '../routes/careerPathRoutes';
 import WetrocloudEligibilityRoutes from '../routes/eligibiltyRoutes';
 import ServerEligibilityRoutes from '../routes/eligibility/serverEligibilityRoute';
+import CourseCategoriesRoutes from '../routes/courseCategoriesRoutes';
 
 const router = express.Router();
 
@@ -41,5 +42,6 @@ router.use('/admin-reset', AdminResetRoutes);
 router.use('/career', CareerRoutes);
 router.use('/server/eligible', ServerEligibilityRoutes);
 router.use('/wetrocloud/eligible', WetrocloudEligibilityRoutes);
+router.use('/categories/course', CourseCategoriesRoutes);
 
 export default router;

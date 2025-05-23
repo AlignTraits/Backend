@@ -92,6 +92,7 @@ export const createCourseController = async (req: Request, res: Response) => {
       programLevel,
       loanInformation,
       ratings, // Add ratings since it's in the model
+      categoryId, // Add categoryId
     } = req.body;
     const logo = req.file;
 
@@ -217,6 +218,7 @@ export const createCourseController = async (req: Request, res: Response) => {
       programLevel,
       loanInformation, // Now optional, can be undefined
       ratings: ratings ? parseFloat(ratings) : undefined,
+      categoryId: categoryId ? parseInt(categoryId) : undefined, // Add categoryId
       userId,
     });
 
@@ -247,6 +249,7 @@ export const updateCourseController = async (req: Request, res: Response) => {
       programLevel,
       loanInformation,
       ratings,
+      categoryId, // Add categoryId
     } = req.body;
     const logo = req.file;
     const { id } = req.params;
@@ -352,6 +355,7 @@ export const updateCourseController = async (req: Request, res: Response) => {
       programLevel,
       loanInformation,
       ratings: ratings ? parseFloat(ratings) : undefined,
+      categoryId: categoryId ? parseInt(categoryId) : undefined, // Add categoryId
     });
     res.status(updatedCourse.status).send(updatedCourse);
   } catch (error) {

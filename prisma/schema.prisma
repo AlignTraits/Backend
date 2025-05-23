@@ -255,6 +255,12 @@ enum Currency {
   CAD
 }
 
+model CourseCategory {
+  id      Int      @id @default(autoincrement())
+  name    String
+  courses Course[] @relation("CourseCategoryCourses")
+}
+
 model Course {
   id                     String          @id @default(dbgenerated("substring(gen_random_uuid()::text, 1, 10)"))
   title                  String          // Course Title
@@ -335,6 +341,9 @@ model Course {
 
   createdAt              DateTime        @default(now())
   updatedAt              DateTime        @default(now()) @updatedAt
+
+  categoryId             Int?
+  category               CourseCategory? @relation("CourseCategoryCourses", fields: [categoryId], references: [id])
 }
 
 model BulkOperationFailure {

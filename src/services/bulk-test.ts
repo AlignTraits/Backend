@@ -827,12 +827,30 @@ export const createBulkCoursesService = async (
   try {
     const errors: (CreateCSVCourseData & { error: string })[] = [];
 
+    // Validate school IDs
     const schoolIds = [...new Set(courses.map((course) => course.schoolId))];
     const existingSchools = await db.school.findMany({
       where: { id: { in: schoolIds } },
       select: { id: true },
     });
     const existingSchoolIds = new Set(existingSchools.map((s) => s.id));
+
+    // Validate category IDs
+    const categoryIds = [
+      ...new Set(
+        courses
+          .map((course) => course.categoryId)
+          .filter((id): id is number => id != null) // Exclude null and undefined
+      ),
+    ];
+    let existingCategoryIds: Set<number> = new Set();
+    if (categoryIds.length > 0) {
+      const existingCategories = await db.courseCategory.findMany({
+        where: { id: { in: categoryIds } },
+        select: { id: true },
+      });
+      existingCategoryIds = new Set(existingCategories.map((c) => c.id));
+    }
 
     const results = await Promise.allSettled(
       courses.map(async (course) => {
@@ -853,6 +871,16 @@ export const createBulkCoursesService = async (
             (course.ratings < 0 || course.ratings > 5)
           ) {
             throw new Error('Ratings must be between 0 and 5');
+          }
+
+          // Validate categoryId
+          if (
+            course.categoryId != null && // Allow null to unset category
+            !existingCategoryIds.has(course.categoryId)
+          ) {
+            throw new Error(
+              `Course category with ID ${course.categoryId} does not exist`
+            );
           }
 
           const courseId = nanoid(10);
@@ -876,6 +904,7 @@ export const createBulkCoursesService = async (
               programLevel: course.programLevel,
               loanInformation: course.loanInformation,
               ratings: course.ratings ?? 0.0,
+              categoryId: course.categoryId ?? undefined, // Convert null to undefined for Prisma
             },
           });
 
@@ -884,6 +913,7 @@ export const createBulkCoursesService = async (
           console.error(`Error creating course "${course.title}":`, error);
           const userFriendlyMessage =
             error.message.includes('School with ID') ||
+            error.message.includes('Course category with ID') ||
             error.message.includes('Course image is required') ||
             error.message.includes('Ratings must be between')
               ? error.message
@@ -917,7 +947,6 @@ export const createBulkCoursesService = async (
       )
       .map((result) => result.value);
 
-    // if (createdCourses.length > 0) {
     if (createdCourses.length > 0 || errors.length > 0) {
       let userExists = false;
       if (userId) {
@@ -997,6 +1026,18 @@ export const updateBulkCoursesService = async (
             }
           }
 
+          // Validate categoryId individually
+          if (course.categoryId !== undefined) {
+            const categoryExists = await db.courseCategory.findUnique({
+              where: { id: course.categoryId },
+            });
+            if (!categoryExists) {
+              throw new Error(
+                `Course category with ID ${course.categoryId} does not exist`
+              );
+            }
+          }
+
           let imageUrl: string | null = null;
           if (course.image) {
             imageUrl = await processImage(course.image);
@@ -1040,6 +1081,10 @@ export const updateBulkCoursesService = async (
                 course.ratings !== undefined
                   ? course.ratings
                   : existingCourse.ratings,
+              categoryId:
+                course.categoryId !== undefined
+                  ? course.categoryId
+                  : existingCourse.categoryId, // Add categoryId
             },
           });
 
@@ -1056,7 +1101,14 @@ export const updateBulkCoursesService = async (
             status: 'failed',
             id: course.id || 'unknown',
             title: course.title || 'Unknown',
-            reason: error.message,
+            reason:
+              error.message.includes('Course with ID') ||
+              error.message.includes('School with ID') ||
+              error.message.includes('Course category with ID') ||
+              error.message.includes('Ratings must be between') ||
+              error.message.includes('Missing course ID')
+                ? error.message
+                : 'An unexpected error occurred while updating the course',
           };
         }
       })

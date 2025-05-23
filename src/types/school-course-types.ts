@@ -29,6 +29,7 @@ export interface CreateCourseData {
   programLevel: string;
   loanInformation?: string;
   ratings?: number; // Optional as per model
+  categoryId?: number; // Add categoryId
 }
 
 // Type for updating a course (all fields optional)
@@ -50,6 +51,7 @@ export interface UpdateCourseData {
   programLevel?: string;
   loanInformation?: string;
   ratings?: number; // Optional
+  categoryId?: number; // Add categoryId
 }
 
 export interface CreateCSVCourseData {
@@ -71,6 +73,7 @@ export interface CreateCSVCourseData {
   programLevel: string;
   loanInformation?: string;
   ratings?: number;
+  categoryId?: number; // Add categoryId
 }
 
 export interface UpdateCsvCourseData {
@@ -92,6 +95,7 @@ export interface UpdateCsvCourseData {
   programLevel?: string;
   loanInformation?: string;
   ratings?: number;
+  categoryId?: number; // Add categoryId
 }
 
 export interface NewCreateCSVSchoolData {
