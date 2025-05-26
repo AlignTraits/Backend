@@ -113,7 +113,8 @@ export const initializeSubscriptionPaymentService = async (
           currency,
           reference,
           // callback_url: `${process.env.APP_URL}/payment/callback`,
-          callback_url: `https://52f1-105-113-118-38.ngrok-free.app/payment/callback`,
+          // callback_url: `https://52f1-105-113-118-38.ngrok-free.app/payment/callback`,
+          callback_url: `https://backend-oo07.onrender.com/payment/callback`,
           metadata: { userId, paymentPlan },
           channels: ['card', 'bank', 'ussd', 'bank_transfer'],
         });
@@ -161,6 +162,7 @@ export const verifySubscriptionPaymentService = async (
     const transaction = await db.transaction.findUnique({
       where: { reference },
     });
+
     if (!transaction) {
       return {
         ok: false,
@@ -175,6 +177,7 @@ export const verifySubscriptionPaymentService = async (
       event === 'charge.success'
         ? TransactionStatus.SUCCESS
         : TransactionStatus.FAILED;
+
     const updatedTransaction = await db.transaction.update({
       where: { reference },
       data: { status },
@@ -205,6 +208,7 @@ export const verifySubscriptionPaymentService = async (
           where: { reference },
           data: { status: TransactionStatus.FAILED },
         });
+
         return {
           ok: false,
           status: 400,
@@ -220,6 +224,7 @@ export const verifySubscriptionPaymentService = async (
           where: { reference },
           data: { status: TransactionStatus.FAILED },
         });
+
         return {
           ok: false,
           status: 400,
@@ -228,19 +233,23 @@ export const verifySubscriptionPaymentService = async (
         };
       }
 
-      // Calculate expiry date
+      // Calculate new expiry date from now
       const planConfig = PLAN_PRICING[transaction.paymentPlan];
-      let expiresAt: Date | undefined;
+      let expiresAt: Date;
 
       if (transaction.paymentPlan === 'BASIC_ONETIME') {
         // 15 minutes from now
         expiresAt = new Date(Date.now() + 15 * 60 * 1000);
       } else if (planConfig.durationDays) {
-        expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + planConfig.durationDays);
+        // Fresh duration from now
+        expiresAt = new Date(
+          Date.now() + planConfig.durationDays * 24 * 60 * 60 * 1000
+        );
+      } else {
+        throw new Error('Invalid plan configuration: durationDays not set');
       }
 
-      // Update user with payment plan and expiry
+      // Update user with new plan and expiry
       await updateUser(transaction.userId, {
         payment_plan: transaction.paymentPlan,
         payment_plan_expires_at: expiresAt,
