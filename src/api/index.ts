@@ -17,6 +17,7 @@ import CareerRoutes from '../routes/careerPathRoutes';
 import WetrocloudEligibilityRoutes from '../routes/eligibiltyRoutes';
 import ServerEligibilityRoutes from '../routes/eligibility/serverEligibilityRoute';
 import CourseCategoriesRoutes from '../routes/courseCategoriesRoutes';
+import PaymentRoutes from '../routes/paymentRoutes';
 
 const router = express.Router();
 
@@ -43,5 +44,6 @@ router.use('/career', CareerRoutes);
 router.use('/server/eligible', ServerEligibilityRoutes);
 router.use('/wetrocloud/eligible', WetrocloudEligibilityRoutes);
 router.use('/categories/course', CourseCategoriesRoutes);
+router.use('/payment', PaymentRoutes);
 
 export default router;
