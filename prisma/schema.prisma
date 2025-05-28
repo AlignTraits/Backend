@@ -76,15 +76,17 @@ model User {
 model Transaction {
   id             String           @id @default(cuid())
   userId         String
-  paymentPlan    PaymentPlan      // Plan being subscribed to
+  paymentPlan    PaymentPlan
   amount         Float
   currency       String
   reference      String           @unique
   status         TransactionStatus @default(PENDING)
+  schoolLocation String?          // Add this field
   createdAt      DateTime         @default(now())
   updatedAt      DateTime?        @updatedAt
   user           User             @relation(fields: [userId], references: [id])
 }
+
 
 model EligibilityResult {
   id                     String           @id @default(cuid())

@@ -14,6 +14,8 @@ require('dotenv').config();
 
 const app = express();
 
+app.set('trust proxy', true); // Trust ngrok/Render proxies
+
 app.use(morgan('dev'));
 app.use(helmet());
 app.use(cors());
