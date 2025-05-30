@@ -58,7 +58,7 @@ export const initializeSubscriptionPaymentService = async (
     const isUsdEnabled = process.env.ENABLE_USD === 'true';
     const currency = isUsdEnabled && region !== 'Nigeria' ? 'USD' : 'NGN';
     const amount = PRICES[paymentPlan][currency];
-    const callbackUrl = `https://beb2-105-113-108-128.ngrok-free.app/payment/callback`;
+    const callbackUrl = `https://www.aligntrait.com/payment/callback`;
     // const callbackUrl = `${process.env.APP_URL}/payment/callback`;
     console.log(
       `IP: ${ip}, Region: ${region || 'Unknown'}, Currency: ${currency}, Amount: ${amount}, Callback URL: ${callbackUrl}`

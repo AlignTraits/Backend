@@ -388,8 +388,8 @@ const requestResetService = async (email: string) => {
     if (!user) {
       return {
         status: 404,
-        message: 'Change Password Request failed',
-        errors: [{ message: 'User does not exist' }],
+        message: 'This email is not registered',
+        errors: [{ message: 'This email is not registered' }],
       };
     }
     // Generate and hash the OTP
