@@ -20,8 +20,14 @@ export const submitCareerAnswers = async (
 ) => {
   try {
     const userId = (req.user as any)?.id ?? '';
-    const { answers } = req.body;
-    const result = await submitAnswersService(userId, answers);
+    // const { answers } = req.body;
+    const { answers, firstName, lastName, email } = req.body;
+    const result = await submitAnswersService(
+      answers,
+      firstName,
+      lastName,
+      email
+    );
     res.status(200).json(result);
   } catch (error) {
     next(error);

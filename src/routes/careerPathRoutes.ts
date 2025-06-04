@@ -16,7 +16,7 @@ const router = express.Router();
 
 router.post<{}, WetrocloudResponse>(
   '/answers',
-  loginRequired,
+  // loginRequired,
   submitCareerAnswers
 );
 

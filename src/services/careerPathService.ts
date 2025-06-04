@@ -1,7 +1,8 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Roles } from '@prisma/client';
 import dotenv from 'dotenv';
 import Wetrocloud from 'wetro-sdk';
 import MessageResponse from '../types/messageResponse';
+import { createUser, getUserByEmail } from '../models/userModel';
 
 dotenv.config();
 
@@ -268,10 +269,9 @@ async function calculateCareerPath(
   };
 }
 
-//old
-// async function calculateCareerPath(
+// async function submitAnswersService(
 //   userId: string,
-//   formResponses: { question: string; answer: string }[]
+//   answers: { question: string; answer: string }[]
 // ): Promise<WetrocloudResponse> {
 //   if (!userId) {
 //     return {
@@ -280,110 +280,51 @@ async function calculateCareerPath(
 //     };
 //   }
 
-//   if (!formResponses?.length) {
-//     return {
-//       ok: false,
-//       message: 'No answers provided',
-//     };
-//   }
-
-//   // Initialize with default values
-//   let recommendedCareer = 'Engineering';
-//   let reasoning = 'Generated using fallback mapping based on user responses.';
-
 //   try {
-//     // console.log(wetroClient);
-
-//     if (wetroClient) {
-//       console.log('Calling Wetrocloud categorize API');
-//       const categorizePayload: CategorizePayload = {
-//         resource: JSON.stringify(formResponses),
-//         type: 'text',
-//         json_schema: { career_path: '', reason: '' },
-//         categories: [
-//           'Engineering',
-//           'Data Science',
-//           'IT',
-//           'Psychology',
-//           'Social Work',
-//           'Law',
-//           'Finance',
-//           'Marketing',
-//           'Startups',
-//           'HR',
-//           'Teaching',
-//         ],
-//         prompt: `
-//           Analyze these career assessment responses and recommend the best career path:
-//           ${JSON.stringify(formResponses, null, 2)}
-
-//           Consider:
-//           - Skills and interests shown
-//           - Personality traits revealed
-//           - Work style preferences
-//           - Long-term career goals
-
-//           Return JSON with:
-//           - career_path: The recommended career
-//           - reason: Detailed explanation including required skills
-//         `,
+//     if (!Array.isArray(answers) || !answers.length) {
+//       return {
+//         ok: false,
+//         message: 'Invalid answers provided',
 //       };
-//       // console.log(
-//       //   'Data sent to Wetrocloud AI:',
-//       //   JSON.stringify(categorizePayload, null, 2)
-//       // );
-//       const response = (await wetroClient.categorize(
-//         categorizePayload
-//       )) as WetrocloudResponse;
-
-//       if (response?.career_path) {
-//         recommendedCareer = response.career_path;
-//         reasoning = response.reason || '';
-//         console.log('AI recommendation:', { recommendedCareer, reasoning });
-//       }
-//       console.log(response);
-
-//       return response;
 //     }
-//   } catch (apiError) {
-//     console.error('Wetrocloud API failed, using fallback:', apiError);
-//   }
 
-//   // Save results
-//   console.log(`logged recommended 1 befor response: ${recommendedCareer}`);
-//   console.log('logged reason 1 befor response:', reasoning);
-
-//   try {
-//     await prisma.careerResult.upsert({
-//       where: { userId },
-//       update: { recommendedCareers: [recommendedCareer], reasoning },
-//       create: {
-//         userId,
-//         recommendedCareers: [recommendedCareer],
-//         reasoning,
-//         createdAt: new Date(),
-//         updatedAt: new Date(),
-//       },
-//     });
-
-//     return {
-//       ok: true,
-//       message: 'Career path calculated successfully',
-//       data: { recommendedCareer, reasoning },
-//     };
-//   } catch (dbError) {
-//     console.error('Database save failed:', dbError);
+//     return await calculateCareerPath(userId, answers);
+//   } catch (error) {
+//     console.error('Error submitting answers:', error);
 //     return {
 //       ok: false,
-//       message: 'Failed to save career results',
+//       message:
+//         error instanceof Error ? error.message : 'Failed to submit answers',
 //     };
 //   }
 // }
 
 async function submitAnswersService(
-  userId: string,
-  answers: { question: string; answer: string }[]
+  // userId: string,
+  answers: { question: string; answer: string }[],
+  firstName?: string,
+  lastName?: string,
+  email?: string
 ): Promise<WetrocloudResponse> {
+  // Use provided userId or check by email
+  let userId: string | null = null;
+  if (email) {
+    let user = await getUserByEmail(email);
+    if (!user) {
+      user = await createUser({
+        data: {
+          firstname: firstName ?? '',
+          lastname: lastName ?? '',
+          email,
+          password: '',
+          emailVerified: new Date(),
+          role: Roles.USER,
+        },
+      });
+    }
+    userId = user.id;
+  }
+
   if (!userId) {
     return {
       ok: false,
