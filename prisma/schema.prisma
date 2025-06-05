@@ -40,38 +40,40 @@ enum TransactionStatus {
 }
 
 model User {
-  id             String           @id @default(cuid())
-  firstname      String
-  lastname       String
-  username       String?
-  email          String           @unique
-  emailVerified  DateTime?
-  password       String
-  role           Roles            @default(USER)
-  contactNumber  String?          // New field: Optional contact number
-  createdAt      DateTime         @default(now())
-  gender         Gender?
-  dob            DateTime?
-  ageRange       String?
-  region         String?
-  bio            String?
-  image          String?
-  updatedAt      DateTime?        @updatedAt
-  // cityId         String?
-  // city           City?     @relation(fields: [cityId], references: [id])
-  otherSkill     String?          // New optional field for custom skill
-  skills         Skill[]          @relation("UserSkills")
-  interests      Interest[]       @relation("UserInterests")
-  ResultDocument ResultDocument[]
-  UserResponse   UserResponse[]
-  actionHistories ActionHistory[]
-  careerResults  CareerResult[]
-  eligibilityResults     EligibilityResult[] // Link to eligibility results
-  payment_plan           PaymentPlan?     // User's payment plan
-  payment_plan_expires_at DateTime?       // Expiration date for the payment plan
-
-  transactions   Transaction[]     // Link to subscription payments
+  id                      String              @id @default(cuid())
+  firstname               String
+  lastname                String
+  username                String?
+  email                   String              @unique
+  emailVerified           DateTime?
+  password                String
+  role                    Roles               @default(USER)
+  contactNumber           String?
+  createdAt               DateTime            @default(now())
+  gender                  Gender?
+  dob                     DateTime?
+  ageRange                String?
+  region                  String?
+  bio                     String?
+  image                   String?
+  updatedAt               DateTime?           @updatedAt
+  otherSkill              String?
+  payment_plan            PaymentPlan?
+  payment_plan_expires_at DateTime?
+  subscription_code       String?             // Paystack subscription code for auto-renewal
+  email_token             String?             // Customer email token for subscription management
+  default_authorization   String?             // Default authorization code for the user's card
+  actionHistories         ActionHistory[]
+  careerResults           CareerResult?
+  eligibilityResults      EligibilityResult[]
+  ResultDocument          ResultDocument[]
+  transactions            Transaction[]
+  UserResponse            UserResponse[]
+  interests               Interest[]          @relation("UserInterests")
+  skills                  Skill[]             @relation("UserSkills")
+  userCards               UserCard[]          // Link to user's cards
 }
+
 
 model Transaction {
   id             String           @id @default(cuid())
@@ -85,6 +87,32 @@ model Transaction {
   createdAt      DateTime         @default(now())
   updatedAt      DateTime?        @updatedAt
   user           User             @relation(fields: [userId], references: [id])
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model UserCard {
+  id                 String    @id @default(cuid())
+  userId             String
+  authorization_code String    @unique
+  last4              String
+  exp_month          String
+  exp_year           String
+  brand              String
+  reusable           Boolean
+
+  subscription_status SubscriptionStatus? // 'active', 'expired', etc.
+
+  subscription_code  String?   // Add this for redundancy
+  email_token        String?   // Add this for redundancy
+  next_payment_date  DateTime? // Add this for tracking
+
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime? @updatedAt
+  user               User      @relation(fields: [userId], references: [id])
 }
 
 
