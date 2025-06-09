@@ -6,6 +6,7 @@ import {
   cancelSubscription,
   getCards,
   deleteCard,
+  addCardController,
 } from '../controllers/monthlyPaymentCtl';
 
 import { loginRequired } from '../middlewares/auth';
@@ -32,5 +33,8 @@ router.get('/cards', loginRequired, getCards);
 // This route deletes a specific card from the logged-in user's
 // saved cards using the card’s authorization_code. user clicks “Remove Card”
 router.delete('/cards/:authorization_code', loginRequired, deleteCard);
+
+// This route adds a new card to the logged-in user's saved cards.
+router.post('/add-card', loginRequired, addCardController);
 
 export default router;

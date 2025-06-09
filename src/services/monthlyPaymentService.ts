@@ -220,6 +220,7 @@ export const initializeMonthlySubscription = async (
   }
 };
 
+// verify payment and update user subscription without method to add new card later
 export const verifySubscriptionPaymentService = async (
   reference: string,
   event: string
@@ -410,6 +411,7 @@ export const verifySubscriptionPaymentService = async (
   }
 };
 
+// Cancel user subscription and update user details
 export const cancelUserSubscription = async (userId: string) => {
   const user = await db.user.findUnique({ where: { id: userId } });
   if (!user?.subscription_code || !user.email_token) {
@@ -439,11 +441,13 @@ export const cancelUserSubscription = async (userId: string) => {
   return { ok: true, status: 200, message: 'Subscription cancelled' };
 };
 
+// Get user cards
 export const getUserCards = async (userId: string) => {
   const cards = await db.userCard.findMany({ where: { userId } });
   return { ok: true, status: 200, data: cards };
 };
 
+// Remove a specific card from user
 export const removeCard = async (
   userId: string,
   authorization_code: string
@@ -455,6 +459,129 @@ export const removeCard = async (
     },
   });
   return { ok: true, status: 200, message: 'Card removed' };
+};
+
+// Add a new card to user's subscription
+export const addCardToSubscription = async (
+  userId: string,
+  email: string,
+  ip: string
+) => {
+  try {
+    const user = await db.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return { ok: false, status: 404, message: 'User not found' };
+    }
+
+    const reference = `addcard_${userId}_${Date.now()}`;
+    const callbackUrl = `https://www.aligntrait.com/payment/callback`;
+
+    // Determine currency and amount based on IP
+    const region = getCountryByIp(ip);
+    const isUsdEnabled = process.env.ENABLE_USD === 'true';
+    const currency = isUsdEnabled && region !== 'Nigeria' ? 'USD' : 'NGN';
+
+    // Define currency-specific amounts
+    const amounts = {
+      NGN: 100, // 100 NGN for Nigeria
+      USD: 1, // 1 USD for other regions (adjust as needed)
+    };
+    const amount = amounts[currency];
+
+    const paystackResponse = await retry(
+      async () =>
+        await paystack.transaction.initialize({
+          email,
+          amount,
+          currency,
+          reference,
+          callback_url: callbackUrl,
+          metadata: { userId, action: 'add_card' },
+          channels: ['card'],
+        }),
+      { retries: 3, minTimeout: 1000, maxTimeout: 5000 }
+    );
+
+    const authorizationUrl = paystackResponse.data.authorization_url;
+    if (!authorizationUrl) {
+      return {
+        ok: false,
+        status: 400,
+        message: 'Failed to initialize card addition',
+      };
+    }
+
+    return {
+      ok: true,
+      status: 200,
+      message: 'Card addition initialized',
+      data: {
+        authorization_url: authorizationUrl,
+        currency,
+        amount,
+        reference,
+      },
+    };
+  } catch (error: any) {
+    console.error('Error adding card:', error);
+    return {
+      ok: false,
+      status: 500,
+      message: 'Failed to add card',
+      error: error.message,
+    };
+  }
+};
+// Handle charge failed scenario by retrying with reusable cards
+
+export const handleChargeFailed = async (reference: string) => {
+  try {
+    const transaction = await db.transaction.findUnique({
+      where: { reference },
+    });
+    if (!transaction || transaction.status === TransactionStatus.SUCCESS) {
+      return;
+    }
+
+    const user = await db.user.findUnique({
+      where: { id: transaction.userId },
+    });
+    if (!user) {
+      console.error('User not found for transaction:', reference);
+      return;
+    }
+
+    const userCards = await db.userCard.findMany({
+      where: { userId: transaction.userId, reusable: true },
+      orderBy: { createdAt: 'asc' }, // Try oldest cards first
+    });
+
+    for (const card of userCards) {
+      if (card.authorization_code !== user.default_authorization) {
+        // Skip the default card
+        const retryResponse = await paystack.transaction.charge({
+          authorization_code: card.authorization_code,
+          email: user.email,
+          amount: transaction.amount * 100, // Convert to kobo/cents
+          currency: transaction.currency as 'NGN' | 'USD', // Type assertion
+          reference: `retry_${Date.now()}_${reference}`,
+        });
+
+        if (retryResponse.data.status === 'success') {
+          await db.transaction.update({
+            where: { reference: transaction.reference },
+            data: { status: TransactionStatus.SUCCESS },
+          });
+          await updateUser(transaction.userId, {
+            default_authorization: card.authorization_code, // Update to the successful card
+          });
+          break; // Stop after success
+        }
+      }
+    }
+  } catch (error: any) {
+    console.error('Error handling charge failed:', error);
+  }
 };
 
 // old code that works 90%
