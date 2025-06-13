@@ -72,6 +72,7 @@ model User {
   interests               Interest[]          @relation("UserInterests")
   skills                  Skill[]             @relation("UserSkills")
   userCards               UserCard[]          // Link to user's cards
+  userDirectDebits UserDirectDebit[]
 }
 
 
@@ -113,6 +114,17 @@ model UserCard {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime? @updatedAt
   user               User      @relation(fields: [userId], references: [id])
+}
+
+model UserDirectDebit {
+  id                String      @id @default(uuid())
+  userId            String
+  authorization_code String     @unique
+  bank_code         String
+  account_number    String
+  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 

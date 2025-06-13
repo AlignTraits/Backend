@@ -8,6 +8,7 @@ import {
   removeCard,
   handleChargeFailed,
   addCardToSubscription,
+  addDirectDebitToSubscription,
 } from '../services/monthlyPaymentService';
 import { createHmac } from 'crypto';
 import { getClientIp } from 'request-ip';
@@ -206,22 +207,111 @@ export const addCardController = async (
   next: NextFunction
 ) => {
   try {
-    const { email, amount } = req.body;
+    const { email } = req.body;
 
     if (!email) {
       return res.status(400).json({
         ok: false,
-        message: 'userId, email, and amount are required',
+        message: 'email is required',
       });
     }
 
     const ip = getClientIp(req) || '127.0.0.1';
-
-    const userId = (req as any)?.user?.id ?? '';
-    const result = await addCardToSubscription(userId, email, amount);
+    const userId = (req as any)?.user?.id ?? 'cmbosgwgo0000wgs002j49ysw';
+    const result = await addCardToSubscription(userId, email, ip);
 
     res.status(result.status).json(result);
   } catch (error) {
     next(error);
   }
 };
+
+export const addDirectDebitController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        ok: false,
+        message: 'email is required',
+      });
+    }
+
+    const ip = getClientIp(req) || '127.0.0.1';
+    const userId = (req as any)?.user?.id ?? 'cmbux2urg0000wgdck8fzlsuq';
+    const result = await addDirectDebitToSubscription(userId, email, ip);
+
+    res.status(result.status).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// export const deactivateDirectDebitController = async (
+//   req: Request,
+//   res: Response,
+//   next: NextFunction
+// ) => {
+//   try {
+//     const { authorization_code } = req.body;
+
+//     if (!authorization_code) {
+//       return res.status(400).json({
+//         ok: false,
+//         message: 'authorization_code is required',
+//       });
+//     }
+
+//     const params = JSON.stringify({
+//       authorization_code,
+//     });
+
+//     const options = {
+//       hostname: 'api.paystack.co',
+//       port: 443,
+//       path: '/customer/authorization/deactivate',
+//       method: 'POST',
+//       headers: {
+//         Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+//         'Content-Type': 'application/json',
+//       },
+//     };
+
+//     const deactivatePromise = new Promise((resolve, reject) => {
+//       const req = https.request(options, (res) => {
+//         let data = '';
+//         res.on('data', (chunk) => (data += chunk));
+//         res.on('end', () => {
+//           const response = JSON.parse(data);
+//           if (res.statusCode === 200 && response.status) {
+//             resolve(response);
+//           } else {
+//             reject(new Error(`Deactivation failed: ${data}`));
+//           }
+//         });
+//       }).on('error', (error) => reject(error));
+
+//       req.write(params);
+//       req.end();
+//     });
+
+//     const result = await deactivatePromise;
+
+//     res.status(200).json({
+//       ok: true,
+//       message: 'Direct Debit deactivated successfully',
+//       data: result,
+//     });
+//   } catch (error: any) {
+//     console.error('Error deactivating direct debit:', error);
+//     res.status(500).json({
+//       ok: false,
+//       message: 'Failed to deactivate direct debit',
+//       error: error.message,
+//     });
+//   }
+// };

@@ -1,4 +1,5 @@
 import Paystack from 'paystack-api';
+import https from 'https';
 import retry from 'async-retry';
 import { db } from '../config/db';
 import { createUser, getUserByEmail, updateUser } from '../models/userModel';
@@ -220,10 +221,29 @@ export const initializeMonthlySubscription = async (
   }
 };
 
-// verify payment and update user subscription without method to add new card later
+interface DirectDebitWebhookData {
+  authorization_code: string;
+  bank: {
+    code: string;
+    name?: string;
+  };
+  account: {
+    number: string;
+  };
+  customer: {
+    email: string;
+    code: string;
+  };
+  metadata?: {
+    action?: string;
+    userId?: string;
+  };
+}
+
 export const verifySubscriptionPaymentService = async (
   reference: string,
-  event: string
+  event: string,
+  webhookData?: DirectDebitWebhookData
 ) => {
   try {
     const transaction = await db.transaction.findUnique({
@@ -233,10 +253,34 @@ export const verifySubscriptionPaymentService = async (
       return { ok: false, status: 404, message: 'Transaction not found' };
     }
 
-    // Verify transaction first
-    const verification = await paystack.transaction.verify({ reference });
-    if (verification.data.status !== 'success') {
-      console.error('Verification failed:', verification.data);
+    // Verify transaction
+    let verification;
+    // Numbered console.log statements
+    console.log('1: Event:', event);
+    console.log('2: Webhook Data:', JSON.stringify(webhookData, null, 2));
+
+    if (event === 'direct_debit.authorization.created') {
+      console.log(
+        '3: ✅ Direct Debit Webhook Payload:',
+        JSON.stringify(webhookData, null, 2)
+      );
+      if (!webhookData) {
+        return {
+          ok: false,
+          status: 400,
+          message: 'Webhook data is required for Direct Debit authorization',
+        };
+      }
+      verification = { data: webhookData, status: 'success' };
+    } else {
+      verification = await paystack.transaction.verify({ reference });
+    }
+
+    if (
+      verification.data.status !== 'success' &&
+      event !== 'direct_debit.authorization.created'
+    ) {
+      console.error('4: Verification failed:', verification.data);
       return { ok: false, status: 400, message: 'Verification failed' };
     }
 
@@ -244,7 +288,6 @@ export const verifySubscriptionPaymentService = async (
       event === 'charge.success'
         ? TransactionStatus.SUCCESS
         : TransactionStatus.FAILED;
-
     await db.transaction.update({
       where: { reference },
       data: { status },
@@ -261,11 +304,9 @@ export const verifySubscriptionPaymentService = async (
     let emailToken: string | null = null;
     let nextPaymentDate: Date | null = null;
 
-    // Handle monthly subscription creation
     if (transaction.paymentPlan !== 'BASIC_ONETIME') {
       expiresAt = addMonths(now, 1);
 
-      // Try to extract subscription details from verification response
       if (verification.data.subscription) {
         subscriptionCode = verification.data.subscription.subscription_code;
         emailToken = verification.data.subscription.email_token;
@@ -273,19 +314,21 @@ export const verifySubscriptionPaymentService = async (
           verification.data.subscription.next_payment_date
         );
         console.log(
-          'Extracted from verification - subscription code:',
+          '5: Extracted from verification - subscription code:',
           subscriptionCode
         );
-        console.log('Extracted from verification - email token:', emailToken);
         console.log(
-          'Extracted from verification - next payment date:',
+          '6: Extracted from verification - email token:',
+          emailToken
+        );
+        console.log(
+          '7: Extracted from verification - next payment date:',
           nextPaymentDate
         );
       } else {
         console.warn(
-          'No subscription data in verification response, fetching subscription...'
+          '8: No subscription data in verification response, fetching subscription...'
         );
-        // Fallback: Fetch subscription using customer code and plan
         const customer = await getOrCreateCustomer(
           verification.data.customer.email,
           verification.data.customer.first_name || '',
@@ -295,9 +338,8 @@ export const verifySubscriptionPaymentService = async (
           customer: customer.customer_code,
           plan: PAYSTACK_PLAN_CODES[transaction.paymentPlan].NGN,
         });
-        console.log('Fetched subscriptions for customer:', subscriptions);
+        console.log('9: Fetched subscriptions for customer:', subscriptions);
 
-        // Find all subscriptions for the plan and select the most recent active one
         const matchingSubscriptions = subscriptions.data.filter(
           (sub: any) =>
             sub.plan.plan_code ===
@@ -307,34 +349,69 @@ export const verifySubscriptionPaymentService = async (
         const activeSubscription = matchingSubscriptions.sort(
           (a: any, b: any) =>
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        )[0]; // Sort by createdAt descending and take the first (most recent)
+        )[0];
 
         if (activeSubscription) {
           subscriptionCode = activeSubscription.subscription_code;
           emailToken = activeSubscription.email_token;
           nextPaymentDate = new Date(activeSubscription.next_payment_date);
           console.log(
-            'Fetched from subscription list - subscription code:',
+            '10: Fetched from subscription list - subscription code:',
             subscriptionCode
           );
           console.log(
-            'Fetched from subscription list - email token:',
+            '11: Fetched from subscription list - email token:',
             emailToken
           );
           console.log(
-            'Fetched from subscription list - next payment date:',
+            '12: Fetched from subscription list - next payment date:',
             nextPaymentDate
           );
         } else {
-          console.error('No active subscription found for this plan');
+          console.error('13: No active subscription found for this plan');
         }
       }
     } else {
       expiresAt = new Date(now.getTime() + 15 * 60 * 1000); // 15 minutes for one-time
     }
 
+    // ✅ Updated Direct Debit block
+    if (event === 'direct_debit.authorization.created') {
+      const authorizationCode = webhookData?.authorization_code || '';
+      const bankCode = webhookData?.bank?.code || '';
+      const accountNumber = webhookData?.account?.number || '';
+
+      const existingDebit = await db.userDirectDebit.findFirst({
+        where: { authorization_code: authorizationCode },
+      });
+
+      if (!existingDebit) {
+        await db.userDirectDebit.create({
+          data: {
+            userId: transaction.userId,
+            authorization_code: authorizationCode,
+            bank_code: bankCode,
+            account_number: accountNumber,
+          },
+        });
+        console.log(
+          '14: New direct debit added successfully:',
+          authorizationCode
+        );
+      } else {
+        console.log('15: Direct debit already exists:', authorizationCode);
+      }
+
+      return {
+        ok: true,
+        status: 200,
+        message: 'Direct Debit authorization verified and added',
+        data: { reference, status: 'success' },
+      };
+    }
+
     // Log the values before updating
-    console.log('Updating user with:', {
+    console.log('16: Updating user with:', {
       payment_plan: transaction.paymentPlan,
       payment_plan_expires_at: expiresAt,
       subscription_code: subscriptionCode,
@@ -342,7 +419,6 @@ export const verifySubscriptionPaymentService = async (
       default_authorization: authorization.authorization_code,
     });
 
-    // Update user with payment details
     await updateUser(transaction.userId, {
       payment_plan: transaction.paymentPlan,
       payment_plan_expires_at: expiresAt,
@@ -351,9 +427,7 @@ export const verifySubscriptionPaymentService = async (
       default_authorization: authorization.authorization_code,
     });
 
-    // Store card details, including subscription data for monthly plans
     if (transaction.paymentPlan !== 'BASIC_ONETIME') {
-      // Disable all previous UserCard subscriptions for this user
       await db.userCard.updateMany({
         where: {
           userId: transaction.userId,
@@ -364,7 +438,6 @@ export const verifySubscriptionPaymentService = async (
         },
       });
 
-      // Create new UserCard with active subscription
       await db.userCard.create({
         data: {
           userId: transaction.userId,
@@ -377,7 +450,7 @@ export const verifySubscriptionPaymentService = async (
           subscription_code: subscriptionCode,
           email_token: emailToken,
           next_payment_date: nextPaymentDate,
-          subscription_status: 'ACTIVE', // Set as active
+          subscription_status: 'ACTIVE',
         },
       });
     } else {
@@ -401,7 +474,7 @@ export const verifySubscriptionPaymentService = async (
       data: { reference, status: 'success' },
     };
   } catch (error: any) {
-    console.error('Error verifying subscription:', error);
+    console.error('17: Error verifying subscription:', error);
     return {
       ok: false,
       status: 500,
@@ -410,6 +483,440 @@ export const verifySubscriptionPaymentService = async (
     };
   }
 };
+
+// export const verifySubscriptionPaymentService = async (
+//   reference: string,
+//   event: string,
+//   webhookData?: DirectDebitWebhookData // Optional parameter for Direct Debit webhook data
+// ) => {
+//   try {
+//     const transaction = await db.transaction.findUnique({
+//       where: { reference },
+//     });
+//     if (!transaction) {
+//       return { ok: false, status: 404, message: 'Transaction not found' };
+//     }
+
+//     // Verify transaction first
+//     let verification;
+//     if (event === 'direct_debit.authorization.created') {
+//       // Use webhookData for Direct Debit authorization
+//       if (!webhookData) {
+//         return {
+//           ok: false,
+//           status: 400,
+//           message: 'Webhook data is required for Direct Debit authorization',
+//         };
+//       }
+//       verification = { data: webhookData, status: 'success' };
+//     } else {
+//       verification = await paystack.transaction.verify({ reference });
+//     }
+
+//     if (
+//       verification.data.status !== 'success' &&
+//       event !== 'direct_debit.authorization.created'
+//     ) {
+//       console.error('Verification failed:', verification.data);
+//       return { ok: false, status: 400, message: 'Verification failed' };
+//     }
+
+//     const status =
+//       event === 'charge.success'
+//         ? TransactionStatus.SUCCESS
+//         : TransactionStatus.FAILED;
+//     await db.transaction.update({
+//       where: { reference },
+//       data: { status },
+//     });
+
+//     if (status !== TransactionStatus.SUCCESS) {
+//       return { ok: true, status: 200, message: 'Payment failed' };
+//     }
+
+//     const authorization = verification.data.authorization;
+//     const now = new Date();
+//     let expiresAt: Date;
+//     let subscriptionCode: string | null = null;
+//     let emailToken: string | null = null;
+//     let nextPaymentDate: Date | null = null;
+
+//     // Handle monthly subscription creation
+//     if (transaction.paymentPlan !== 'BASIC_ONETIME') {
+//       expiresAt = addMonths(now, 1);
+
+//       // Try to extract subscription details from verification response
+//       if (verification.data.subscription) {
+//         subscriptionCode = verification.data.subscription.subscription_code;
+//         emailToken = verification.data.subscription.email_token;
+//         nextPaymentDate = new Date(
+//           verification.data.subscription.next_payment_date
+//         );
+//         console.log(
+//           'Extracted from verification - subscription code:',
+//           subscriptionCode
+//         );
+//         console.log('Extracted from verification - email token:', emailToken);
+//         console.log(
+//           'Extracted from verification - next payment date:',
+//           nextPaymentDate
+//         );
+//       } else {
+//         console.warn(
+//           'No subscription data in verification response, fetching subscription...'
+//         );
+//         // Fallback: Fetch subscription using customer code and plan
+//         const customer = await getOrCreateCustomer(
+//           verification.data.customer.email,
+//           verification.data.customer.first_name || '',
+//           verification.data.customer.last_name || ''
+//         );
+//         const subscriptions = await paystack.subscription.list({
+//           customer: customer.customer_code,
+//           plan: PAYSTACK_PLAN_CODES[transaction.paymentPlan].NGN,
+//         });
+//         console.log('Fetched subscriptions for customer:', subscriptions);
+
+//         // Find all subscriptions for the plan and select the most recent active one
+//         const matchingSubscriptions = subscriptions.data.filter(
+//           (sub: any) =>
+//             sub.plan.plan_code ===
+//               PAYSTACK_PLAN_CODES[transaction.paymentPlan].NGN &&
+//             sub.status === 'active'
+//         );
+//         const activeSubscription = matchingSubscriptions.sort(
+//           (a: any, b: any) =>
+//             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+//         )[0]; // Sort by createdAt descending and take the first (most recent)
+
+//         if (activeSubscription) {
+//           subscriptionCode = activeSubscription.subscription_code;
+//           emailToken = activeSubscription.email_token;
+//           nextPaymentDate = new Date(activeSubscription.next_payment_date);
+//           console.log(
+//             'Fetched from subscription list - subscription code:',
+//             subscriptionCode
+//           );
+//           console.log(
+//             'Fetched from subscription list - email token:',
+//             emailToken
+//           );
+//           console.log(
+//             'Fetched from subscription list - next payment date:',
+//             nextPaymentDate
+//           );
+//         } else {
+//           console.error('No active subscription found for this plan');
+//         }
+//       }
+//     } else {
+//       expiresAt = new Date(now.getTime() + 15 * 60 * 1000); // 15 minutes for one-time
+//     }
+
+//     // Handle Direct Debit authorization
+//     if (event === 'direct_debit.authorization.created') {
+//       const existingDebit = webhookData
+//         ? await db.userDirectDebit.findFirst({
+//             where: { authorization_code: webhookData.authorization_code },
+//           })
+//         : null;
+//       if (!existingDebit) {
+//         await db.userDirectDebit.create({
+//           data: {
+//             userId: transaction.userId,
+//             authorization_code: webhookData?.authorization_code || '',
+//             bank_code: webhookData?.bank ?? '', // Adjust if 'bank' should be parsed (e.g., webhookData.bank.code)
+//             account_number: '', // Add logic to derive account_number if available in webhookData
+//           },
+//         });
+//         console.log(
+//           'New direct debit added successfully:',
+//           webhookData?.authorization_code
+//         );
+//       } else {
+//         console.log(
+//           'Direct debit already exists:',
+//           webhookData?.authorization_code || ''
+//         );
+//       }
+//       return {
+//         ok: true,
+//         status: 200,
+//         message: 'Direct Debit authorization verified and added',
+//         data: { reference, status: 'success' },
+//       };
+//     }
+
+//     // Log the values before updating
+//     console.log('Updating user with:', {
+//       payment_plan: transaction.paymentPlan,
+//       payment_plan_expires_at: expiresAt,
+//       subscription_code: subscriptionCode,
+//       email_token: emailToken,
+//       default_authorization: authorization.authorization_code,
+//     });
+
+//     // Update user with payment details
+//     await updateUser(transaction.userId, {
+//       payment_plan: transaction.paymentPlan,
+//       payment_plan_expires_at: expiresAt,
+//       subscription_code: subscriptionCode,
+//       email_token: emailToken,
+//       default_authorization: authorization.authorization_code,
+//     });
+
+//     // Store card details, including subscription data for monthly plans
+//     if (transaction.paymentPlan !== 'BASIC_ONETIME') {
+//       // Disable all previous UserCard subscriptions for this user
+//       await db.userCard.updateMany({
+//         where: {
+//           userId: transaction.userId,
+//           subscription_status: 'ACTIVE',
+//         },
+//         data: {
+//           subscription_status: 'INACTIVE',
+//         },
+//       });
+
+//       // Create new UserCard with active subscription
+//       await db.userCard.create({
+//         data: {
+//           userId: transaction.userId,
+//           authorization_code: authorization.authorization_code,
+//           last4: authorization.last4 || '',
+//           exp_month: authorization.exp_month?.toString().padStart(2, '0') || '',
+//           exp_year: authorization.exp_year?.toString() || '',
+//           brand: authorization.brand || '',
+//           reusable: authorization.reusable || false,
+//           subscription_code: subscriptionCode,
+//           email_token: emailToken,
+//           next_payment_date: nextPaymentDate,
+//           subscription_status: 'ACTIVE', // Set as active
+//         },
+//       });
+//     } else {
+//       await db.userCard.create({
+//         data: {
+//           userId: transaction.userId,
+//           authorization_code: authorization.authorization_code,
+//           last4: authorization.last4 || '',
+//           exp_month: authorization.exp_month?.toString().padStart(2, '0') || '',
+//           exp_year: authorization.exp_year?.toString() || '',
+//           brand: authorization.brand || '',
+//           reusable: false,
+//         },
+//       });
+//     }
+
+//     return {
+//       ok: true,
+//       status: 200,
+//       message: 'Payment verified and user updated',
+//       data: { reference, status: 'success' },
+//     };
+//   } catch (error: any) {
+//     console.error('Error verifying subscription:', error);
+//     return {
+//       ok: false,
+//       status: 500,
+//       message: 'Failed to verify subscription',
+//       error: error.message,
+//     };
+//   }
+// };
+
+const updateUser1 = async (userId: string, data: any) => {};
+
+// verify payment and update user subscription without method to add new card later
+// export const verifySubscriptionPaymentService = async (
+//   reference: string,
+//   event: string
+// ) => {
+//   try {
+//     const transaction = await db.transaction.findUnique({
+//       where: { reference },
+//     });
+//     if (!transaction) {
+//       return { ok: false, status: 404, message: 'Transaction not found' };
+//     }
+
+//     // Verify transaction first
+//     const verification = await paystack.transaction.verify({ reference });
+//     if (verification.data.status !== 'success') {
+//       console.error('Verification failed:', verification.data);
+//       return { ok: false, status: 400, message: 'Verification failed' };
+//     }
+
+//     const status =
+//       event === 'charge.success'
+//         ? TransactionStatus.SUCCESS
+//         : TransactionStatus.FAILED;
+
+//     await db.transaction.update({
+//       where: { reference },
+//       data: { status },
+//     });
+
+//     if (status !== TransactionStatus.SUCCESS) {
+//       return { ok: true, status: 200, message: 'Payment failed' };
+//     }
+
+//     const authorization = verification.data.authorization;
+//     const now = new Date();
+//     let expiresAt: Date;
+//     let subscriptionCode: string | null = null;
+//     let emailToken: string | null = null;
+//     let nextPaymentDate: Date | null = null;
+
+//     // Handle monthly subscription creation
+//     if (transaction.paymentPlan !== 'BASIC_ONETIME') {
+//       expiresAt = addMonths(now, 1);
+
+//       // Try to extract subscription details from verification response
+//       if (verification.data.subscription) {
+//         subscriptionCode = verification.data.subscription.subscription_code;
+//         emailToken = verification.data.subscription.email_token;
+//         nextPaymentDate = new Date(
+//           verification.data.subscription.next_payment_date
+//         );
+//         console.log(
+//           'Extracted from verification - subscription code:',
+//           subscriptionCode
+//         );
+//         console.log('Extracted from verification - email token:', emailToken);
+//         console.log(
+//           'Extracted from verification - next payment date:',
+//           nextPaymentDate
+//         );
+//       } else {
+//         console.warn(
+//           'No subscription data in verification response, fetching subscription...'
+//         );
+//         // Fallback: Fetch subscription using customer code and plan
+//         const customer = await getOrCreateCustomer(
+//           verification.data.customer.email,
+//           verification.data.customer.first_name || '',
+//           verification.data.customer.last_name || ''
+//         );
+//         const subscriptions = await paystack.subscription.list({
+//           customer: customer.customer_code,
+//           plan: PAYSTACK_PLAN_CODES[transaction.paymentPlan].NGN,
+//         });
+//         console.log('Fetched subscriptions for customer:', subscriptions);
+
+//         // Find all subscriptions for the plan and select the most recent active one
+//         const matchingSubscriptions = subscriptions.data.filter(
+//           (sub: any) =>
+//             sub.plan.plan_code ===
+//               PAYSTACK_PLAN_CODES[transaction.paymentPlan].NGN &&
+//             sub.status === 'active'
+//         );
+//         const activeSubscription = matchingSubscriptions.sort(
+//           (a: any, b: any) =>
+//             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+//         )[0]; // Sort by createdAt descending and take the first (most recent)
+
+//         if (activeSubscription) {
+//           subscriptionCode = activeSubscription.subscription_code;
+//           emailToken = activeSubscription.email_token;
+//           nextPaymentDate = new Date(activeSubscription.next_payment_date);
+//           console.log(
+//             'Fetched from subscription list - subscription code:',
+//             subscriptionCode
+//           );
+//           console.log(
+//             'Fetched from subscription list - email token:',
+//             emailToken
+//           );
+//           console.log(
+//             'Fetched from subscription list - next payment date:',
+//             nextPaymentDate
+//           );
+//         } else {
+//           console.error('No active subscription found for this plan');
+//         }
+//       }
+//     } else {
+//       expiresAt = new Date(now.getTime() + 15 * 60 * 1000); // 15 minutes for one-time
+//     }
+
+//     // Log the values before updating
+//     console.log('Updating user with:', {
+//       payment_plan: transaction.paymentPlan,
+//       payment_plan_expires_at: expiresAt,
+//       subscription_code: subscriptionCode,
+//       email_token: emailToken,
+//       default_authorization: authorization.authorization_code,
+//     });
+
+//     // Update user with payment details
+//     await updateUser(transaction.userId, {
+//       payment_plan: transaction.paymentPlan,
+//       payment_plan_expires_at: expiresAt,
+//       subscription_code: subscriptionCode,
+//       email_token: emailToken,
+//       default_authorization: authorization.authorization_code,
+//     });
+
+//     // Store card details, including subscription data for monthly plans
+//     if (transaction.paymentPlan !== 'BASIC_ONETIME') {
+//       // Disable all previous UserCard subscriptions for this user
+//       await db.userCard.updateMany({
+//         where: {
+//           userId: transaction.userId,
+//           subscription_status: 'ACTIVE',
+//         },
+//         data: {
+//           subscription_status: 'INACTIVE',
+//         },
+//       });
+
+//       // Create new UserCard with active subscription
+//       await db.userCard.create({
+//         data: {
+//           userId: transaction.userId,
+//           authorization_code: authorization.authorization_code,
+//           last4: authorization.last4 || '',
+//           exp_month: authorization.exp_month?.toString().padStart(2, '0') || '',
+//           exp_year: authorization.exp_year?.toString() || '',
+//           brand: authorization.brand || '',
+//           reusable: authorization.reusable || false,
+//           subscription_code: subscriptionCode,
+//           email_token: emailToken,
+//           next_payment_date: nextPaymentDate,
+//           subscription_status: 'ACTIVE', // Set as active
+//         },
+//       });
+//     } else {
+//       await db.userCard.create({
+//         data: {
+//           userId: transaction.userId,
+//           authorization_code: authorization.authorization_code,
+//           last4: authorization.last4 || '',
+//           exp_month: authorization.exp_month?.toString().padStart(2, '0') || '',
+//           exp_year: authorization.exp_year?.toString() || '',
+//           brand: authorization.brand || '',
+//           reusable: false,
+//         },
+//       });
+//     }
+
+//     return {
+//       ok: true,
+//       status: 200,
+//       message: 'Payment verified and user updated',
+//       data: { reference, status: 'success' },
+//     };
+//   } catch (error: any) {
+//     console.error('Error verifying subscription:', error);
+//     return {
+//       ok: false,
+//       status: 500,
+//       message: 'Failed to verify subscription',
+//       error: error.message,
+//     };
+//   }
+// };
 
 // Cancel user subscription and update user details
 export const cancelUserSubscription = async (userId: string) => {
@@ -462,6 +969,7 @@ export const removeCard = async (
 };
 
 // Add a new card to user's subscription
+
 export const addCardToSubscription = async (
   userId: string,
   email: string,
@@ -488,7 +996,8 @@ export const addCardToSubscription = async (
     };
     const amount = amounts[currency];
 
-    const paystackResponse = await retry(
+    // Initialize card transaction
+    const paystackCardResponse = await retry(
       async () =>
         await paystack.transaction.initialize({
           email,
@@ -502,8 +1011,8 @@ export const addCardToSubscription = async (
       { retries: 3, minTimeout: 1000, maxTimeout: 5000 }
     );
 
-    const authorizationUrl = paystackResponse.data.authorization_url;
-    if (!authorizationUrl) {
+    const cardAuthorizationUrl = paystackCardResponse.data.authorization_url;
+    if (!cardAuthorizationUrl) {
       return {
         ok: false,
         status: 400,
@@ -516,7 +1025,7 @@ export const addCardToSubscription = async (
       status: 200,
       message: 'Card addition initialized',
       data: {
-        authorization_url: authorizationUrl,
+        card_authorization_url: cardAuthorizationUrl,
         currency,
         amount,
         reference,
@@ -532,6 +1041,7 @@ export const addCardToSubscription = async (
     };
   }
 };
+
 // Handle charge failed scenario by retrying with reusable cards
 
 export const handleChargeFailed = async (reference: string) => {
@@ -553,17 +1063,16 @@ export const handleChargeFailed = async (reference: string) => {
 
     const userCards = await db.userCard.findMany({
       where: { userId: transaction.userId, reusable: true },
-      orderBy: { createdAt: 'asc' }, // Try oldest cards first
+      orderBy: { createdAt: 'asc' },
     });
 
     for (const card of userCards) {
       if (card.authorization_code !== user.default_authorization) {
-        // Skip the default card
         const retryResponse = await paystack.transaction.charge({
           authorization_code: card.authorization_code,
           email: user.email,
-          amount: transaction.amount * 100, // Convert to kobo/cents
-          currency: transaction.currency as 'NGN' | 'USD', // Type assertion
+          amount: transaction.amount * 100,
+          currency: transaction.currency as 'NGN' | 'USD',
           reference: `retry_${Date.now()}_${reference}`,
         });
 
@@ -573,14 +1082,135 @@ export const handleChargeFailed = async (reference: string) => {
             data: { status: TransactionStatus.SUCCESS },
           });
           await updateUser(transaction.userId, {
-            default_authorization: card.authorization_code, // Update to the successful card
+            default_authorization: card.authorization_code,
           });
-          break; // Stop after success
+          return;
+        }
+      }
+    }
+
+    // Fallback to Direct Debit if enabled and authorized
+    if (process.env.ENABLE_DIRECT_DEBIT === 'true') {
+      const userDirectDebit = await db.userDirectDebit.findFirst({
+        where: { userId: transaction.userId },
+      });
+      if (userDirectDebit?.authorization_code) {
+        const debitResponse = await paystack.transaction.charge({
+          authorization_code: userDirectDebit.authorization_code,
+          email: user.email,
+          amount: transaction.amount * 100,
+          currency: transaction.currency as 'NGN' | 'USD',
+          reference: `debit_${Date.now()}_${reference}`,
+        });
+        if (debitResponse.data.status === 'success') {
+          await db.transaction.update({
+            where: { reference: transaction.reference },
+            data: { status: TransactionStatus.SUCCESS },
+          });
+          console.log('Direct Debit successful:', reference);
         }
       }
     }
   } catch (error: any) {
     console.error('Error handling charge failed:', error);
+  }
+};
+
+// add direct debit to user subscription
+
+export const addDirectDebitToSubscription = async (
+  userId: string,
+  email: string,
+  ip: string
+) => {
+  try {
+    const user = await db.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return { ok: false, status: 404, message: 'User not found' };
+    }
+
+    const reference = `adddebit_${userId}_${Date.now()}`;
+    const callbackUrl = `https://www.aligntrait.com/payment/callback`;
+
+    // Determine currency based on IP (Direct Debit currently supports NGN only)
+    const region = getCountryByIp(ip);
+    const isUsdEnabled = process.env.ENABLE_USD === 'true';
+    const currency = isUsdEnabled && region !== 'Nigeria' ? 'USD' : 'NGN';
+
+    // Define currency-specific amounts (Direct Debit amount is minimal for authorization)
+    const amounts = {
+      NGN: 100,
+      USD: 1,
+    };
+    const amount = amounts[currency];
+
+    const directDebitParams = JSON.stringify({
+      email,
+      channel: 'direct_debit',
+      callback_url: callbackUrl,
+      metadata: {
+        userId,
+        action: 'add_debit',
+        nonce: Date.now(), // 👈 Unique value to prevent session reuse
+      },
+    });
+
+    const directDebitOptions = {
+      hostname: 'api.paystack.co',
+      port: 443,
+      path: '/customer/authorization/initialize',
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+        'Content-Type': 'application/json',
+      },
+    };
+
+    const directDebitPromise = new Promise<string>((resolve, reject) => {
+      const req = https
+        .request(directDebitOptions, (res) => {
+          let data = '';
+          res.on('data', (chunk) => (data += chunk));
+          res.on('end', () => {
+            const response = JSON.parse(data);
+            if (
+              res.statusCode === 200 &&
+              response.status &&
+              response.data?.redirect_url
+            ) {
+              resolve(response.data.redirect_url);
+            } else {
+              reject(new Error(`Direct Debit initialization failed: ${data}`));
+            }
+          });
+        })
+        .on('error', (error) => reject(error));
+
+      req.write(directDebitParams);
+      req.end();
+    });
+
+    const directDebitRedirectUrl = await directDebitPromise;
+
+    return {
+      ok: true,
+      status: 200,
+      message: 'Direct Debit authorization initialized',
+      data: {
+        direct_debit_redirect_url: directDebitRedirectUrl,
+        currency,
+        amount,
+        reference,
+      },
+    };
+  } catch (error: any) {
+    console.error('Error adding direct debit:', error);
+    return {
+      ok: false,
+      status: 500,
+      message: 'Failed to add direct debit',
+      error: error.message,
+    };
   }
 };
 

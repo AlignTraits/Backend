@@ -15,11 +15,7 @@ interface WetrocloudResponse {
 
 const router = express.Router();
 
-router.post<{}, WetrocloudResponse>(
-  '/answers',
-  loginRequired,
-  submitEligibilityAnswers
-);
+router.post<{}, WetrocloudResponse>('/answer', submitEligibilityAnswers);
 
 // router.get<{}, WetrocloudResponse>('/', loginRequired, getEligibilityResults);
 

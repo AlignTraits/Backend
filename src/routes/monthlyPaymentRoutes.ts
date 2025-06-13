@@ -7,6 +7,7 @@ import {
   getCards,
   deleteCard,
   addCardController,
+  addDirectDebitController,
 } from '../controllers/monthlyPaymentCtl';
 
 import { loginRequired } from '../middlewares/auth';
@@ -35,6 +36,9 @@ router.get('/cards', loginRequired, getCards);
 router.delete('/cards/:authorization_code', loginRequired, deleteCard);
 
 // This route adds a new card to the logged-in user's saved cards.
-router.post('/add-card', loginRequired, addCardController);
+router.post('/add-card', addCardController);
+router.post('/add-direct-debit', addDirectDebitController);
+
+// router.post('/deactivate-direct-debit', loginRequired, deactivateDirectDebitController);
 
 export default router;

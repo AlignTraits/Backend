@@ -2,6 +2,7 @@ import { PrismaClient, Prisma } from '@prisma/client';
 import dotenv from 'dotenv';
 import Wetrocloud from 'wetro-sdk';
 import axios, { AxiosError } from 'axios';
+import { getUserByEmail } from '../models/userModel';
 
 dotenv.config();
 
@@ -582,9 +583,21 @@ Return JSON with:
 }
 
 async function submitEligibilityAnswersService(
-  userId: string,
+  email: string,
   input: QualificationInput
 ): Promise<WetrocloudResponse> {
+  if (!email) {
+    return {
+      ok: false,
+      message: 'Email are required',
+      status: 400,
+      tokens: null,
+    };
+  }
+  let user = await getUserByEmail(email);
+
+  const userId = user?.id;
+
   if (!userId) {
     return {
       ok: false,

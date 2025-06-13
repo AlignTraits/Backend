@@ -37,7 +37,8 @@ export const submitServerEligibilityAnswers = async (
   next: NextFunction
 ) => {
   try {
-    const userId = (req.user as any)?.id ?? '';
+    // const userId = (req.user as any)?.id ?? '';
+    const { email } = req.body as any;
 
     const body = req.body as ServerQualificationInput;
     const { courseId, exams, preferences } = body;
@@ -62,7 +63,7 @@ export const submitServerEligibilityAnswers = async (
       });
     }
 
-    const result = await submitServerEligibilityAnswersService(userId, {
+    const result = await submitServerEligibilityAnswersService(email, {
       courseId,
       exams,
       preferences,

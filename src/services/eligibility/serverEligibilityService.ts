@@ -1,4 +1,5 @@
 import { PrismaClient, Prisma } from '@prisma/client';
+import { getUserByEmail } from '../../models/userModel';
 
 const prisma = new PrismaClient();
 
@@ -831,9 +832,20 @@ async function calculateServerEligibility(
 // }
 
 async function submitServerEligibilityAnswersService(
-  userId: string,
+  email: string,
   input: ServerQualificationInput
 ): Promise<WetrocloudResponse> {
+  if (!email) {
+    return {
+      ok: false,
+      message: 'Email are required',
+      status: 400,
+      tokens: null,
+    };
+  }
+  let user = await getUserByEmail(email);
+
+  const userId = user?.id;
   if (!userId) {
     return { ok: false, message: 'Invalid user ID', status: 400 };
   }

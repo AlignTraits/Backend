@@ -33,8 +33,9 @@ export const submitEligibilityAnswers = async (
   next: NextFunction
 ) => {
   try {
-    const userId = (req.user as any)?.id ?? '';
+    // const userId = (req.user as any)?.id ?? '';
     const { courseId, exams, preferences } = req.body as QualificationInput;
+    const { email } = req.user as any;
 
     if (!courseId || !exams || !Array.isArray(exams) || exams.length === 0) {
       return res.status(400).json({
@@ -65,7 +66,7 @@ export const submitEligibilityAnswers = async (
       });
     }
 
-    const result = await submitEligibilityAnswersService(userId, {
+    const result = await submitEligibilityAnswersService(email, {
       courseId,
       exams,
       preferences,
