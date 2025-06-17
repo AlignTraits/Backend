@@ -7,6 +7,7 @@ import {
   updatePasswordService,
   getUserDataService,
   updateUserProfileService,
+  getUserByEmailService,
 } from '../services/userServices';
 import { uploadProfilePicService } from '../services/uploadServices';
 
@@ -21,6 +22,30 @@ export const getUserData = async (
     const result = await getUserDataService((req.user as any)?.id ?? '');
     res.status(result.status).json(result);
   } catch (error) {
+    next(error);
+  }
+};
+
+export const getUserByEmailData = async (
+  req: Request<{ email: string }, MessageResponse>,
+  res: Response<MessageResponse>,
+  next: NextFunction
+) => {
+  const { email } = req.params;
+  if (!email || typeof email !== 'string') {
+    return res.status(400).json({
+      ok: false,
+      // status: 400,
+      message: 'Invalid email parameter',
+    });
+  }
+
+  try {
+    const result = await getUserByEmailService(email);
+    // Set status code explicitly, e.g., 200 for success, or handle error cases as needed
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Error in getUserByEmailData:', error);
     next(error);
   }
 };
