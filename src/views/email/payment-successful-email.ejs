@@ -1,0 +1,153 @@
+<!-- views/payment-successful-email.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Successful - AlignTraits</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f2f2f2;
+            margin: 0;
+            padding: 0;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border: 2px solid #1565C0;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .logo img {
+            max-width: 250px;
+        }
+
+        .content {
+            text-align: left;
+        }
+
+        .content h1 {
+            color: #1565C0;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        .content p {
+            color: #333333;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .details-table th,
+        .details-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+
+        .details-table th {
+            background-color: #f5f5f5;
+            color: #1565C0;
+        }
+
+        .footer {
+            text-align: left;
+            font-size: 14px;
+            color: #666666;
+            margin-top: 30px;
+        }
+
+        .footer a {
+            color: #1565C0;
+            text-decoration: none;
+        }
+
+        .social-icons {
+            text-align: right;
+        }
+
+        .social-icons img {
+            max-width: 25px;
+            margin: 0 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="email-container">
+        <div class="logo">
+            <img src="https://res.cloudinary.com/dnd6g0t90/image/upload/v1734808959/full-logo_jvosfh.png"
+                alt="AlignTraits Logo">
+        </div>
+        <div class="content">
+            <h1>Payment Successful - Welcome to AlignTraits!</h1>
+            <p><b>Dear <%= name %>,</b></p>
+            <p>Thank you for your payment! Your transaction with AlignTraits has been successfully processed. Below are
+                the details of your purchase:</p>
+            <table class="details-table">
+                <tr>
+                    <th>Transaction Reference</th>
+                    <td>
+                        <%= transactionReference %>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Plan Type</th>
+                    <td>
+                        <%= planType %>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Status</th>
+                    <td>Success</td>
+                </tr>
+                <% if (expiresAt) { %>
+                    <tr>
+                        <th>Plan Expires On</th>
+                        <td>
+                            <%= expiresAt.toLocaleDateString() %>
+                        </td>
+                    </tr>
+                    <% } %>
+            </table>
+            <p>You're now ready to explore personalized career insights tailored to your unique traits. If you have any
+                questions, feel free to contact us at <a href="mailto:aligntraits@gmail.com">aligntraits@gmail.com</a>.
+            </p>
+            <p>Best,<br>The AlignTraits Team</p>
+        </div>
+        <div class="footer">
+            <p>Stay connected with us on social media:</p>
+            <div class="social-icons">
+                <a href="#"><img
+                        src="https://res.cloudinary.com/dnd6g0t90/image/upload/v1734809228/instagram-icon_zlvcoc.png"
+                        alt="Instagram"></a>
+                <a href="#"><img
+                        src="https://res.cloudinary.com/dnd6g0t90/image/upload/v1734809227/facebook-icon_ejeerf.png"
+                        alt="Facebook"></a>
+                <a href="#"><img
+                        src="https://res.cloudinary.com/dnd6g0t90/image/upload/v1734809230/linkedin-icon_cjnhex.png"
+                        alt="LinkedIn"></a>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

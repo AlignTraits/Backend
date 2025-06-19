@@ -3,6 +3,8 @@ import dotenv from 'dotenv';
 import Wetrocloud from 'wetro-sdk';
 import MessageResponse from '../types/messageResponse';
 import { createUser, getUserByEmail } from '../models/userModel';
+import { sendMail } from './mailServices';
+import { db } from '../config/db';
 
 dotenv.config();
 
@@ -338,6 +340,30 @@ async function submitAnswersService(
         ok: false,
         message: 'Invalid answers provided',
       };
+    }
+
+    const updatedUser = await db.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (updatedUser) {
+      const host = process.env.BACKEND_URL || 'http://localhost:3000';
+
+      // Send welcome email if email is not verified
+      if (!updatedUser.emailVerified) {
+        const welcomeEmailResult = await sendMail({
+          from: 'Aligntraits <no-reply@aligntrait.com>',
+          recipients: [updatedUser.email],
+          subject: 'Welcome to AlignTraits - Verify Your Email',
+          templateName: 'welcome-unverified-email',
+          templateInfo: {
+            name: `${updatedUser.firstname} ${updatedUser.lastname}`,
+            signupUrl: `${host}/signup-2?token=${updatedUser.email_token}`,
+            host,
+          },
+        });
+        console.log('20: Welcome Email Result:', welcomeEmailResult);
+      }
     }
 
     return await calculateCareerPath(userId, answers);

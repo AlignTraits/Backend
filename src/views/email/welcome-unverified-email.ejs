@@ -1,0 +1,128 @@
+<!-- views/welcome-unverified-email.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to AlignTraits - Verify Your Email</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f2f2f2;
+            margin: 0;
+            padding: 0;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border: 2px solid #1565C0;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .logo img {
+            max-width: 250px;
+        }
+
+        .content {
+            text-align: left;
+        }
+
+        .content h1 {
+            color: #1565C0;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        .content p {
+            color: #333333;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .button-wrapper {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #1565C0;
+            color: #ffffff !important;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 16px;
+            margin-bottom: 20px;
+            text-align: center !important;
+        }
+
+        .footer {
+            text-align: left;
+            font-size: 14px;
+            color: #666666;
+            margin-top: 30px;
+        }
+
+        .footer a {
+            color: #1565C0;
+            text-decoration: none;
+        }
+
+        .social-icons {
+            text-align: right;
+        }
+
+        .social-icons img {
+            max-width: 25px;
+            margin: 0 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="email-container">
+        <div class="logo">
+            <img src="https://res.cloudinary.com/dnd6g0t90/image/upload/v1734808959/full-logo_jvosfh.png"
+                alt="AlignTraits Logo">
+        </div>
+        <div class="content">
+            <h1>Welcome to AlignTraits - Verify Your Email</h1>
+            <p><b>Dear <%= name %>,</b></p>
+            <p>Thank you for joining AlignTraits! We're excited to help you unlock personalized career insights. To
+                complete your registration, please verify your email address by clicking the link below:</p>
+            <div class="button-wrapper">
+                <a href="<%= signupUrl %>" class="button">Verify and Continue to Sign-Up</a>
+            </div>
+            <p>This link will expire in 24 hours. If it expires, you’ll need to sign up again. For assistance, contact
+                us at <a href="mailto:aligntraits@gmail.com">aligntraits@gmail.com</a>.</p>
+            <p>Looking forward to supporting your career journey!<br>Best,<br>The AlignTraits Team</p>
+        </div>
+        <div class="footer">
+            <p>Follow us for updates:</p>
+            <div class="social-icons">
+                <a href="#"><img
+                        src="https://res.cloudinary.com/dnd6g0t90/image/upload/v1734809228/instagram-icon_zlvcoc.png"
+                        alt="Instagram"></a>
+                <a href="#"><img
+                        src="https://res.cloudinary.com/dnd6g0t90/image/upload/v1734809227/facebook-icon_ejeerf.png"
+                        alt="Facebook"></a>
+                <a href="#"><img
+                        src="https://res.cloudinary.com/dnd6g0t90/image/upload/v1734809230/linkedin-icon_cjnhex.png"
+                        alt="LinkedIn"></a>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
