@@ -30,6 +30,12 @@ router.post<{}, MessageResponse>(
   authController.requestReset
 );
 
+router.post<{}, MessageResponse>(
+  '/add-password-after-eligibility',
+  preventLoggedUser, // Assuming this middleware prevents logged-in users from accessing
+  authController.addPasswordAfterEligibilty
+);
+
 router.get<{}, MessageResponse>(
   '/verification',
   preventLoggedUser,

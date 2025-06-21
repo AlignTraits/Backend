@@ -57,7 +57,7 @@ export const initializeBasicOneTimePayment = async (
         lastname,
         email,
         password: '',
-        emailVerified: new Date(),
+        // emailVerified: new Date(),
         role: Roles.USER,
       },
     });
@@ -150,7 +150,7 @@ export const initializeMonthlySubscription = async (
           lastname,
           email,
           password: '',
-          emailVerified: new Date(),
+          // emailVerified: new Date(),
           role: Roles.USER,
         },
       });

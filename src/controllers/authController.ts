@@ -12,6 +12,7 @@ import {
   addAdminPasswordService,
   updateAdminPasswordService,
   updateAdminProfileService,
+  addPasswordAfterEligibiltyService,
 } from '../services/authService';
 import {
   getAdminDataService,
@@ -163,12 +164,27 @@ const updateAdminPassword = async (
   }
 };
 
+const addPasswordAfterEligibilty = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { email, password } = req.body;
+    const result = await addPasswordAfterEligibiltyService({ email, password });
+    return res.status(result.status).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export = {
   login,
   register,
   validateToken,
   requestReset,
   resetPassword,
+  addPasswordAfterEligibilty,
   // admin auth controller
   loginAdmin,
   registerAdmin,

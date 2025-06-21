@@ -316,7 +316,8 @@ const registerService = async ({
         email: newUser.email,
         role: newUser.role,
         createdAt: newUser.createdAt,
-        emailSent: response?.didEmailSend,
+        // emailSent: response?.didEmailSend,
+        emailSent: response?.ok ?? false,
       },
     };
   } catch (e) {
@@ -592,7 +593,8 @@ const emailVerificationService = async (email: string) => {
       expirationTime,
     });
 
-    console.log('start confirm send email');
+    // console.log('start confirm send email');
+    console.log('Sending confirmation email with OTP:', otp);
     const emailRes = await sendConfirmationEmail({
       name: existingUser.firstname,
       email: existingUser.email,
@@ -600,10 +602,14 @@ const emailVerificationService = async (email: string) => {
     });
 
     return {
-      ok: true,
-      status: 200,
+      // ok: true,
+      ok: emailRes.ok,
+      // status: 200,
+      status: emailRes.status,
       didEmailSend: emailRes.ok,
       data: { otp, token: { ...savedToken } },
+      message: emailRes.message,
+      error: emailRes.error,
     };
   } catch (e) {
     throw e;
@@ -806,6 +812,76 @@ const updateAdminPasswordService = async (adminId: string, data: any) => {
   }
 };
 
+const addPasswordAfterEligibiltyService = async ({
+  email,
+  password,
+}: {
+  email: string;
+  password: string;
+}) => {
+  try {
+    if (!email || !password) {
+      return {
+        status: 400,
+        message: 'Password addition failed',
+        errors: [{ message: 'Email and password are required' }],
+      };
+    }
+
+    const user = await getUserByEmail(email);
+    if (!user) {
+      return {
+        ok: false,
+        status: 404,
+        message: 'Password addition failed',
+        errors: [{ message: 'User does not exist' }],
+      };
+    }
+
+    // if (user.password) {
+    //   return {
+    //     ok: false,
+    //     status: 400,
+    //     message: 'Password addition failed',
+    //     errors: [{ message: 'Password already set' }],
+    //   };
+    // }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Update the user with the new password
+    await updateUser(user.id, {
+      password: hashedPassword,
+    });
+
+    // Check email verification status and resend if not verified
+    if (!user.emailVerified) {
+      await emailVerificationService(user.email);
+      return {
+        ok: false,
+        status: 403,
+        message: 'Password updated, but email not verified',
+        errors: [
+          {
+            message:
+              "Email has not been verified. We've sent a new verification email",
+          },
+        ],
+      };
+    }
+
+    return {
+      ok: true,
+      status: 200,
+      message:
+        'Password added successfully and We have sent a verification email',
+    };
+  } catch (e) {
+    throw e;
+  }
+};
+
 export {
   loginService,
   registerService,
@@ -819,4 +895,5 @@ export {
   addAdminPasswordService,
   updateAdminPasswordService,
   updateAdminProfileService,
+  addPasswordAfterEligibiltyService,
 };
