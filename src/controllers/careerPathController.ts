@@ -4,6 +4,7 @@ import ErrorResponse from '../types/errorResponse';
 import {
   getCareerPathService,
   submitAnswersService,
+  submitAnswersServiceServer,
   // getCareerPathService,
 } from '../services/careerPathService';
 
@@ -29,6 +30,31 @@ export const submitCareerAnswers = async (
       email
     );
     res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const submitServerCareerAnswers = async (
+  req: Request,
+  res: Response<WetrocloudResponse | ErrorResponse>,
+  next: NextFunction
+) => {
+  try {
+    const { answers, firstName, lastName, email } = req.body;
+    if (!answers || !Array.isArray(answers) || !answers.length) {
+      return res.status(400).json({
+        ok: false,
+        message: 'Invalid or missing answers in request body',
+      });
+    }
+    const result = await submitAnswersServiceServer(
+      answers,
+      firstName,
+      lastName,
+      email
+    );
+    res.status(result.status || 200).json(result);
   } catch (error) {
     next(error);
   }

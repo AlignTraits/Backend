@@ -26,116 +26,6 @@ try {
   console.error('Failed to initialize Wetrocloud client:', error);
 }
 
-// Fallback mapping
-// const careerPathMapping: Record<string, any> = {
-//   personality_mbti: {
-//     when_learning_something_new_do_you_prefer: {
-//       'Practical, hands-on experience': ['Engineering', 'Accounting', 'IT'],
-//       'Exploring theories and possibilities': ['Psychology', 'Social Work'],
-//     },
-//     when_working_on_a_group_project_do_you: {
-//       'Prefer structured plans and clear goals': ['Law', 'Finance'],
-//       'Adapt as you go and keep things flexible': ['Marketing', 'Startups'],
-//     },
-//     when_making_a_decision_do_you: {
-//       'Focus on facts and logic': ['Data Science', 'Engineering'],
-//       'Consider how it affects people emotionally': ['HR', 'Teaching'],
-//     },
-//     do_you_feel_energized_by: {
-//       'Socializing and working with groups': ['Sales', 'PR', 'Business'],
-//       'Working alone or in quiet environments': ['Research', 'Writing', 'IT'],
-//     },
-//   },
-//   work_behavior_disc: {
-//     how_do_you_approach_challenges_at_work: {
-//       'Take control and solve problems quickly': [
-//         'Leadership',
-//         'Law',
-//         'Business',
-//       ],
-//       'Persuade and inspire others to contribute': ['Marketing', 'PR', 'Sales'],
-//       'Work patiently and maintain team harmony': ['HR', 'Teaching'],
-//       'Analyze all details before making a decision': [
-//         'Data Analysis',
-//         'Engineering',
-//       ],
-//     },
-//     when_managing_a_project_you_prefer: {
-//       'Setting ambitious goals and leading from the front': [
-//         'Business',
-//         'Law',
-//         'Management',
-//       ],
-//       'Engaging people and ensuring collaboration': [
-//         'Marketing',
-//         'Social Careers',
-//       ],
-//       'Maintaining a stable workflow and supporting the team': [
-//         'Healthcare',
-//         'HR',
-//       ],
-//       'Creating detailed plans and ensuring accuracy': ['Finance', 'IT'],
-//     },
-//   },
-//   career_values_schein: {
-//     which_of_these_job_features_is_most_important_to_you: {
-//       'Becoming an expert in my field': ['Engineering', 'IT'],
-//       'Leading teams and making decisions': ['Business', 'Economics'],
-//       'Having job security and stability': ['Banking', 'Government'],
-//       'Helping people and making a difference': ['Social Work', 'Teaching'],
-//     },
-//     if_you_had_to_choose_between_two_job_offers_you_would_pick: {
-//       'A stable job with a clear career path': ['Government', 'Accounting'],
-//       'A high-risk, high-reward opportunity': ['Entrepreneurship', 'Marketing'],
-//     },
-//   },
-//   emotional_intelligence_eq: {
-//     when_you_receive_negative_feedback_you: {
-//       'Take it constructively and improve': ['Public Relations', 'Leadership'],
-//       'Feel discouraged but eventually bounce back': [
-//         'Research',
-//         'Data Science',
-//       ],
-//       'Get defensive and justify your actions': ['Research', 'Data Science'],
-//     },
-//     how_do_you_handle_workplace_conflict: {
-//       'Address it immediately and resolve the issue': [
-//         'HR',
-//         'Teaching',
-//         'Counseling',
-//       ],
-//       'Try to mediate and find common ground': ['HR', 'Teaching', 'Counseling'],
-//       'Avoid confrontation and let it pass': ['Independent Roles'],
-//     },
-//     which_situation_would_stress_you_the_most: {
-//       'Constantly having to network and socialize': ['Analytical Work'],
-//       'Working alone for long periods without interaction': ['Dynamic Fields'],
-//       'Being in an unpredictable and rapidly changing job': ['Stable Roles'],
-//       'Doing the same repetitive tasks every day': ['Dynamic Fields'],
-//     },
-//   },
-//   motivation_career_drive: {
-//     when_you_set_a_goal_how_do_you_pursue_it: {
-//       'Push myself to achieve it, no matter the obstacles': ['Law', 'Medicine'],
-//       'Work steadily but adjust if necessary': ['Business', 'Marketing'],
-//       'Lose interest if it takes too long': ['Support', 'Admin'],
-//     },
-//     if_faced_with_a_major_career_setback_what_would_you_do: {
-//       'Work even harder and find another way': ['Finance', 'Startups'],
-//       'Reevaluate my options and adjust my plans': [
-//         'Consulting',
-//         'Mid-Level Management',
-//       ],
-//       'Feel discouraged and consider quitting': ['Routine Roles'],
-//     },
-//     what_type_of_work_environment_suits_you_best: {
-//       'High-pressure, competitive fields': ['Law', 'Medicine'],
-//       'Balanced work-life environment': ['Creative Fields'],
-//       'Low-stress, stable careers': ['Government', 'Admin'],
-//     },
-//   },
-// };
-
 interface CareerPathResponse {
   career_path: string;
   reason: string;
@@ -271,36 +161,6 @@ async function calculateCareerPath(
   };
 }
 
-// async function submitAnswersService(
-//   userId: string,
-//   answers: { question: string; answer: string }[]
-// ): Promise<WetrocloudResponse> {
-//   if (!userId) {
-//     return {
-//       ok: false,
-//       message: 'Invalid user ID',
-//     };
-//   }
-
-//   try {
-//     if (!Array.isArray(answers) || !answers.length) {
-//       return {
-//         ok: false,
-//         message: 'Invalid answers provided',
-//       };
-//     }
-
-//     return await calculateCareerPath(userId, answers);
-//   } catch (error) {
-//     console.error('Error submitting answers:', error);
-//     return {
-//       ok: false,
-//       message:
-//         error instanceof Error ? error.message : 'Failed to submit answers',
-//     };
-//   }
-// }
-
 async function submitAnswersService(
   // userId: string,
   answers: { question: string; answer: string }[],
@@ -347,7 +207,7 @@ async function submitAnswersService(
     });
 
     if (updatedUser) {
-      const host = process.env.BACKEND_URL || 'http://localhost:3000';
+      const host = process.env.WEBSITE_URL || 'http://localhost:3000';
 
       // Send welcome email if email is not verified
       if (!updatedUser.emailVerified) {
@@ -413,4 +273,392 @@ async function getCareerPathService(userId: string) {
   }
 }
 
-export { submitAnswersService, getCareerPathService };
+// Server Career Path Mapping
+async function calculateCareerPathFromMappingServer(
+  userId: string,
+  answers: { question: string; answer: string }[],
+  mapping: Record<string, any>
+): Promise<WetrocloudResponse> {
+  try {
+    console.log(
+      'Calculating career path for user:',
+      userId,
+      'with answers:',
+      answers
+    );
+
+    // Convert answers to a case-insensitive map for lookup
+    const answerMap = new Map(
+      answers.map(({ question, answer }) => [
+        question.toLowerCase().replace(/[^a-z0-9]/g, ''), // Normalize question
+        answer.toLowerCase().replace(/[^a-z0-9]/g, ''), // Normalize answer
+      ])
+    );
+
+    let totalScore: Record<string, number> = {};
+    let matchedDetails: {
+      question: string;
+      answer: string;
+      careers: string[];
+    }[] = [];
+
+    // Iterate through mapping to find matches with relaxed criteria
+    for (const [category, categoryRules] of Object.entries(mapping)) {
+      for (const [question, options] of Object.entries(categoryRules)) {
+        const normalizedQuestion = question
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '');
+        if (answerMap.has(normalizedQuestion)) {
+          const userAnswer = answerMap.get(normalizedQuestion)!;
+          for (const [answerOption, careers] of Object.entries(
+            options as Record<string, unknown>
+          )) {
+            const normalizedOption = answerOption
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, '');
+            if (
+              userAnswer.includes(normalizedOption) ||
+              normalizedOption.includes(userAnswer)
+            ) {
+              if (
+                Array.isArray(careers) &&
+                careers.every((c) => typeof c === 'string')
+              ) {
+                matchedDetails.push({
+                  question,
+                  answer: userAnswer,
+                  careers: careers as string[],
+                });
+                careers.forEach((career) => {
+                  totalScore[career] = (totalScore[career] || 0) + 1; // Increment score for each match
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+
+    let recommendedCareer = 'Undetermined';
+    let reasoning = 'No clear career path identified based on your responses.';
+
+    // Determine the best career based on total score
+    if (matchedDetails.length > 0) {
+      const sortedCareers = Object.entries(totalScore).sort(
+        (a, b) => b[1] - a[1]
+      );
+      recommendedCareer = sortedCareers[0][0]; // Top career
+
+      // Identify key traits from matched details
+      const traits = {
+        planning: matchedDetails.some(
+          (md) => md.careers.includes('Law') || md.careers.includes('Finance')
+        ),
+        logic: matchedDetails.some(
+          (md) =>
+            md.careers.includes('Data Science') ||
+            md.careers.includes('Engineering')
+        ),
+        independence: matchedDetails.some(
+          (md) => md.careers.includes('Research') || md.careers.includes('IT')
+        ),
+        pressure: matchedDetails.some(
+          (md) => md.careers.includes('Law') || md.careers.includes('Medicine')
+        ),
+        stability: matchedDetails.some(
+          (md) =>
+            md.careers.includes('Government') ||
+            md.careers.includes('Accounting')
+        ),
+        growth: matchedDetails.some(
+          (md) =>
+            md.careers.includes('Engineering') || md.careers.includes('IT')
+        ),
+        feedback: matchedDetails.some(
+          (md) =>
+            md.careers.includes('Public Relations') ||
+            md.careers.includes('Leadership')
+        ),
+        conflict: matchedDetails.some(
+          (md) => md.careers.includes('HR') || md.careers.includes('Teaching')
+        ),
+        decisiveness: matchedDetails.some(
+          (md) =>
+            md.careers.includes('Leadership') || md.careers.includes('Law')
+        ),
+      };
+
+      // Craft reasoning based on the recommended career
+      const traitList = [];
+      if (traits.planning) traitList.push('structured planning');
+      if (traits.logic) traitList.push('logical decision-making');
+      if (traits.independence) traitList.push('working independently');
+      if (traits.pressure)
+        traitList.push('thriving in competitive environments');
+      if (traits.stability) traitList.push('preferring stability');
+      if (traits.growth) traitList.push('a drive to become an expert');
+      if (traits.feedback) traitList.push('handling feedback constructively');
+      if (traits.conflict) traitList.push('addressing conflict directly');
+      if (traits.decisiveness) traitList.push('quick decision-making');
+
+      const skills =
+        {
+          Law: 'legal analysis, argumentation, leadership',
+          Engineering: 'technical problem-solving, project management',
+          IT: 'technical expertise, system design',
+          'Data Science': 'data analysis, statistical modeling',
+        }[recommendedCareer] || 'problem-solving, critical thinking';
+
+      reasoning = `Based on the assessment, you demonstrate ${traitList.join(', ')}. These traits align well with a career in ${recommendedCareer}, which requires ${skills}.`;
+    }
+
+    console.log('Career recommendation:', { recommendedCareer, reasoning });
+
+    // Save to database
+    try {
+      await prisma.careerResult.upsert({
+        where: { userId },
+        update: { recommendedCareers: [recommendedCareer], reasoning },
+        create: {
+          userId,
+          recommendedCareers: [recommendedCareer],
+          reasoning,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+    } catch (dbError) {
+      console.error('Database save failed:', dbError);
+      return {
+        ok: false,
+        message: 'Failed to save career results',
+      };
+    }
+
+    return {
+      ok: true,
+      message: 'Career path calculated successfully',
+      data: { recommendedCareer, reasoning },
+    };
+  } catch (error) {
+    console.error('Career path calculation failed:', error);
+    return {
+      ok: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : 'Unable to generate career path recommendation',
+    };
+  }
+}
+
+// This mapping is used to categorize career paths based on user responses
+const careerPathMappingServer: Record<string, any> = {
+  personality_mbti: {
+    when_learning_something_new_do_you_prefer: {
+      'Practical, hands-on experience': ['Engineering', 'Accounting', 'IT'],
+      'Exploring theories and possibilities': ['Psychology', 'Social Work'],
+    },
+    when_working_on_a_group_project_do_you: {
+      'Prefer structured plans and clear goals': ['Law', 'Finance'],
+      'Adapt as you go and keep things flexible': ['Marketing', 'Startups'],
+    },
+    when_making_a_decision_do_you: {
+      'Focus on facts and logic': ['Data Science', 'Engineering'],
+      'Consider how it affects people emotionally': ['HR', 'Teaching'],
+    },
+    do_you_feel_energized_by: {
+      'Socializing and working with groups': ['Sales', 'PR', 'Business'],
+      'Working alone or in quiet environments': ['Research', 'Writing', 'IT'],
+    },
+  },
+  work_behavior_disc: {
+    how_do_you_approach_challenges_at_work: {
+      'Take control and solve problems quickly': [
+        'Leadership',
+        'Law',
+        'Business',
+      ],
+      'Persuade and inspire others to contribute': ['Marketing', 'PR', 'Sales'],
+      'Work patiently and maintain team harmony': ['HR', 'Teaching'],
+      'Analyze all details before making a decision': [
+        'Data Analysis',
+        'Engineering',
+      ],
+    },
+    when_managing_a_project_you_prefer: {
+      'Setting ambitious goals and leading from the front': [
+        'Business',
+        'Law',
+        'Management',
+      ],
+      'Engaging people and ensuring collaboration': [
+        'Marketing',
+        'Social Careers',
+      ],
+      'Maintaining a stable workflow and supporting the team': [
+        'Healthcare',
+        'HR',
+      ],
+      'Creating detailed plans and ensuring accuracy': ['Finance', 'IT'],
+    },
+  },
+  career_values_schein: {
+    which_of_these_job_features_is_most_important_to_you: {
+      'Becoming an expert in my field': ['Engineering', 'IT'],
+      'Leading teams and making decisions': ['Business', 'Economics'],
+      'Having job security and stability': ['Banking', 'Government'],
+      'Helping people and making a difference': ['Social Work', 'Teaching'],
+    },
+    if_you_had_to_choose_between_two_job_offers_you_would_pick: {
+      'A stable job with a clear career path': ['Government', 'Accounting'],
+      'A high-risk, high-reward opportunity': ['Entrepreneurship', 'Marketing'],
+    },
+  },
+  emotional_intelligence_eq: {
+    when_you_receive_negative_feedback_you: {
+      'Take it constructively and improve': ['Public Relations', 'Leadership'],
+      'Feel discouraged but eventually bounce back': [
+        'Research',
+        'Data Science',
+      ],
+      'Get defensive and justify your actions': ['Research', 'Data Science'],
+    },
+    how_do_you_handle_workplace_conflict: {
+      'Address it immediately and resolve the issue': [
+        'HR',
+        'Teaching',
+        'Counseling',
+      ],
+      'Try to mediate and find common ground': ['HR', 'Teaching', 'Counseling'],
+      'Avoid confrontation and let it pass': ['Independent Roles'],
+    },
+    which_situation_would_stress_you_the_most: {
+      'Constantly having to network and socialize': ['Analytical Work'],
+      'Working alone for long periods without interaction': ['Dynamic Fields'],
+      'Being in an unpredictable and rapidly changing job': ['Stable Roles'],
+      'Doing the same repetitive tasks every day': ['Dynamic Fields'],
+    },
+  },
+  motivation_career_drive: {
+    when_you_set_a_goal_how_do_you_pursue_it: {
+      'Push myself to achieve it, no matter the obstacles': ['Law', 'Medicine'],
+      'Work steadily but adjust if necessary': ['Business', 'Marketing'],
+      'Lose interest if it takes too long': ['Support', 'Admin'],
+    },
+    if_faced_with_a_major_career_setback_what_would_you_do: {
+      'Work even harder and find another way': ['Finance', 'Startups'],
+      'Reevaluate my options and adjust my plans': [
+        'Consulting',
+        'Mid-Level Management',
+      ],
+      'Feel discouraged and consider quitting': ['Routine Roles'],
+    },
+    what_type_of_work_environment_suits_you_best: {
+      'High-pressure, competitive fields': ['Law', 'Medicine'],
+      'Balanced work-life environment': ['Creative Fields'],
+      'Low-stress, stable careers': ['Government', 'Admin'],
+    },
+  },
+};
+
+async function submitAnswersServiceServer(
+  answers: { question: string; answer: string }[],
+  firstName?: string,
+  lastName?: string,
+  email?: string
+): Promise<WetrocloudResponse> {
+  let userId: string | null = null;
+
+  // Handle user creation or retrieval based on email
+  if (email) {
+    let user = await getUserByEmail(email);
+    if (!user) {
+      user = await createUser({
+        data: {
+          firstname: firstName ?? '',
+          lastname: lastName ?? '',
+          email,
+          password: '', // Empty password as per eligibility check
+          emailVerified: null, // Require verification
+          role: Roles.USER,
+          // email_token: crypto.randomBytes(32).toString('hex'), // Generate token
+          // token_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24-hour expiration
+        },
+      });
+      console.log('New user created:', { userId: user.id, email });
+    }
+    userId = user.id;
+  }
+
+  if (!userId) {
+    return {
+      ok: false,
+      message: 'Invalid user ID',
+    };
+  }
+
+  try {
+    if (!Array.isArray(answers) || !answers.length) {
+      return {
+        ok: false,
+        message: 'Invalid or empty answers provided',
+      };
+    }
+
+    const updatedUser = await db.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!updatedUser) {
+      return {
+        ok: false,
+        message: 'User not found after creation',
+      };
+    }
+
+    const host = process.env.WEBSITE_URL || 'http://localhost:3000';
+
+    // Send welcome email if email is not verified
+    if (!updatedUser.emailVerified) {
+      const welcomeEmailResult = await sendMail({
+        from: 'Aligntraits <no-reply@aligntrait.com>',
+        recipients: [updatedUser.email],
+        subject: 'Welcome to AlignTraits - Verify Your Email',
+        templateName: 'welcome-unverified-email',
+        templateInfo: {
+          name: `${updatedUser.firstname} ${updatedUser.lastname}`,
+          signupUrl: `${host}/signup-2?token=${updatedUser.email_token}`,
+          host,
+        },
+      });
+      console.log('20: Welcome Email Result:', welcomeEmailResult);
+      if (!welcomeEmailResult.ok) {
+        console.warn(
+          'Email sending failed, but proceeding with career calculation'
+        );
+      }
+    }
+
+    // Calculate career path
+    const careerResult = await calculateCareerPathFromMappingServer(
+      userId,
+      answers,
+      careerPathMappingServer
+    );
+    return careerResult;
+  } catch (error) {
+    console.error('Error submitting answers:', error);
+    return {
+      ok: false,
+      message:
+        error instanceof Error ? error.message : 'Failed to submit answers',
+    };
+  }
+}
+
+export {
+  submitAnswersService,
+  submitAnswersServiceServer,
+  getCareerPathService,
+};

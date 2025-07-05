@@ -3,6 +3,7 @@ import { loginRequired } from '../middlewares/auth';
 import {
   submitCareerAnswers,
   getCareerPath,
+  submitServerCareerAnswers,
 } from '../controllers/careerPathController';
 // import MessageResponse from '../types/messageResponse';
 interface WetrocloudResponse {
@@ -14,10 +15,11 @@ interface WetrocloudResponse {
 
 const router = express.Router();
 
+router.post<{}, WetrocloudResponse>('/answers', submitCareerAnswers);
+
 router.post<{}, WetrocloudResponse>(
-  '/answers',
-  // loginRequired,
-  submitCareerAnswers
+  '/answers/server',
+  submitServerCareerAnswers
 );
 
 router.get<{}, WetrocloudResponse>('/', loginRequired, getCareerPath);
