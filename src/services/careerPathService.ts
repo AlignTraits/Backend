@@ -179,7 +179,7 @@ async function submitAnswersService(
           lastname: lastName ?? '',
           email,
           password: '',
-          emailVerified: new Date(),
+          emailVerified: null,
           role: Roles.USER,
         },
       });
@@ -280,12 +280,12 @@ async function calculateCareerPathFromMappingServer(
   mapping: Record<string, any>
 ): Promise<WetrocloudResponse> {
   try {
-    console.log(
-      'Calculating career path for user:',
-      userId,
-      'with answers:',
-      answers
-    );
+    // console.log(
+    //   'Calculating career path for user:',
+    //   userId,
+    //   'with answers:',
+    //   answers
+    // );
 
     // Convert answers to a case-insensitive map for lookup
     const answerMap = new Map(
@@ -412,7 +412,7 @@ async function calculateCareerPathFromMappingServer(
       reasoning = `Based on the assessment, you demonstrate ${traitList.join(', ')}. These traits align well with a career in ${recommendedCareer}, which requires ${skills}.`;
     }
 
-    console.log('Career recommendation:', { recommendedCareer, reasoning });
+    // console.log('Career recommendation:', { recommendedCareer, reasoning });
 
     // Save to database
     try {
@@ -582,11 +582,13 @@ async function submitAnswersServiceServer(
           password: '', // Empty password as per eligibility check
           emailVerified: null, // Require verification
           role: Roles.USER,
-          // email_token: crypto.randomBytes(32).toString('hex'), // Generate token
-          // token_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24-hour expiration
         },
       });
-      console.log('New user created:', { userId: user.id, email });
+      console.log('New user created:', {
+        userId: user.id,
+        email,
+        emailVerified: user.emailVerified,
+      });
     }
     userId = user.id;
   }
@@ -608,7 +610,19 @@ async function submitAnswersServiceServer(
 
     const updatedUser = await db.user.findUnique({
       where: { id: userId },
+      select: {
+        emailVerified: true,
+        email: true,
+        firstname: true,
+        lastname: true,
+        email_token: true,
+      }, // Explicitly select required fields
     });
+
+    console.log('Fetched user:', {
+      userId,
+      emailVerified: updatedUser?.emailVerified,
+    }); // Debug log
 
     if (!updatedUser) {
       return {
@@ -620,14 +634,23 @@ async function submitAnswersServiceServer(
     const host = process.env.WEBSITE_URL || 'http://localhost:3000';
 
     // Send welcome email if email is not verified
-    if (!updatedUser.emailVerified) {
+    if (updatedUser.emailVerified === null) {
+      // Explicitly check for null
+      console.log(
+        'Email verification is null, triggering email send for:',
+        updatedUser.email
+      );
       const welcomeEmailResult = await sendMail({
         from: 'Aligntraits <no-reply@aligntrait.com>',
-        recipients: [updatedUser.email],
+        recipients: [
+          updatedUser.email === 'odionbeauty7@example.com'
+            ? 'testuser@resend.dev'
+            : updatedUser.email,
+        ], // Use test email for example.com
         subject: 'Welcome to AlignTraits - Verify Your Email',
         templateName: 'welcome-unverified-email',
         templateInfo: {
-          name: `${updatedUser.firstname} ${updatedUser.lastname}`,
+          name: `${updatedUser.firstname} ${updatedUser.lastname}` || 'User',
           signupUrl: `${host}/signup-2?token=${updatedUser.email_token}`,
           host,
         },
@@ -635,9 +658,16 @@ async function submitAnswersServiceServer(
       console.log('20: Welcome Email Result:', welcomeEmailResult);
       if (!welcomeEmailResult.ok) {
         console.warn(
-          'Email sending failed, but proceeding with career calculation'
+          'Email sending failed: ',
+          welcomeEmailResult.message ||
+            'Unknown error, proceeding with career calculation'
         );
       }
+    } else {
+      console.log(
+        'Email already verified or not null, skipping email send for:',
+        updatedUser.email
+      );
     }
 
     // Calculate career path
