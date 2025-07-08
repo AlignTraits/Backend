@@ -20,6 +20,7 @@ import CourseCategoriesRoutes from '../routes/courseCategoriesRoutes';
 import PaymentRoutes from '../routes/paymentRoutes';
 // for testing monthly payment
 import MonthlyPaymentRoutes from '../routes/monthlyPaymentRoutes';
+import BulkImageuploadRoutes from '../routes/bulkImageuploadRoute';
 
 const router = express.Router();
 
@@ -49,5 +50,6 @@ router.use('/categories/course', CourseCategoriesRoutes);
 router.use('/payment', PaymentRoutes);
 // for testing monthly payment
 router.use('/monthly/payment', MonthlyPaymentRoutes);
+router.use('/images', BulkImageuploadRoutes);
 
 export default router;
