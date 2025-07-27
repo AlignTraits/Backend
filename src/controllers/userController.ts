@@ -82,14 +82,52 @@ export const updateUserPassword = async (
   next: NextFunction
 ) => {
   try {
-    const { newPassword } = req.body;
+    const { currentPassword, newPassword, confirmPassword } = req.body;
     const userId = (req.user as any)?.id ?? '';
-    const result = await updatePasswordService(userId, newPassword);
+
+    // Validate required fields
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      console.log('Missing required fields:', {
+        currentPassword,
+        newPassword,
+        confirmPassword,
+      });
+      return res.status(400).json({
+        ok: false,
+        message: 'Missing fields',
+        // errors: [{ message: 'Current password, new password, and confirmation are required' }],
+      });
+    }
+
+    console.log('Calling updatePasswordService with userId:', userId);
+    const result = await updatePasswordService(
+      userId,
+      currentPassword,
+      newPassword,
+      confirmPassword
+    );
+    console.log('Service result:', result);
     res.status(result.status).json(result);
   } catch (error) {
+    console.error('Controller error:', error);
     next(error);
   }
 };
+
+// export const updateUserPassword = async (
+//   req: Request,
+//   res: Response<MessageResponse | ErrorResponse>,
+//   next: NextFunction
+// ) => {
+//   try {
+//     const { newPassword } = req.body;
+//     const userId = (req.user as any)?.id ?? '';
+//     const result = await updatePasswordService(userId, newPassword);
+//     res.status(result.status).json(result);
+//   } catch (error) {
+//     next(error);
+//   }
+// };
 
 export const uploadUserPicture = async (
   req: Request,

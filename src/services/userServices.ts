@@ -254,22 +254,60 @@ export const getUserByEmailService = async (
 
 export const updatePasswordService = async (
   userId: string,
-  password: string
+  currentPassword: string,
+  newPassword: string,
+  confirmPassword: string
 ) => {
   try {
+    console.log('Checking user with ID:', userId);
     const existingUser = await getUserById(userId);
-    if (!existingUser)
+    if (!existingUser) {
+      console.log('User not found for ID:', userId);
       return {
         ok: false,
         status: 403,
         message: 'User not found',
         errors: [{ message: 'User does not exist' }],
       };
+    }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Verify current password
+    console.log('Comparing current password for user:', existingUser.email);
+    const isPasswordValid = await bcrypt.compare(
+      currentPassword,
+      existingUser.password
+    );
+    if (!isPasswordValid) {
+      console.log('Current password mismatch');
+      return {
+        ok: false,
+        status: 401,
+        message: 'Invalid credentials',
+        errors: [{ message: 'Current password is incorrect' }],
+      };
+    }
+
+    // Validate new password and confirm password match
+    console.log('Validating new password match:', {
+      newPassword,
+      confirmPassword,
+    });
+    if (newPassword !== confirmPassword) {
+      console.log('New password and confirm password do not match');
+      return {
+        ok: false,
+        status: 400,
+        message: 'Password mismatch',
+        errors: [{ message: 'New password and confirmation do not match' }],
+      };
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    console.log('Hashing new password, updating user:', userId);
     const updatedUser = await updateUser(userId, { password: hashedPassword });
 
-    if (!updatedUser)
+    if (!updatedUser) {
+      console.log('Update failed for user:', userId);
       return {
         ok: false,
         status: 500,
@@ -280,7 +318,9 @@ export const updatePasswordService = async (
           },
         ],
       };
+    }
 
+    console.log('Password updated successfully for user:', userId);
     return {
       ok: true,
       status: 200,
@@ -288,9 +328,50 @@ export const updatePasswordService = async (
       data: updatedUser,
     };
   } catch (e) {
+    console.error('Error in updatePasswordService:', e);
     throw e;
   }
 };
+
+// export const updatePasswordService = async (
+//   userId: string,
+//   password: string
+// ) => {
+//   try {
+//     const existingUser = await getUserById(userId);
+//     if (!existingUser)
+//       return {
+//         ok: false,
+//         status: 403,
+//         message: 'User not found',
+//         errors: [{ message: 'User does not exist' }],
+//       };
+
+//     const hashedPassword = await bcrypt.hash(password, 10);
+//     const updatedUser = await updateUser(userId, { password: hashedPassword });
+
+//     if (!updatedUser)
+//       return {
+//         ok: false,
+//         status: 500,
+//         message: 'Update failed',
+//         errors: [
+//           {
+//             message: 'Server error. Something went wrong at updateUserProfile',
+//           },
+//         ],
+//       };
+
+//     return {
+//       ok: true,
+//       status: 200,
+//       message: 'successful',
+//       data: updatedUser,
+//     };
+//   } catch (e) {
+//     throw e;
+//   }
+// };
 
 // convert date before updating user profile
 
@@ -368,6 +449,7 @@ export const updatePasswordService = async (
 // };
 
 // Updated updateUserProfileService to handle skill IDs and otherSkill
+
 export const updateUserProfileService = async (
   userId: string,
   filteredData: Record<string, any>
