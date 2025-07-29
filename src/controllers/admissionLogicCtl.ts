@@ -4,9 +4,16 @@ import Papa from 'papaparse';
 import {
   updateBulkCourseAdmissionsService,
   updateCourseAdmissionService,
+  createAcademicRecordService,
+  updateAcademicRecordService,
+  deleteAcademicRecordService,
+  getAcademicRecordService,
 } from '../services/admissionLogicServices';
 import MessageResponse from '../types/messageResponse';
-import { UpdateCourseAdmissionData } from '../types/school-course-types';
+import {
+  UpdateCourseAdmissionData,
+  AcademicRecordData,
+} from '../types/school-course-types';
 
 export const updateCourseAdmissionController = async (
   req: Request,
@@ -194,4 +201,106 @@ export const updateBulkCourseAdmissionsController = async (
       error: 'An error occurred while updating the course admission logic',
     });
   }
+};
+
+// Create academic record
+export const createAcademicRecordController = async (
+  req: Request,
+  res: Response<MessageResponse>
+) => {
+  const userId = (req as any)?.user?.id ?? '';
+  if (!userId) {
+    return res.status(401).json({
+      message: 'Unauthorized: User ID not found',
+      ok: false,
+    });
+  }
+
+  const academicRecordData: AcademicRecordData = {
+    userId,
+    ...req.body,
+  };
+
+  const result = await createAcademicRecordService(academicRecordData);
+  res.status(result.status).json({
+    message: result.message,
+    ...(result.data && { data: result.data }),
+    ...(result.errors && { errors: result.errors }),
+    ok: result.ok,
+  });
+};
+
+// Update academic record
+export const updateAcademicRecordController = async (
+  req: Request,
+  res: Response<MessageResponse>
+) => {
+  const userId = (req as any)?.user?.id ?? '';
+  if (!userId) {
+    return res.status(401).json({
+      message: 'Unauthorized: User ID not found',
+      ok: false,
+    });
+  }
+
+  const { id } = req.params;
+  const academicRecordData: AcademicRecordData = {
+    id,
+    userId,
+    ...req.body,
+  };
+
+  const result = await updateAcademicRecordService(academicRecordData);
+  res.status(result.status).json({
+    message: result.message,
+    ...(result.data && { data: result.data }),
+    ...(result.errors && { errors: result.errors }),
+    ok: result.ok,
+  });
+};
+
+// Delete academic record
+export const deleteAcademicRecordController = async (
+  req: Request,
+  res: Response<MessageResponse>
+) => {
+  const userId = (req as any)?.user?.id ?? '';
+  if (!userId) {
+    return res.status(401).json({
+      message: 'Unauthorized: User ID not found',
+      ok: false,
+    });
+  }
+
+  const { id } = req.params;
+
+  const result = await deleteAcademicRecordService({ id, userId });
+  res.status(result.status).json({
+    message: result.message,
+    ...(result.data && { data: result.data }), // Only include data if it exists
+    ...(result.errors && { errors: result.errors }), // Only include errors if they exist
+    ok: result.ok,
+  });
+};
+
+// Fetch academic record
+export const getAcademicRecordController = async (
+  req: Request,
+  res: Response<MessageResponse>
+) => {
+  const userId = (req as any)?.user?.id ?? '';
+  if (!userId) {
+    return res.status(401).json({
+      message: 'Unauthorized: User ID not found',
+      ok: false,
+    });
+  }
+
+  const result = await getAcademicRecordService({ userId });
+  res.status(result.status).json({
+    message: result.message,
+    ...(result.data && { data: result.data }),
+    ...(result.errors && { errors: result.errors }),
+    ok: result.ok,
+  });
 };

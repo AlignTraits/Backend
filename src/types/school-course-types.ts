@@ -261,3 +261,50 @@ export interface UpdateCourseAdmissionData {
   Adminrule4?: string;
   Adminrule5?: string;
 }
+
+// types/academicRecordTypes.ts
+// types/academicRecordTypes.ts
+export interface AcademicRecordData {
+  id?: string;
+  userId: string;
+  ExamCountry1?: string | null;
+  ExamType1?: string | null;
+  ExamType1Subjects?: string | null; // Changed from string | string[] | undefined to string | null | undefined
+  ExamType1SubGrades?: string | null; // Changed from string | string[] | undefined to string | null | undefined
+  ExamCountry2?: string | null;
+  ExamType2?: string | null;
+  ExamType2Subjects?: string | null;
+  ExamType2SubGrades?: string | null;
+  ExamCountry3?: string | null;
+  ExamType3?: string | null;
+  ExamType3Subjects?: string | null;
+  ExamType3SubGrades?: string | null;
+  ExamCountry4?: string | null;
+  ExamType4?: string | null;
+  ExamType4Subjects?: string | null;
+  ExamType4SubGrades?: string | null;
+  ExamCountry5?: string | null;
+  ExamType5?: string | null;
+  ExamType5Subjects?: string | null;
+  ExamType5SubGrades?: string | null;
+  ExamCountry6?: string | null;
+  ExamType6?: string | null;
+  ExamType6Subjects?: string | null;
+  ExamType6SubGrades?: string | null;
+  ExamCountry7?: string | null;
+  ExamType7?: string | null;
+  ExamType7Subjects?: string | null;
+  ExamType7SubGrades?: string | null;
+  ExamCountry8?: string | null;
+  ExamType8?: string | null;
+  ExamType8Subjects?: string | null;
+  ExamType8SubGrades?: string | null;
+  ExamCountry9?: string | null;
+  ExamType9?: string | null;
+  ExamType9Subjects?: string | null;
+  ExamType9SubGrades?: string | null;
+  ExamCountry10?: string | null;
+  ExamType10?: string | null;
+  ExamType10Subjects?: string | null;
+  ExamType10SubGrades?: string | null;
+}

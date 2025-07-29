@@ -1,6 +1,9 @@
 // services/admissionService.ts
 import { db } from '../config/db';
-import { UpdateCourseAdmissionData } from '../types/school-course-types';
+import {
+  AcademicRecordData,
+  UpdateCourseAdmissionData,
+} from '../types/school-course-types';
 
 export const updateCourseAdmissionService = async ({
   id,
@@ -457,5 +460,422 @@ export const updateBulkCourseAdmissionsService = async (
   } catch (error: any) {
     console.error('Error in updateBulkCourseAdmissionsService:', error);
     throw new Error(`Bulk admission logic update failed: ${error.message}`);
+  }
+};
+
+// users' Academic History
+export const createAcademicRecordService = async (data: AcademicRecordData) => {
+  try {
+    // Preprocess data to handle arrays by converting them to JSON strings
+    const processedData = {
+      userId: data.userId,
+      ExamCountry1: data.ExamCountry1,
+      ExamType1: data.ExamType1,
+      ExamType1Subjects: Array.isArray(data.ExamType1Subjects)
+        ? JSON.stringify(data.ExamType1Subjects)
+        : data.ExamType1Subjects,
+      ExamType1SubGrades: Array.isArray(data.ExamType1SubGrades)
+        ? JSON.stringify(data.ExamType1SubGrades)
+        : data.ExamType1SubGrades,
+      ExamCountry2: data.ExamCountry2,
+      ExamType2: data.ExamType2,
+      ExamType2Subjects: Array.isArray(data.ExamType2Subjects)
+        ? JSON.stringify(data.ExamType2Subjects)
+        : data.ExamType2Subjects,
+      ExamType2SubGrades: Array.isArray(data.ExamType2SubGrades)
+        ? JSON.stringify(data.ExamType2SubGrades)
+        : data.ExamType2SubGrades,
+      ExamCountry3: data.ExamCountry3,
+      ExamType3: data.ExamType3,
+      ExamType3Subjects: Array.isArray(data.ExamType3Subjects)
+        ? JSON.stringify(data.ExamType3Subjects)
+        : data.ExamType3Subjects,
+      ExamType3SubGrades: Array.isArray(data.ExamType3SubGrades)
+        ? JSON.stringify(data.ExamType3SubGrades)
+        : data.ExamType3SubGrades,
+      ExamCountry4: data.ExamCountry4,
+      ExamType4: data.ExamType4,
+      ExamType4Subjects: Array.isArray(data.ExamType4Subjects)
+        ? JSON.stringify(data.ExamType4Subjects)
+        : data.ExamType4Subjects,
+      ExamType4SubGrades: Array.isArray(data.ExamType4SubGrades)
+        ? JSON.stringify(data.ExamType4SubGrades)
+        : data.ExamType4SubGrades,
+      ExamCountry5: data.ExamCountry5,
+      ExamType5: data.ExamType5,
+      ExamType5Subjects: Array.isArray(data.ExamType5Subjects)
+        ? JSON.stringify(data.ExamType5Subjects)
+        : data.ExamType5Subjects,
+      ExamType5SubGrades: Array.isArray(data.ExamType5SubGrades)
+        ? JSON.stringify(data.ExamType5SubGrades)
+        : data.ExamType5SubGrades,
+      ExamCountry6: data.ExamCountry6,
+      ExamType6: data.ExamType6,
+      ExamType6Subjects: Array.isArray(data.ExamType6Subjects)
+        ? JSON.stringify(data.ExamType6Subjects)
+        : data.ExamType6Subjects,
+      ExamType6SubGrades: Array.isArray(data.ExamType6SubGrades)
+        ? JSON.stringify(data.ExamType6SubGrades)
+        : data.ExamType6SubGrades,
+      ExamCountry7: data.ExamCountry7,
+      ExamType7: data.ExamType7,
+      ExamType7Subjects: Array.isArray(data.ExamType7Subjects)
+        ? JSON.stringify(data.ExamType7Subjects)
+        : data.ExamType7Subjects,
+      ExamType7SubGrades: Array.isArray(data.ExamType7SubGrades)
+        ? JSON.stringify(data.ExamType7SubGrades)
+        : data.ExamType7SubGrades,
+      ExamCountry8: data.ExamCountry8,
+      ExamType8: data.ExamType8,
+      ExamType8Subjects: Array.isArray(data.ExamType8Subjects)
+        ? JSON.stringify(data.ExamType8Subjects)
+        : data.ExamType8Subjects,
+      ExamType8SubGrades: Array.isArray(data.ExamType8SubGrades)
+        ? JSON.stringify(data.ExamType8SubGrades)
+        : data.ExamType8SubGrades,
+      ExamCountry9: data.ExamCountry9,
+      ExamType9: data.ExamType9,
+      ExamType9Subjects: Array.isArray(data.ExamType9Subjects)
+        ? JSON.stringify(data.ExamType9Subjects)
+        : data.ExamType9Subjects,
+      ExamType9SubGrades: Array.isArray(data.ExamType9SubGrades)
+        ? JSON.stringify(data.ExamType9SubGrades)
+        : data.ExamType9SubGrades,
+      ExamCountry10: data.ExamCountry10,
+      ExamType10: data.ExamType10,
+      ExamType10Subjects: Array.isArray(data.ExamType10Subjects)
+        ? JSON.stringify(data.ExamType10Subjects)
+        : data.ExamType10Subjects,
+      ExamType10SubGrades: Array.isArray(data.ExamType10SubGrades)
+        ? JSON.stringify(data.ExamType10SubGrades)
+        : data.ExamType10SubGrades,
+    };
+
+    const academicRecord = await db.academicRecord.create({
+      data: processedData,
+    });
+    return {
+      ok: true,
+      status: 201,
+      message: 'Academic record created successfully',
+      data: academicRecord,
+    };
+  } catch (error: any) {
+    console.error('Error creating academic record:', error);
+    return {
+      ok: false,
+      status: 500,
+      message: 'An error occurred while creating the academic record',
+      errors: [{ message: error.message }],
+    };
+  }
+};
+
+export const updateAcademicRecordService = async (data: AcademicRecordData) => {
+  try {
+    const { id, userId, ...updateData } = data;
+    const existingRecord = await db.academicRecord.findUnique({
+      where: { id },
+    });
+    if (!existingRecord) {
+      return {
+        ok: false,
+        status: 404,
+        message: 'Academic record not found',
+      };
+    }
+    if (existingRecord.userId !== userId) {
+      return {
+        ok: false,
+        status: 403,
+        message: 'Unauthorized: Record does not belong to user',
+      };
+    }
+
+    const stringifyIfArray = (value: any, fallback: any) => {
+      return Array.isArray(value)
+        ? JSON.stringify(value)
+        : value !== undefined
+          ? value
+          : fallback;
+    };
+
+    const validatedData = {
+      ExamCountry1: updateData.ExamCountry1 ?? existingRecord.ExamCountry1,
+      ExamType1: updateData.ExamType1 ?? existingRecord.ExamType1,
+      ExamType1Subjects: stringifyIfArray(
+        updateData.ExamType1Subjects,
+        existingRecord.ExamType1Subjects
+      ),
+      ExamType1SubGrades: stringifyIfArray(
+        updateData.ExamType1SubGrades,
+        existingRecord.ExamType1SubGrades
+      ),
+      ExamCountry2: updateData.ExamCountry2 ?? existingRecord.ExamCountry2,
+      ExamType2: updateData.ExamType2 ?? existingRecord.ExamType2,
+      ExamType2Subjects: stringifyIfArray(
+        updateData.ExamType2Subjects,
+        existingRecord.ExamType2Subjects
+      ),
+      ExamType2SubGrades: stringifyIfArray(
+        updateData.ExamType2SubGrades,
+        existingRecord.ExamType2SubGrades
+      ),
+      ExamCountry3: updateData.ExamCountry3 ?? existingRecord.ExamCountry3,
+      ExamType3: updateData.ExamType3 ?? existingRecord.ExamType3,
+      ExamType3Subjects: stringifyIfArray(
+        updateData.ExamType3Subjects,
+        existingRecord.ExamType3Subjects
+      ),
+      ExamType3SubGrades: stringifyIfArray(
+        updateData.ExamType3SubGrades,
+        existingRecord.ExamType3SubGrades
+      ),
+      ExamCountry4: updateData.ExamCountry4 ?? existingRecord.ExamCountry4,
+      ExamType4: updateData.ExamType4 ?? existingRecord.ExamType4,
+      ExamType4Subjects: stringifyIfArray(
+        updateData.ExamType4Subjects,
+        existingRecord.ExamType4Subjects
+      ),
+      ExamType4SubGrades: stringifyIfArray(
+        updateData.ExamType4SubGrades,
+        existingRecord.ExamType4SubGrades
+      ),
+      ExamCountry5: updateData.ExamCountry5 ?? existingRecord.ExamCountry5,
+      ExamType5: updateData.ExamType5 ?? existingRecord.ExamType5,
+      ExamType5Subjects: stringifyIfArray(
+        updateData.ExamType5Subjects,
+        existingRecord.ExamType5Subjects
+      ),
+      ExamType5SubGrades: stringifyIfArray(
+        updateData.ExamType5SubGrades,
+        existingRecord.ExamType5SubGrades
+      ),
+      ExamCountry6: updateData.ExamCountry6 ?? existingRecord.ExamCountry6,
+      ExamType6: updateData.ExamType6 ?? existingRecord.ExamType6,
+      ExamType6Subjects: stringifyIfArray(
+        updateData.ExamType6Subjects,
+        existingRecord.ExamType6Subjects
+      ),
+      ExamType6SubGrades: stringifyIfArray(
+        updateData.ExamType6SubGrades,
+        existingRecord.ExamType6SubGrades
+      ),
+      ExamCountry7: updateData.ExamCountry7 ?? existingRecord.ExamCountry7,
+      ExamType7: updateData.ExamType7 ?? existingRecord.ExamType7,
+      ExamType7Subjects: stringifyIfArray(
+        updateData.ExamType7Subjects,
+        existingRecord.ExamType7Subjects
+      ),
+      ExamType7SubGrades: stringifyIfArray(
+        updateData.ExamType7SubGrades,
+        existingRecord.ExamType7SubGrades
+      ),
+      ExamCountry8: updateData.ExamCountry8 ?? existingRecord.ExamCountry8,
+      ExamType8: updateData.ExamType8 ?? existingRecord.ExamType8,
+      ExamType8Subjects: stringifyIfArray(
+        updateData.ExamType8Subjects,
+        existingRecord.ExamType8Subjects
+      ),
+      ExamType8SubGrades: stringifyIfArray(
+        updateData.ExamType8SubGrades,
+        existingRecord.ExamType8SubGrades
+      ),
+      ExamCountry9: updateData.ExamCountry9 ?? existingRecord.ExamCountry9,
+      ExamType9: updateData.ExamType9 ?? existingRecord.ExamType9,
+      ExamType9Subjects: stringifyIfArray(
+        updateData.ExamType9Subjects,
+        existingRecord.ExamType9Subjects
+      ),
+      ExamType9SubGrades: stringifyIfArray(
+        updateData.ExamType9SubGrades,
+        existingRecord.ExamType9SubGrades
+      ),
+      ExamCountry10: updateData.ExamCountry10 ?? existingRecord.ExamCountry10,
+      ExamType10: updateData.ExamType10 ?? existingRecord.ExamType10,
+      ExamType10Subjects: stringifyIfArray(
+        updateData.ExamType10Subjects,
+        existingRecord.ExamType10Subjects
+      ),
+      ExamType10SubGrades: stringifyIfArray(
+        updateData.ExamType10SubGrades,
+        existingRecord.ExamType10SubGrades
+      ),
+    };
+
+    const updatedRecord = await db.academicRecord.update({
+      where: { id },
+      data: validatedData,
+    });
+
+    return {
+      ok: true,
+      status: 200,
+      message: 'Academic record updated successfully',
+      data: updatedRecord,
+    };
+  } catch (error: any) {
+    console.error('Error updating academic record:', error);
+    return {
+      ok: false,
+      status: 500,
+      message: 'An error occurred while updating the academic record',
+      errors: [{ message: error.message }],
+    };
+  }
+};
+
+export const deleteAcademicRecordService = async ({
+  id,
+  userId,
+}: {
+  id: string;
+  userId: string;
+}) => {
+  try {
+    const existingRecord = await db.academicRecord.findUnique({
+      where: { id },
+    });
+    if (!existingRecord) {
+      return {
+        ok: false,
+        status: 404,
+        message: 'Academic record not found',
+      };
+    }
+    if (existingRecord.userId !== userId) {
+      return {
+        ok: false,
+        status: 403,
+        message: 'Unauthorized: Record does not belong to user',
+      };
+    }
+
+    const deletedRecord = await db.academicRecord.delete({
+      where: { id },
+    });
+
+    return {
+      ok: true,
+      status: 200,
+      message: 'Academic record deleted successfully',
+      data: deletedRecord, // Optionally return the deleted record
+    };
+  } catch (error: any) {
+    console.error('Error deleting academic record:', error);
+    return {
+      ok: false,
+      status: 500,
+      message: 'An error occurred while deleting the academic record',
+      errors: [{ message: error.message }],
+    };
+  }
+};
+
+export const getAcademicRecordService = async ({
+  userId,
+}: {
+  userId: string;
+}) => {
+  try {
+    const academicRecords = await db.academicRecord.findMany({
+      where: { userId },
+    });
+
+    if (academicRecords.length === 0) {
+      return {
+        ok: false,
+        status: 404,
+        message: 'No academic records found for this user',
+      };
+    }
+
+    // Parse JSON strings into arrays for each record
+    const parsedRecords = academicRecords.map((record) => ({
+      ...record,
+      ExamType1Subjects: record.ExamType1Subjects
+        ? JSON.parse(record.ExamType1Subjects)
+        : null,
+      ExamType1SubGrades: record.ExamType1SubGrades
+        ? JSON.parse(record.ExamType1SubGrades)
+        : null,
+      ExamType2Subjects: record.ExamType2Subjects
+        ? JSON.parse(record.ExamType2Subjects)
+        : null,
+      ExamType2SubGrades: record.ExamType2SubGrades
+        ? JSON.parse(record.ExamType2SubGrades)
+        : null,
+      ExamType3Subjects: record.ExamType3Subjects
+        ? JSON.parse(record.ExamType3Subjects)
+        : null,
+      ExamType3SubGrades: record.ExamType3SubGrades
+        ? JSON.parse(record.ExamType3SubGrades)
+        : null,
+      ExamType4Subjects: record.ExamType4Subjects
+        ? JSON.parse(record.ExamType4Subjects)
+        : null,
+      ExamType4SubGrades: record.ExamType4SubGrades
+        ? JSON.parse(record.ExamType4SubGrades)
+        : null,
+      ExamType5Subjects: record.ExamType5Subjects
+        ? JSON.parse(record.ExamType5Subjects)
+        : null,
+      ExamType5SubGrades: record.ExamType5SubGrades
+        ? JSON.parse(record.ExamType5SubGrades)
+        : null,
+      ExamType6Subjects: record.ExamType6Subjects
+        ? JSON.parse(record.ExamType6Subjects)
+        : null,
+      ExamType6SubGrades: record.ExamType6SubGrades
+        ? JSON.parse(record.ExamType6SubGrades)
+        : null,
+      ExamType7Subjects: record.ExamType7Subjects
+        ? JSON.parse(record.ExamType7Subjects)
+        : null,
+      ExamType7SubGrades: record.ExamType7SubGrades
+        ? JSON.parse(record.ExamType7SubGrades)
+        : null,
+      ExamType8Subjects: record.ExamType8Subjects
+        ? JSON.parse(record.ExamType8Subjects)
+        : null,
+      ExamType8SubGrades: record.ExamType8SubGrades
+        ? JSON.parse(record.ExamType8SubGrades)
+        : null,
+      ExamType9Subjects: record.ExamType9Subjects
+        ? JSON.parse(record.ExamType9Subjects)
+        : null,
+      ExamType9SubGrades: record.ExamType9SubGrades
+        ? JSON.parse(record.ExamType9SubGrades)
+        : null,
+      ExamType10Subjects: record.ExamType10Subjects
+        ? JSON.parse(record.ExamType10Subjects)
+        : null,
+      ExamType10SubGrades: record.ExamType10SubGrades
+        ? JSON.parse(record.ExamType10SubGrades)
+        : null,
+    }));
+
+    return {
+      ok: true,
+      status: 200,
+      message: 'Academic records retrieved successfully',
+      data: parsedRecords,
+    };
+  } catch (error: any) {
+    console.error('Error fetching academic records:', error);
+    if (error.name === 'SyntaxError') {
+      return {
+        ok: false,
+        status: 500,
+        message: 'Invalid JSON data in academic records',
+        errors: [{ message: error.message }],
+      };
+    }
+    return {
+      ok: false,
+      status: 500,
+      message: 'An error occurred while fetching the academic records',
+      errors: [{ message: error.message }],
+    };
   }
 };

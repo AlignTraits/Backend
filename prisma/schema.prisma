@@ -39,6 +39,66 @@ enum TransactionStatus {
   FAILED
 }
 
+
+model AcademicRecord {
+  id                     String   @id @default(cuid())
+  userId                 String
+  ExamCountry1           String?  @map("ExamCountry1")
+  ExamType1              String?  @map("ExamType1")
+  ExamType1Subjects      String?  @map("ExamType1Subjects")
+  ExamType1SubGrades     String?  @map("ExamType1SubGrades")
+
+  ExamCountry2           String?  @map("ExamCountry2")
+  ExamType2              String?  @map("ExamType2")
+  ExamType2Subjects      String?  @map("ExamType2Subjects")
+  ExamType2SubGrades     String?  @map("ExamType2SubGrades")
+
+  ExamCountry3           String?  @map("ExamCountry3")
+  ExamType3              String?  @map("ExamType3")
+  ExamType3Subjects      String?  @map("ExamType3Subjects")
+  ExamType3SubGrades     String?  @map("ExamType3SubGrades")
+
+  ExamCountry4           String?  @map("ExamCountry4")
+  ExamType4              String?  @map("ExamType4")
+  ExamType4Subjects      String?  @map("ExamType4Subjects")
+  ExamType4SubGrades     String?  @map("ExamType4SubGrades")
+
+  ExamCountry5           String?  @map("ExamCountry5")
+  ExamType5              String?  @map("ExamType5")
+  ExamType5Subjects      String?  @map("ExamType5Subjects")
+  ExamType5SubGrades     String?  @map("ExamType5SubGrades")
+
+  ExamCountry6           String?  @map("ExamCountry6")
+  ExamType6              String?  @map("ExamType6")
+  ExamType6Subjects      String?  @map("ExamType6Subjects")
+  ExamType6SubGrades     String?  @map("ExamType6SubGrades")
+
+  ExamCountry7           String?  @map("ExamCountry7")
+  ExamType7              String?  @map("ExamType7")
+  ExamType7Subjects      String?  @map("ExamType7Subjects")
+  ExamType7SubGrades     String?  @map("ExamType7SubGrades")
+
+  ExamCountry8           String?  @map("ExamCountry8")
+  ExamType8              String?  @map("ExamType8")
+  ExamType8Subjects      String?  @map("ExamType8Subjects")
+  ExamType8SubGrades     String?  @map("ExamType8SubGrades")
+
+  ExamCountry9           String?  @map("ExamCountry9")
+  ExamType9              String?  @map("ExamType9")
+  ExamType9Subjects      String?  @map("ExamType9Subjects")
+  ExamType9SubGrades     String?  @map("ExamType9SubGrades")
+
+  ExamCountry10          String?  @map("ExamCountry10")
+  ExamType10             String?  @map("ExamType10")
+  ExamType10Subjects     String?  @map("ExamType10Subjects")
+  ExamType10SubGrades    String?  @map("ExamType10SubGrades")
+
+  user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("academic_records")
+}
+
+
 model User {
   id                      String              @id @default(cuid())
   firstname               String
@@ -73,6 +133,7 @@ model User {
   skills                  Skill[]             @relation("UserSkills")
   userCards               UserCard[]          // Link to user's cards
   userDirectDebits UserDirectDebit[]
+  academicRecords AcademicRecord[]
 }
 
 
@@ -417,3 +478,4 @@ model BulkOperationFailure {
   errorMessage String   // The specific error message for this failure
   createdAt    DateTime @default(now())
 }
+

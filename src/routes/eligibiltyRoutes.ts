@@ -1,6 +1,6 @@
 // ```typescript
 import express from 'express';
-import { loginRequired } from '../middlewares/auth';
+
 import {
   submitEligibilityAnswers,
   // getEligibilityResults,
