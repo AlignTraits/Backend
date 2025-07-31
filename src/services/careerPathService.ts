@@ -243,11 +243,11 @@ async function getCareerPathService(userId: string) {
   }
 
   try {
-    const careerResult = await prisma.careerResult.findUnique({
+    const careerResults = await prisma.careerResult.findMany({
       where: { userId },
     });
 
-    if (!careerResult) {
+    if (careerResults.length === 0) {
       return {
         ok: false,
         status: 404,
@@ -258,14 +258,17 @@ async function getCareerPathService(userId: string) {
       };
     }
 
+    // Map all career results to include recommended career and reasoning
+    const formattedResults = careerResults.map((result) => ({
+      recommendedCareer: result.recommendedCareers[0] || '',
+      reasoning: result.reasoning || 'No reasoning provided.',
+    }));
+
     return {
       ok: true,
       status: 200,
-      message: 'Career path retrieved successfully',
-      data: {
-        recommendedCareer: careerResult.recommendedCareers[0] || '',
-        reasoning: careerResult.reasoning || 'No reasoning provided.',
-      },
+      message: 'Career paths retrieved successfully',
+      data: formattedResults,
     };
   } catch (error) {
     console.error('Error retrieving career path:', error);
