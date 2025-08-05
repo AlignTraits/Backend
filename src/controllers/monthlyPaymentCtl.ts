@@ -9,6 +9,7 @@ import {
   handleChargeFailed,
   addCardToSubscription,
   addDirectDebitToSubscription,
+  verifyDirectDebitService,
 } from '../services/monthlyPaymentService';
 import { createHmac } from 'crypto';
 import { getClientIp } from 'request-ip';
@@ -80,6 +81,46 @@ export const initMonthlySubscription = async (
 
 // This function handles Paystack webhook verification and processes subscription payment events
 //  and retries failed charges with another card by calling handleChargeFailed
+// this function works
+// export const verifyWebhook = async (
+//   req: Request,
+//   res: Response,
+//   next: NextFunction
+// ) => {
+//   try {
+//     const secret = process.env.PAYSTACK_SECRET_KEY || '';
+//     const hash = createHmac('sha512', secret)
+//       .update(JSON.stringify(req.body))
+//       .digest('hex');
+
+//     if (hash !== req.headers['x-paystack-signature']) {
+//       return res
+//         .status(401)
+//         .json({ ok: false, message: 'Invalid webhook signature' });
+//     }
+
+//     const event = req.body;
+//     if (['charge.success', 'charge.failed'].includes(event.event)) {
+//       const result = await verifySubscriptionPaymentService(
+//         event.data.reference,
+//         event.event
+//       );
+
+//       // For charge.failed, attempt to retry with another card
+//       if (event.event === 'charge.failed') {
+//         await handleChargeFailed(event.data.reference);
+//       }
+
+//       return res.status(result.status).json(result);
+//     }
+
+//     res.status(200).json({ ok: true, message: 'Webhook received' });
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+// this function above works // use it when the immediate one below fails to work
+
 export const verifyWebhook = async (
   req: Request,
   res: Response,
@@ -98,13 +139,24 @@ export const verifyWebhook = async (
     }
 
     const event = req.body;
+
+    // Add Direct Debit handling
+    if (event.event === 'direct_debit.authorization.created') {
+      const result = await verifyDirectDebitService(
+        event.data.reference,
+        event.event,
+        event.data
+      );
+      return res.status(result.status).json(result);
+    }
+
+    // Existing payment handling
     if (['charge.success', 'charge.failed'].includes(event.event)) {
       const result = await verifySubscriptionPaymentService(
         event.data.reference,
         event.event
       );
 
-      // For charge.failed, attempt to retry with another card
       if (event.event === 'charge.failed') {
         await handleChargeFailed(event.data.reference);
       }
@@ -217,7 +269,7 @@ export const addCardController = async (
     }
 
     const ip = getClientIp(req) || '127.0.0.1';
-    const userId = (req as any)?.user?.id ?? 'cmbosgwgo0000wgs002j49ysw';
+    const userId = (req as any)?.user?.id ?? '';
     const result = await addCardToSubscription(userId, email, ip);
 
     res.status(result.status).json(result);
@@ -313,5 +365,62 @@ export const addDirectDebitController = async (
 //       message: 'Failed to deactivate direct debit',
 //       error: error.message,
 //     });
+//   }
+// };
+
+// test
+
+// export const verifyWebhook = async (
+//   req: Request,
+//   res: Response,
+//   next: NextFunction
+// ) => {
+//   try {
+//     console.log('1: Webhook received:', JSON.stringify(req.body, null, 2));
+
+//     // Verify webhook signature
+//     const secret = process.env.PAYSTACK_SECRET_KEY || '';
+//     const hash = createHmac('sha512', secret)
+//       .update(JSON.stringify(req.body))
+//       .digest('hex');
+
+//     if (hash !== req.headers['x-paystack-signature']) {
+//       console.error('2: Invalid webhook signature');
+//       return res
+//         .status(401)
+//         .json({ ok: false, message: 'Invalid webhook signature' });
+//     }
+
+//     console.log('3: Webhook signature verified');
+//     const event = req.body;
+
+//     // Handle Direct Debit authorization events
+//     if (event.event === 'direct_debit.authorization.created') {
+//       console.log('4: Processing Direct Debit authorization event');
+//       const result = await verifySubscriptionPaymentService(
+//         event.data.reference,
+//         event.event,
+//         event.data
+//       );
+//       return res.status(result.status).json(result);
+//     }
+
+//     // Handle payment success/failure events
+//     if (['charge.success', 'charge.failed'].includes(event.event)) {
+//       console.log(`5: Processing ${event.event} event`);
+//       const result = await verifySubscriptionPaymentService(
+//         event.data.reference,
+//         event.event
+//       );
+//       return res.status(result.status).json(result);
+//     }
+
+//     console.log('6: Webhook event not processed (not a payment event)');
+//     res
+//       .status(200)
+//       .json({ ok: true, message: 'Webhook received but no action taken' });
+//   } catch (error) {
+//     console.error('7: Webhook processing error:', error);
+//     next(error);
 //   }
 // };
