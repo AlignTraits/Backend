@@ -29,11 +29,19 @@ const PRICES: Record<PaymentPlan, { NGN: number; USD: number }> = {
 //   GLOBAL_MONTHLY: 'PLN_g4vdb2pu9mdpwrk', // Global Monthly plan code
 // };
 
+// actual paystack plan codes
 const PAYSTACK_PLAN_CODES: Record<PaymentPlan, { NGN: string; USD: string }> = {
   BASIC_ONETIME: { NGN: '', USD: '' }, // Not needed for one-time payments
-  LOCAL_MONTHLY: { NGN: 'PLN_0s54bpaqt1zoe3d', USD: 'PLN_uh2v4rnvyc6pw7h' },
-  GLOBAL_MONTHLY: { NGN: 'PLN_g4vdb2pu9mdpwrk', USD: 'PLN_hgfa4dnb463jipw' },
+  LOCAL_MONTHLY: { NGN: 'PLN_s98khsmfiwdieag', USD: 'PLN_7rovhgu80uy242n' },
+  GLOBAL_MONTHLY: { NGN: 'PLN_a5r0jp1103lonrq', USD: 'PLN_4zjbf9lvcw1h6x0' },
 };
+
+// julius' paystack
+// const PAYSTACK_PLAN_CODES: Record<PaymentPlan, { NGN: string; USD: string }> = {
+//   BASIC_ONETIME: { NGN: '', USD: '' }, // Not needed for one-time payments
+//   LOCAL_MONTHLY: { NGN: 'PLN_0s54bpaqt1zoe3d', USD: 'PLN_uh2v4rnvyc6pw7h' },
+//   GLOBAL_MONTHLY: { NGN: 'PLN_g4vdb2pu9mdpwrk', USD: 'PLN_hgfa4dnb463jipw' },
+// };
 
 export const initializeBasicOneTimePayment = async (
   email: string,
