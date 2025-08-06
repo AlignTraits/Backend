@@ -29,11 +29,18 @@ const PRICES: Record<PaymentPlan, { NGN: number; USD: number }> = {
 //   GLOBAL_MONTHLY: 'PLN_g4vdb2pu9mdpwrk', // Global Monthly plan code
 // };
 
-// actual paystack plan codes
+// // actual aligntrait live paystack plan codes
+// const PAYSTACK_PLAN_CODES: Record<PaymentPlan, { NGN: string; USD: string }> = {
+//   BASIC_ONETIME: { NGN: '', USD: '' }, // Not needed for one-time payments
+//   LOCAL_MONTHLY: { NGN: 'PLN_s98khsmfiwdieag', USD: 'PLN_7rovhgu80uy242n' },
+//   GLOBAL_MONTHLY: { NGN: 'PLN_a5r0jp1103lonrq', USD: 'PLN_4zjbf9lvcw1h6x0' },
+// };
+
+// actual aligntrait test paystack plan codes
 const PAYSTACK_PLAN_CODES: Record<PaymentPlan, { NGN: string; USD: string }> = {
   BASIC_ONETIME: { NGN: '', USD: '' }, // Not needed for one-time payments
-  LOCAL_MONTHLY: { NGN: 'PLN_s98khsmfiwdieag', USD: 'PLN_7rovhgu80uy242n' },
-  GLOBAL_MONTHLY: { NGN: 'PLN_a5r0jp1103lonrq', USD: 'PLN_4zjbf9lvcw1h6x0' },
+  LOCAL_MONTHLY: { NGN: 'PLN_z15232m740tyaxf', USD: 'PLN_33ioknh2pf4aik3' },
+  GLOBAL_MONTHLY: { NGN: 'PLN_ewzbny6yvxu4kin', USD: 'PLN_e8ntg2614qlzjho' },
 };
 
 // julius' paystack
