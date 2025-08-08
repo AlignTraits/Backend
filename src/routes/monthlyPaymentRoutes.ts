@@ -37,7 +37,7 @@ router.delete('/cards/:authorization_code', loginRequired, deleteCard);
 
 // This route adds a new card to the logged-in user's saved cards.
 router.post('/add-card', addCardController);
-router.post('/add-direct-debit', addDirectDebitController);
+router.post('/add-direct-debit', loginRequired, addDirectDebitController);
 
 // router.post('/deactivate-direct-debit', loginRequired, deactivateDirectDebitController);
 

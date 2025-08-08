@@ -7,6 +7,7 @@ import { PaymentPlan, TransactionStatus, Roles } from '@prisma/client';
 import { getCountryByIp } from '../lib/getCountryByIp';
 import { addMonths } from 'date-fns'; // Add this library for precise month addition
 import { sendMail } from './mailServices';
+import { DebitTransactionStatus } from '../types/school-course-types';
 
 const paystack = Paystack(process.env.PAYSTACK_SECRET_KEY || '');
 
@@ -1341,8 +1342,6 @@ export const addCardToSubscription = async (
   }
 };
 
-// Handle charge failed scenario by retrying with reusable cards
-
 export const handleChargeFailed = async (reference: string) => {
   try {
     const transaction = await db.transaction.findUnique({
@@ -1365,6 +1364,7 @@ export const handleChargeFailed = async (reference: string) => {
       orderBy: { createdAt: 'asc' },
     });
 
+    // Retry with other cards
     for (const card of userCards) {
       if (card.authorization_code !== user.default_authorization) {
         const retryResponse = await paystack.transaction.charge({
@@ -1394,19 +1394,70 @@ export const handleChargeFailed = async (reference: string) => {
         where: { userId: transaction.userId },
       });
       if (userDirectDebit?.authorization_code) {
-        const debitResponse = await paystack.transaction.charge({
-          authorization_code: userDirectDebit.authorization_code,
-          email: user.email,
-          amount: transaction.amount * 100,
-          currency: transaction.currency as 'NGN' | 'USD',
-          reference: `debit_${Date.now()}_${reference}`,
-        });
-        if (debitResponse.data.status === 'success') {
+        const subscriptionCode = user.subscription_code; // Use from User table
+
+        let chargeResponse;
+        if (subscriptionCode) {
+          // Update subscription to use Direct Debit authorization
+          const updateSubscription = await paystack.subscription.update({
+            code: subscriptionCode,
+            authorization: userDirectDebit.authorization_code,
+          });
+          if (updateSubscription.data.status === 'active') {
+            chargeResponse = await paystack.subscription.charge({
+              code: subscriptionCode,
+              amount: transaction.amount * 100,
+            });
+          }
+        } else {
+          // Fallback to one-off charge with Direct Debit
+          chargeResponse = await paystack.transaction.charge({
+            authorization_code: userDirectDebit.authorization_code,
+            email: user.email,
+            amount: transaction.amount * 100,
+            currency: transaction.currency as 'NGN' | 'USD',
+            reference: `debit_${Date.now()}_${reference}`,
+          });
+        }
+
+        if (chargeResponse?.data.status === 'success') {
           await db.transaction.update({
             where: { reference: transaction.reference },
             data: { status: TransactionStatus.SUCCESS },
           });
+
+          // Update userCard and default authorization
+          const last4 = userDirectDebit.account_number?.slice(-4) || '';
+          await db.userCard.upsert({
+            where: { authorization_code: userDirectDebit.authorization_code },
+            create: {
+              userId: transaction.userId,
+              authorization_code: userDirectDebit.authorization_code,
+              last4,
+              exp_month: '01', // Placeholder for Direct Debit
+              exp_year: '2025', // Placeholder for Direct Debit
+              brand: 'Direct Debit',
+              reusable: true,
+            },
+            update: {
+              last4,
+              exp_month: '01', // Update placeholder
+              exp_year: '2025', // Update placeholder
+            },
+          });
+
+          // Update expiry date for monthly renewal
+          const now = new Date();
+          const expiresAt = addMonths(now, 1); // Match verifySubscriptionPaymentService logic
+
+          await updateUser(transaction.userId, {
+            default_authorization: userDirectDebit.authorization_code,
+            subscription_code: subscriptionCode || null, // Sync with existing or null if none
+            payment_plan_expires_at: expiresAt, // Update expiry date
+          });
           console.log('Direct Debit successful:', reference);
+        } else {
+          console.warn('Direct Debit charge failed:', chargeResponse?.data);
         }
       }
     }
@@ -1515,8 +1566,6 @@ export const handleChargeFailed = async (reference: string) => {
 
 // old code that works 90%
 
-// test
-
 export const verifyDirectDebitService = async (
   reference: string,
   event: string,
@@ -1550,15 +1599,38 @@ export const verifyDirectDebitService = async (
         };
       }
 
+      // Validate required fields
+      if (
+        !webhookData.authorization_code ||
+        !webhookData.customer?.email ||
+        !webhookData.customer?.code
+      ) {
+        console.error('6: Missing required webhook data fields');
+        return {
+          ok: false,
+          status: 400,
+          message: 'Missing required webhook data fields',
+        };
+      }
+
       console.log(
-        '7: Direct Debit Webhook Payload:',
+        '7: Paystack webhook response:',
         JSON.stringify(webhookData, null, 2)
       );
 
       // Extract Direct Debit details
-      const authorizationCode = webhookData.authorization_code || '';
-      const bankCode = webhookData.bank?.code || '';
-      const accountNumber = webhookData.account?.number || '';
+      const authorizationCode = webhookData.authorization_code;
+      const bankCode = webhookData.bank?.code;
+      const accountNumber = webhookData.account?.number;
+
+      if (!authorizationCode) {
+        console.error('6: Missing authorization_code in webhook data');
+        return {
+          ok: false,
+          status: 400,
+          message: 'Missing required webhook data fields',
+        };
+      }
 
       // Check if this debit already exists
       const existingDebit = await db.userDirectDebit.findFirst({
@@ -1583,19 +1655,14 @@ export const verifyDirectDebitService = async (
         console.log('9: Direct debit already exists:', authorizationCode);
       }
 
-      // Update transaction status
-      await db.transaction.update({
-        where: { reference },
-        data: { status: TransactionStatus.SUCCESS },
-      });
-
+      // No status update needed here; transaction remains PENDING until charged
       return {
         ok: true,
         status: 200,
-        message: 'Direct Debit authorization verified and added',
+        message: 'Direct Debit account details registered successfully',
         data: {
           reference,
-          status: 'success',
+          status: 'registered', // Descriptive response, not tied to enum
           authorization_code: authorizationCode,
           bank_code: bankCode,
           account_number: accountNumber,
@@ -1607,7 +1674,7 @@ export const verifyDirectDebitService = async (
     console.log('10: Performing regular Paystack verification');
     const verification = await paystack.transaction.verify({ reference });
     console.log(
-      '11: Verification result:',
+      '11: Paystack verification response:',
       JSON.stringify(verification, null, 2)
     );
 
@@ -1616,7 +1683,7 @@ export const verifyDirectDebitService = async (
       return { ok: false, status: 400, message: 'Verification failed' };
     }
 
-    // Update transaction status
+    // Update transaction status for successful charges
     await db.transaction.update({
       where: { reference },
       data: { status: TransactionStatus.SUCCESS },
@@ -1634,7 +1701,11 @@ export const verifyDirectDebitService = async (
       },
     };
   } catch (error: any) {
-    console.error('14: Error in verification:', error);
+    console.error('14: Error in verification:', {
+      message: error.message,
+      type: error.name,
+      stack: error.stack,
+    });
     return {
       ok: false,
       status: 500,
@@ -1643,6 +1714,134 @@ export const verifyDirectDebitService = async (
     };
   }
 };
+
+//
+// export const verifyDirectDebitService = async (
+//   reference: string,
+//   event: string,
+//   webhookData?: DirectDebitWebhookData
+// ) => {
+//   try {
+//     console.log('1: Starting verification for reference:', reference);
+//     console.log('2: Event:', event);
+//     console.log('3: Webhook Data:', JSON.stringify(webhookData, null, 2));
+
+//     // Find the transaction first
+//     const transaction = await db.transaction.findUnique({
+//       where: { reference },
+//     });
+
+//     if (!transaction) {
+//       console.error('4: Transaction not found');
+//       return { ok: false, status: 404, message: 'Transaction not found' };
+//     }
+
+//     if (event === 'direct_debit.authorization.created') {
+//       console.log('5: Processing Direct Debit authorization');
+//       if (!webhookData) {
+//         console.error(
+//           '6: Webhook data is required for Direct Debit authorization'
+//         );
+//         return {
+//           ok: false,
+//           status: 400,
+//           message: 'Webhook data is required for Direct Debit authorization',
+//         };
+//       }
+
+//       console.log(
+//         '7: Direct Debit Webhook Payload:',
+//         JSON.stringify(webhookData, null, 2)
+//       );
+
+//       // Extract Direct Debit details
+//       const authorizationCode = webhookData.authorization_code || '';
+//       const bankCode = webhookData.bank?.code || '';
+//       const accountNumber = webhookData.account?.number || '';
+
+//       // Check if this debit already exists
+//       const existingDebit = await db.userDirectDebit.findFirst({
+//         where: { authorization_code: authorizationCode },
+//       });
+
+//       if (!existingDebit) {
+//         // Store the Direct Debit details
+//         await db.userDirectDebit.create({
+//           data: {
+//             userId: transaction.userId,
+//             authorization_code: authorizationCode,
+//             bank_code: bankCode,
+//             account_number: accountNumber,
+//           },
+//         });
+//         console.log(
+//           '8: New direct debit added successfully:',
+//           authorizationCode
+//         );
+//       } else {
+//         console.log('9: Direct debit already exists:', authorizationCode);
+//       }
+
+//       // Update transaction status
+//       await db.transaction.update({
+//         where: { reference },
+//         data: { status: TransactionStatus.SUCCESS },
+//       });
+
+//       return {
+//         ok: true,
+//         status: 200,
+//         message: 'Direct Debit authorization verified and added',
+//         data: {
+//           reference,
+//           status: 'success',
+//           authorization_code: authorizationCode,
+//           bank_code: bankCode,
+//           account_number: accountNumber,
+//         },
+//       };
+//     }
+
+//     // For non-direct debit events, perform regular verification
+//     console.log('10: Performing regular Paystack verification');
+//     const verification = await paystack.transaction.verify({ reference });
+//     console.log(
+//       '11: Verification result:',
+//       JSON.stringify(verification, null, 2)
+//     );
+
+//     if (verification.data.status !== 'success') {
+//       console.error('12: Verification failed');
+//       return { ok: false, status: 400, message: 'Verification failed' };
+//     }
+
+//     // Update transaction status
+//     await db.transaction.update({
+//       where: { reference },
+//       data: { status: TransactionStatus.SUCCESS },
+//     });
+
+//     console.log('13: Payment verified successfully');
+//     return {
+//       ok: true,
+//       status: 200,
+//       message: 'Payment verified',
+//       data: {
+//         reference,
+//         status: 'success',
+//         authorization: verification.data.authorization,
+//       },
+//     };
+//   } catch (error: any) {
+//     console.error('14: Error in verification:', error);
+//     return {
+//       ok: false,
+//       status: 500,
+//       message: 'Failed to verify payment',
+//       error: error.message,
+//     };
+//   }
+// };
 
 export const addDirectDebitToSubscription = async (
   userId: string,
@@ -1654,29 +1853,18 @@ export const addDirectDebitToSubscription = async (
     console.log('2: User email:', email);
     console.log('3: IP address:', ip);
 
-    // Fetch user to verify existence and get contact number
+    // Verify user exists (optional, only checks email)
     const user = await db.user.findUnique({
       where: { id: userId },
-      select: { contactNumber: true },
+      select: { email: true }, // Minimal check to confirm user
     });
 
     if (!user) {
       console.error('4: User not found');
-      return {
-        ok: false,
-        status: 404,
-        message: 'User not found',
-      };
+      return { ok: false, status: 404, message: 'User not found' };
     }
 
-    if (!user.contactNumber) {
-      console.error('5: User contact number not available');
-      return {
-        ok: false,
-        status: 400,
-        message: 'User contact number is required for Direct Debit',
-      };
-    }
+    console.log('5: User verified with email:', user.email);
 
     const reference = `adddebit_${userId}_${Date.now()}`;
     const callbackUrl = `https://www.aligntrait.com/payment/callback`;
@@ -1695,7 +1883,6 @@ export const addDirectDebitToSubscription = async (
 
     console.log('6: Currency determined:', currency);
     console.log('7: Amount set to:', amount);
-    console.log('8: Using user contact number:', user.contactNumber);
 
     const directDebitParams = JSON.stringify({
       email,
@@ -1704,18 +1891,11 @@ export const addDirectDebitToSubscription = async (
       metadata: {
         userId,
         action: 'add_debit',
-        custom_fields: [
-          {
-            display_name: 'Phone Number',
-            variable_name: 'phone_number',
-            value: user.contactNumber, // Using the user's actual contact number
-          },
-        ],
         nonce: Date.now(),
       },
     });
 
-    console.log('9: Paystack request params:', directDebitParams);
+    console.log('8: Paystack request params:', directDebitParams);
 
     const directDebitOptions = {
       hostname: 'api.paystack.co',
@@ -1728,7 +1908,7 @@ export const addDirectDebitToSubscription = async (
       },
     };
 
-    console.log('10: Sending request to Paystack...');
+    console.log('9: Sending request to Paystack...');
     const directDebitPromise = new Promise<string>((resolve, reject) => {
       const req = https
         .request(directDebitOptions, (res) => {
@@ -1736,24 +1916,24 @@ export const addDirectDebitToSubscription = async (
           res.on('data', (chunk) => (data += chunk));
           res.on('end', () => {
             const response = JSON.parse(data);
-            console.log('11: Paystack response:', response);
+            console.log('10: Paystack response:', response);
             if (
               res.statusCode === 200 &&
               response.status &&
               response.data?.redirect_url
             ) {
               console.log(
-                '12: Direct Debit authorization initialized successfully'
+                '11: Direct Debit authorization initialized successfully'
               );
               resolve(response.data.redirect_url);
             } else {
-              console.error('13: Direct Debit initialization failed');
+              console.error('12: Direct Debit initialization failed');
               reject(new Error(`Direct Debit initialization failed: ${data}`));
             }
           });
         })
         .on('error', (error) => {
-          console.error('14: Request error:', error);
+          console.error('13: Request error:', error);
           reject(error);
         });
 
@@ -1762,7 +1942,7 @@ export const addDirectDebitToSubscription = async (
     });
 
     const directDebitRedirectUrl = await directDebitPromise;
-    console.log('15: Redirect URL:', directDebitRedirectUrl);
+    console.log('14: Redirect URL:', directDebitRedirectUrl);
 
     return {
       ok: true,
@@ -1776,7 +1956,7 @@ export const addDirectDebitToSubscription = async (
       },
     };
   } catch (error: any) {
-    console.error('16: Error in Direct Debit initialization:', error);
+    console.error('15: Error in Direct Debit initialization:', error);
     return {
       ok: false,
       status: 500,

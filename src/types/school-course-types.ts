@@ -308,3 +308,11 @@ export interface AcademicRecordData {
   ExamType10Subjects?: string | null;
   ExamType10SubGrades?: string | null;
 }
+
+// types.ts or constants.ts
+export const DebitTransactionStatus = {
+  PENDING: 'PENDING',
+  SUCCESS: 'SUCCESS',
+  FAILED: 'FAILED',
+  AUTHORIZED: 'AUTHORIZED', // Add this line
+} as const;

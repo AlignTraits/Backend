@@ -127,7 +127,14 @@ export const verifyWebhook = async (
   next: NextFunction
 ) => {
   try {
-    const secret = process.env.PAYSTACK_SECRET_KEY || '';
+    // const secret = process.env.PAYSTACK_SECRET_KEY || '';
+    const secret = process.env.PAYSTACK_SECRET_KEY;
+    if (!secret) {
+      console.error('PAYSTACK_SECRET_KEY is not set');
+      return res
+        .status(500)
+        .json({ ok: false, message: 'Server configuration error' });
+    }
     const hash = createHmac('sha512', secret)
       .update(JSON.stringify(req.body))
       .digest('hex');
@@ -270,6 +277,8 @@ export const addCardController = async (
 
     const ip = getClientIp(req) || '127.0.0.1';
     const userId = (req as any)?.user?.id ?? '';
+    console.log(userId);
+
     const result = await addCardToSubscription(userId, email, ip);
 
     res.status(result.status).json(result);
@@ -294,7 +303,8 @@ export const addDirectDebitController = async (
     }
 
     const ip = getClientIp(req) || '127.0.0.1';
-    const userId = (req as any)?.user?.id ?? 'cmbux2urg0000wgdck8fzlsuq';
+    const userId = (req as any)?.user?.id ?? '';
+    console.log(userId);
     const result = await addDirectDebitToSubscription(userId, email, ip);
 
     res.status(result.status).json(result);
