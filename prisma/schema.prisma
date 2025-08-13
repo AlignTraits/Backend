@@ -124,6 +124,7 @@ model User {
   email_token             String?             // Customer email token for subscription management
   default_authorization   String?             // Default authorization code for the user's card
   actionHistories         ActionHistory[]
+  isCareerPathChecked  Boolean  @default(false)
   careerResults           CareerResult?
   eligibilityResults      EligibilityResult[]
   ResultDocument          ResultDocument[]

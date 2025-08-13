@@ -123,14 +123,24 @@ async function calculateCareerPath(
         console.log('AI recommendation:', { recommendedCareer, reasoning });
 
         try {
-          await prisma.careerResult.upsert({
+          // await prisma.careerResult.upsert({
+          //   where: { userId },
+          //   update: { recommendedCareers: [recommendedCareer], reasoning },
+          //   create: {
+          //     userId,
+          //     recommendedCareers: [recommendedCareer],
+          //     reasoning,
+          //     createdAt: new Date(),
+          //     updatedAt: new Date(),
+          //   },
+          // });
+          await prisma.careerResult.update({
             where: { userId },
-            update: { recommendedCareers: [recommendedCareer], reasoning },
-            create: {
-              userId,
-              recommendedCareers: [recommendedCareer],
-              reasoning,
-              createdAt: new Date(),
+            data: {
+              recommendedCareers: {
+                push: [recommendedCareer], // Prepend instead of push to put latest first
+              },
+              reasoning: reasoning, // Update or append reasoning if needed
               updatedAt: new Date(),
             },
           });
@@ -260,7 +270,9 @@ async function getCareerPathService(userId: string) {
 
     // Map all career results to include recommended career and reasoning
     const formattedResults = careerResults.map((result) => ({
-      recommendedCareer: result.recommendedCareers[0] || '',
+      recommendedCareer: result.recommendedCareers
+        ? [...result.recommendedCareers].reverse()
+        : [],
       reasoning: result.reasoning || 'No reasoning provided.',
     }));
 
@@ -419,14 +431,24 @@ async function calculateCareerPathFromMappingServer(
 
     // Save to database
     try {
-      await prisma.careerResult.upsert({
+      // await prisma.careerResult.upsert({
+      //   where: { userId },
+      //   update: { recommendedCareers: [recommendedCareer], reasoning },
+      //   create: {
+      //     userId,
+      //     recommendedCareers: [recommendedCareer],
+      //     reasoning,
+      //     createdAt: new Date(),
+      //     updatedAt: new Date(),
+      //   },
+      // });
+      await prisma.careerResult.update({
         where: { userId },
-        update: { recommendedCareers: [recommendedCareer], reasoning },
-        create: {
-          userId,
-          recommendedCareers: [recommendedCareer],
-          reasoning,
-          createdAt: new Date(),
+        data: {
+          recommendedCareers: {
+            push: [recommendedCareer], // Prepend instead of push to put latest first
+          },
+          reasoning: reasoning, // Update or append reasoning if needed
           updatedAt: new Date(),
         },
       });
