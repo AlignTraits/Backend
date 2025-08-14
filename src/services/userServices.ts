@@ -80,6 +80,7 @@ export const getUserDataService = async (
     lastname: string;
     username: string | null;
     email: string;
+    isCareerPathChecked: boolean;
     image: string | null;
     role: Roles;
     gender: Gender | null;
@@ -147,6 +148,7 @@ export const getUserDataService = async (
         lastname: user.lastname,
         username: user.username,
         email: user.email,
+        isCareerPathChecked: user.isCareerPathChecked,
         image: user.image,
         role: user.role,
         gender: user.gender,

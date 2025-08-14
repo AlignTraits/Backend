@@ -123,27 +123,27 @@ async function calculateCareerPath(
         console.log('AI recommendation:', { recommendedCareer, reasoning });
 
         try {
-          // await prisma.careerResult.upsert({
-          //   where: { userId },
-          //   update: { recommendedCareers: [recommendedCareer], reasoning },
-          //   create: {
-          //     userId,
-          //     recommendedCareers: [recommendedCareer],
-          //     reasoning,
-          //     createdAt: new Date(),
-          //     updatedAt: new Date(),
-          //   },
-          // });
-          await prisma.careerResult.update({
+          await prisma.careerResult.upsert({
             where: { userId },
-            data: {
-              recommendedCareers: {
-                push: [recommendedCareer], // Prepend instead of push to put latest first
-              },
-              reasoning: reasoning, // Update or append reasoning if needed
+            update: { recommendedCareers: [recommendedCareer], reasoning },
+            create: {
+              userId,
+              recommendedCareers: [recommendedCareer],
+              reasoning,
+              createdAt: new Date(),
               updatedAt: new Date(),
             },
           });
+          // await prisma.careerResult.update({
+          //   where: { userId },
+          //   data: {
+          //     recommendedCareers: {
+          //       push: [recommendedCareer], // Prepend instead of push to put latest first
+          //     },
+          //     reasoning: reasoning, // Update or append reasoning if needed
+          //     updatedAt: new Date(),
+          //   },
+          // });
         } catch (dbError) {
           console.error('Database save failed:', dbError);
           return {
@@ -253,34 +253,35 @@ async function getCareerPathService(userId: string) {
   }
 
   try {
-    const careerResults = await prisma.careerResult.findMany({
+    const careerResults = await prisma.careerResult.findUnique({
       where: { userId },
     });
 
-    if (careerResults.length === 0) {
-      return {
-        ok: false,
-        status: 404,
-        message: 'No career path found for this user',
-        errors: [
-          { message: 'Please submit answers to get career recommendations' },
-        ],
-      };
-    }
+    // if (careerResults.length === 0) {
+    //   return {
+    //     ok: false,
+    //     status: 404,
+    //     message: 'No career path found for this user',
+    //     errors: [
+    //       { message: 'Please submit answers to get career recommendations' },
+    //     ],
+    //   };
+    // }
 
     // Map all career results to include recommended career and reasoning
-    const formattedResults = careerResults.map((result) => ({
-      recommendedCareer: result.recommendedCareers
-        ? [...result.recommendedCareers].reverse()
-        : [],
-      reasoning: result.reasoning || 'No reasoning provided.',
-    }));
+    // const formattedResults = careerResults.map((result) => ({
+    //   recommendedCareer: result.recommendedCareers
+    //     ? [...result.recommendedCareers].reverse()
+    //     : [],
+    //   reasoning: result.reasoning || 'No reasoning provided.',
+    // }));
 
     return {
       ok: true,
       status: 200,
       message: 'Career paths retrieved successfully',
-      data: formattedResults,
+      data: careerResults,
+      // data: formattedResults,
     };
   } catch (error) {
     console.error('Error retrieving career path:', error);
@@ -431,27 +432,27 @@ async function calculateCareerPathFromMappingServer(
 
     // Save to database
     try {
-      // await prisma.careerResult.upsert({
-      //   where: { userId },
-      //   update: { recommendedCareers: [recommendedCareer], reasoning },
-      //   create: {
-      //     userId,
-      //     recommendedCareers: [recommendedCareer],
-      //     reasoning,
-      //     createdAt: new Date(),
-      //     updatedAt: new Date(),
-      //   },
-      // });
-      await prisma.careerResult.update({
+      await prisma.careerResult.upsert({
         where: { userId },
-        data: {
-          recommendedCareers: {
-            push: [recommendedCareer], // Prepend instead of push to put latest first
-          },
-          reasoning: reasoning, // Update or append reasoning if needed
+        update: { recommendedCareers: [recommendedCareer], reasoning },
+        create: {
+          userId,
+          recommendedCareers: [recommendedCareer],
+          reasoning,
+          createdAt: new Date(),
           updatedAt: new Date(),
         },
       });
+      // await prisma.careerResult.update({
+      //   where: { userId },
+      //   data: {
+      //     recommendedCareers: {
+      //       push: [recommendedCareer], // Prepend instead of push to put latest first
+      //     },
+      //     reasoning: reasoning, // Update or append reasoning if needed
+      //     updatedAt: new Date(),
+      //   },
+      // });
     } catch (dbError) {
       console.error('Database save failed:', dbError);
       return {
