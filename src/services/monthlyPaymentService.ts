@@ -515,7 +515,7 @@ export const verifySubscriptionPaymentService = async (
         templateName: 'welcome-unverified-email',
         templateInfo: {
           name: `${updatedUser.firstname} ${updatedUser.lastname}`,
-          signupUrl: `${host}/signup-2`,
+          signupUrl: `${host}/setup-password?email=${updatedUser.email}`,
           host,
         },
       });

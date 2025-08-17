@@ -219,7 +219,7 @@ async function submitAnswersService(
     if (updatedUser) {
       const host = process.env.WEBSITE_URL || 'http://localhost:3000';
 
-      // Send welcome email if email is not verified
+      // Send welcome email if email is not verified && !updatedUser.emailVerified
       if (!updatedUser.emailVerified) {
         const welcomeEmailResult = await sendMail({
           from: 'Aligntraits <no-reply@aligntrait.com>',
@@ -228,7 +228,7 @@ async function submitAnswersService(
           templateName: 'welcome-unverified-email',
           templateInfo: {
             name: `${updatedUser.firstname} ${updatedUser.lastname}`,
-            signupUrl: `${host}/signup-2?token=${updatedUser.email_token}`,
+            signupUrl: `${host}/setup-password?email=${updatedUser.email}`,
             host,
           },
         });
@@ -290,6 +290,194 @@ async function getCareerPathService(userId: string) {
 }
 
 // Server Career Path Mapping
+// async function calculateCareerPathFromMappingServer(
+//   userId: string,
+//   answers: { question: string; answer: string }[],
+//   mapping: Record<string, any>
+// ): Promise<WetrocloudResponse> {
+//   try {
+//     // console.log(
+//     //   'Calculating career path for user:',
+//     //   userId,
+//     //   'with answers:',
+//     //   answers
+//     // );
+
+//     // Convert answers to a case-insensitive map for lookup
+//     const answerMap = new Map(
+//       answers.map(({ question, answer }) => [
+//         question.toLowerCase().replace(/[^a-z0-9]/g, ''), // Normalize question
+//         answer.toLowerCase().replace(/[^a-z0-9]/g, ''), // Normalize answer
+//       ])
+//     );
+
+//     let totalScore: Record<string, number> = {};
+//     let matchedDetails: {
+//       question: string;
+//       answer: string;
+//       careers: string[];
+//     }[] = [];
+
+//     // Iterate through mapping to find matches with relaxed criteria
+//     for (const [category, categoryRules] of Object.entries(mapping)) {
+//       for (const [question, options] of Object.entries(categoryRules)) {
+//         const normalizedQuestion = question
+//           .toLowerCase()
+//           .replace(/[^a-z0-9]/g, '');
+//         if (answerMap.has(normalizedQuestion)) {
+//           const userAnswer = answerMap.get(normalizedQuestion)!;
+//           for (const [answerOption, careers] of Object.entries(
+//             options as Record<string, unknown>
+//           )) {
+//             const normalizedOption = answerOption
+//               .toLowerCase()
+//               .replace(/[^a-z0-9]/g, '');
+//             if (
+//               userAnswer.includes(normalizedOption) ||
+//               normalizedOption.includes(userAnswer)
+//             ) {
+//               if (
+//                 Array.isArray(careers) &&
+//                 careers.every((c) => typeof c === 'string')
+//               ) {
+//                 matchedDetails.push({
+//                   question,
+//                   answer: userAnswer,
+//                   careers: careers as string[],
+//                 });
+//                 careers.forEach((career) => {
+//                   totalScore[career] = (totalScore[career] || 0) + 1; // Increment score for each match
+//                 });
+//               }
+//             }
+//           }
+//         }
+//       }
+//     }
+
+//     let recommendedCareer = 'Undetermined';
+//     let reasoning = 'No clear career path identified based on your responses.';
+
+//     // Determine the best career based on total score
+//     if (matchedDetails.length > 0) {
+//       const sortedCareers = Object.entries(totalScore).sort(
+//         (a, b) => b[1] - a[1]
+//       );
+//       recommendedCareer = sortedCareers[0][0]; // Top career
+
+//       // Identify key traits from matched details
+//       const traits = {
+//         planning: matchedDetails.some(
+//           (md) => md.careers.includes('Law') || md.careers.includes('Finance')
+//         ),
+//         logic: matchedDetails.some(
+//           (md) =>
+//             md.careers.includes('Data Science') ||
+//             md.careers.includes('Engineering')
+//         ),
+//         independence: matchedDetails.some(
+//           (md) => md.careers.includes('Research') || md.careers.includes('IT')
+//         ),
+//         pressure: matchedDetails.some(
+//           (md) => md.careers.includes('Law') || md.careers.includes('Medicine')
+//         ),
+//         stability: matchedDetails.some(
+//           (md) =>
+//             md.careers.includes('Government') ||
+//             md.careers.includes('Accounting')
+//         ),
+//         growth: matchedDetails.some(
+//           (md) =>
+//             md.careers.includes('Engineering') || md.careers.includes('IT')
+//         ),
+//         feedback: matchedDetails.some(
+//           (md) =>
+//             md.careers.includes('Public Relations') ||
+//             md.careers.includes('Leadership')
+//         ),
+//         conflict: matchedDetails.some(
+//           (md) => md.careers.includes('HR') || md.careers.includes('Teaching')
+//         ),
+//         decisiveness: matchedDetails.some(
+//           (md) =>
+//             md.careers.includes('Leadership') || md.careers.includes('Law')
+//         ),
+//       };
+
+//       // Craft reasoning based on the recommended career
+//       const traitList = [];
+//       if (traits.planning) traitList.push('structured planning');
+//       if (traits.logic) traitList.push('logical decision-making');
+//       if (traits.independence) traitList.push('working independently');
+//       if (traits.pressure)
+//         traitList.push('thriving in competitive environments');
+//       if (traits.stability) traitList.push('preferring stability');
+//       if (traits.growth) traitList.push('a drive to become an expert');
+//       if (traits.feedback) traitList.push('handling feedback constructively');
+//       if (traits.conflict) traitList.push('addressing conflict directly');
+//       if (traits.decisiveness) traitList.push('quick decision-making');
+
+//       const skills =
+//         {
+//           Law: 'legal analysis, argumentation, leadership',
+//           Engineering: 'technical problem-solving, project management',
+//           IT: 'technical expertise, system design',
+//           'Data Science': 'data analysis, statistical modeling',
+//         }[recommendedCareer] || 'problem-solving, critical thinking';
+
+//       reasoning = `Based on the assessment, you demonstrate ${traitList.join(', ')}. These traits align well with a career in ${recommendedCareer}, which requires ${skills}.`;
+//     }
+
+//     // console.log('Career recommendation:', { recommendedCareer, reasoning });
+
+//     // Save to database
+//     try {
+//       await prisma.careerResult.upsert({
+//         where: { userId },
+//         update: { recommendedCareers: [recommendedCareer], reasoning },
+//         create: {
+//           userId,
+//           recommendedCareers: [recommendedCareer],
+//           reasoning,
+//           createdAt: new Date(),
+//           updatedAt: new Date(),
+//         },
+//       });
+//       // await prisma.careerResult.update({
+//       //   where: { userId },
+//       //   data: {
+//       //     recommendedCareers: {
+//       //       push: [recommendedCareer], // Prepend instead of push to put latest first
+//       //     },
+//       //     reasoning: reasoning, // Update or append reasoning if needed
+//       //     updatedAt: new Date(),
+//       //   },
+//       // });
+//     } catch (dbError) {
+//       console.error('Database save failed:', dbError);
+//       return {
+//         ok: false,
+//         message: 'Failed to save career results',
+//       };
+//     }
+
+//     return {
+//       ok: true,
+//       message: 'Career path calculated successfully',
+//       data: { recommendedCareer, reasoning },
+//     };
+//   } catch (error) {
+//     console.error('Career path calculation failed:', error);
+//     return {
+//       ok: false,
+//       message:
+//         error instanceof Error
+//           ? error.message
+//           : 'Unable to generate career path recommendation',
+//     };
+//   }
+// }
+
 async function calculateCareerPathFromMappingServer(
   userId: string,
   answers: { question: string; answer: string }[],
@@ -355,15 +543,17 @@ async function calculateCareerPathFromMappingServer(
       }
     }
 
-    let recommendedCareer = 'Undetermined';
-    let reasoning = 'No clear career path identified based on your responses.';
+    let recommendedCareers: string[] = ['Undetermined'];
+    let reasoning = 'No clear career paths identified based on your responses.';
 
-    // Determine the best career based on total score
+    // Determine the top 4 careers based on total score
     if (matchedDetails.length > 0) {
       const sortedCareers = Object.entries(totalScore).sort(
         (a, b) => b[1] - a[1]
       );
-      recommendedCareer = sortedCareers[0][0]; // Top career
+      recommendedCareers = sortedCareers
+        .slice(0, 4) // Take top 4 careers
+        .map((entry) => entry[0]); // Extract career names
 
       // Identify key traits from matched details
       const traits = {
@@ -404,7 +594,7 @@ async function calculateCareerPathFromMappingServer(
         ),
       };
 
-      // Craft reasoning based on the recommended career
+      // Craft reasoning based on the top 4 recommended careers
       const traitList = [];
       if (traits.planning) traitList.push('structured planning');
       if (traits.logic) traitList.push('logical decision-making');
@@ -417,15 +607,80 @@ async function calculateCareerPathFromMappingServer(
       if (traits.conflict) traitList.push('addressing conflict directly');
       if (traits.decisiveness) traitList.push('quick decision-making');
 
-      const skills =
-        {
-          Law: 'legal analysis, argumentation, leadership',
-          Engineering: 'technical problem-solving, project management',
-          IT: 'technical expertise, system design',
-          'Data Science': 'data analysis, statistical modeling',
-        }[recommendedCareer] || 'problem-solving, critical thinking';
+      const careerSkills: Record<
+        | 'Law'
+        | 'Engineering'
+        | 'IT'
+        | 'Data Science'
+        | 'Finance'
+        | 'Medicine'
+        | 'Accounting'
+        | 'Psychology'
+        | 'Social Work'
+        | 'Marketing'
+        | 'Startups'
+        | 'HR'
+        | 'Teaching'
+        | 'Sales'
+        | 'Public Relations'
+        | 'Business'
+        | 'Research'
+        | 'Writing'
+        | 'Management'
+        | 'Economics'
+        | 'Banking'
+        | 'Government'
+        | 'Entrepreneurship'
+        | 'Consulting'
+        | 'Mid-Level Mgmt'
+        | 'Healthcare'
+        | 'Counseling'
+        | 'Support/Admin',
+        string
+      > = {
+        Law: 'legal analysis, argumentation, leadership',
+        Engineering: 'technical problem-solving, project management',
+        IT: 'technical expertise, system design',
+        'Data Science': 'data analysis, statistical modeling',
+        Finance: 'financial planning, risk assessment',
+        Medicine: 'patient care, medical knowledge',
+        Accounting: 'financial reporting, auditing, precision',
+        Psychology: 'emotional intelligence, counseling, research',
+        'Social Work': 'community support, empathy, advocacy',
+        Marketing: 'creative strategy, market analysis, communication',
+        Startups: 'innovation, risk management, adaptability',
+        HR: 'employee relations, conflict resolution, training',
+        Teaching: 'education, communication, mentorship',
+        Sales: 'persuasion, relationship building, negotiation',
+        'Public Relations': 'media management, storytelling, networking',
+        Business: 'strategy, leadership, decision-making',
+        Research: 'investigation, critical thinking, documentation',
+        Writing: 'content creation, editing, narrative skills',
+        Management: 'team leadership, resource allocation, planning',
+        Economics: 'economic analysis, policy advising, forecasting',
+        Banking: 'financial services, risk assessment, customer relations',
+        Government: 'public policy, administration, stability',
+        Entrepreneurship: 'business development, innovation, resilience',
+        Consulting: 'problem-solving, advisory services, adaptability',
+        'Mid-Level Mgmt': 'team coordination, process optimization, support',
+        Healthcare: 'patient care, medical knowledge, teamwork',
+        Counseling: 'emotional support, guidance, listening skills',
+        'Support/Admin': 'organization, documentation, reliability',
+      };
 
-      reasoning = `Based on the assessment, you demonstrate ${traitList.join(', ')}. These traits align well with a career in ${recommendedCareer}, which requires ${skills}.`;
+      const skillsList = recommendedCareers
+        .map((career) =>
+          career in careerSkills
+            ? careerSkills[career as keyof typeof careerSkills]
+            : 'problem-solving, critical thinking'
+        )
+        .join('; ');
+
+      reasoning = `Based on the assessment, you demonstrate ${traitList.join(
+        ', '
+      )}. These traits align well with careers in ${recommendedCareers.join(
+        ', '
+      )}, which require ${skillsList}. The recommendations are prioritized by your strongest matches, with ${recommendedCareers[0]} being the top fit.`;
     }
 
     // console.log('Career recommendation:', { recommendedCareer, reasoning });
@@ -434,25 +689,15 @@ async function calculateCareerPathFromMappingServer(
     try {
       await prisma.careerResult.upsert({
         where: { userId },
-        update: { recommendedCareers: [recommendedCareer], reasoning },
+        update: { recommendedCareers, reasoning },
         create: {
           userId,
-          recommendedCareers: [recommendedCareer],
+          recommendedCareers,
           reasoning,
           createdAt: new Date(),
           updatedAt: new Date(),
         },
       });
-      // await prisma.careerResult.update({
-      //   where: { userId },
-      //   data: {
-      //     recommendedCareers: {
-      //       push: [recommendedCareer], // Prepend instead of push to put latest first
-      //     },
-      //     reasoning: reasoning, // Update or append reasoning if needed
-      //     updatedAt: new Date(),
-      //   },
-      // });
     } catch (dbError) {
       console.error('Database save failed:', dbError);
       return {
@@ -464,7 +709,7 @@ async function calculateCareerPathFromMappingServer(
     return {
       ok: true,
       message: 'Career path calculated successfully',
-      data: { recommendedCareer, reasoning },
+      data: { recommendedCareers, reasoning },
     };
   } catch (error) {
     console.error('Career path calculation failed:', error);
@@ -677,7 +922,7 @@ async function submitAnswersServiceServer(
         templateName: 'welcome-unverified-email',
         templateInfo: {
           name: `${updatedUser.firstname} ${updatedUser.lastname}` || 'User',
-          signupUrl: `${host}/signup-2?token=${updatedUser.email_token}`,
+          signupUrl: `${host}/setup-password?email=${updatedUser.email}`,
           host,
         },
       });
