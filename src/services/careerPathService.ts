@@ -958,8 +958,540 @@ async function submitAnswersServiceServer(
   }
 }
 
+// Recommended Courses
+
+type AcademicRecordSubjectFields =
+  | 'ExamType1Subjects'
+  | 'ExamType2Subjects'
+  | 'ExamType3Subjects'
+  | 'ExamType4Subjects'
+  | 'ExamType5Subjects'
+  | 'ExamType6Subjects'
+  | 'ExamType7Subjects'
+  | 'ExamType8Subjects'
+  | 'ExamType9Subjects'
+  | 'ExamType10Subjects';
+
+type CourseSubjectFields =
+  | 'ExamType1Subjects'
+  | 'ExamType2Subjects'
+  | 'ExamType3Subjects'
+  | 'ExamType4Subjects'
+  | 'ExamType5Subjects'
+  | 'ExamType6Subjects'
+  | 'ExamType7Subjects'
+  | 'ExamType8Subjects'
+  | 'ExamType9Subjects'
+  | 'ExamType10Subjects';
+
+interface RecommendedCourse {
+  id: string;
+  title: string;
+}
+
+// async function extractUserData(userId: string) {
+//   const careerResult = await prisma.careerResult.findUnique({
+//     where: { userId },
+//     include: { user: { include: { academicRecords: true } } },
+//   });
+
+//   if (!careerResult) {
+//     throw new Error('No career path found for this user');
+//   }
+
+//   const academicRecord = careerResult.user.academicRecords[0];
+//   if (!academicRecord) {
+//     throw new Error('No academic record found for this user');
+//   }
+
+//   console.log('academicRecord:', academicRecord);
+
+//   let userSubjects: string[] = [];
+//   const subjectFields: AcademicRecordSubjectFields[] = [
+//     'ExamType1Subjects',
+//     'ExamType2Subjects',
+//     'ExamType3Subjects',
+//     'ExamType4Subjects',
+//     'ExamType5Subjects',
+//     'ExamType6Subjects',
+//     'ExamType7Subjects',
+//     'ExamType8Subjects',
+//     'ExamType9Subjects',
+//     'ExamType10Subjects',
+//   ];
+//   for (const field of subjectFields) {
+//     if (academicRecord[field]) {
+//       try {
+//         userSubjects = JSON.parse(academicRecord[field] as string) || [];
+//         break;
+//       } catch (e) {
+//         console.warn(`Failed to parse ${field}:`, e);
+//       }
+//     }
+//   }
+
+//   const firstCareer = careerResult.recommendedCareers[0] || 'Undetermined';
+
+//   return { careerResult, firstCareer, userSubjects };
+// }
+
+// async function matchRecommendedCourses(
+//   firstCareer: string,
+//   userSubjects: string[]
+// ): Promise<RecommendedCourse[]> {
+//   const requiredSubjects = ['Math', 'English', ...userSubjects.slice(2)]; // Ensure Math and English are included
+//   const minSubjectMatch = 5;
+
+//   let recommendedCourses: RecommendedCourse[] = [];
+
+//   // Step 1: Find category matching the first career and loop through its courses
+//   const matchingCategory = await prisma.courseCategory.findFirst({
+//     where: { name: { contains: firstCareer, mode: 'insensitive' } },
+//     include: { courses: true },
+//   });
+
+//   if (matchingCategory?.courses && matchingCategory.courses.length > 0) {
+//     recommendedCourses = matchingCategory.courses
+//       .filter((course) => {
+//         const subjectFields: CourseSubjectFields[] = [
+//           'ExamType1Subjects',
+//           'ExamType2Subjects',
+//           'ExamType3Subjects',
+//           'ExamType4Subjects',
+//           'ExamType5Subjects',
+//           'ExamType6Subjects',
+//           'ExamType7Subjects',
+//           'ExamType8Subjects',
+//           'ExamType9Subjects',
+//           'ExamType10Subjects',
+//         ];
+//         for (const field of subjectFields) {
+//           if (course[field]) {
+//             try {
+//               const courseSubjects = JSON.parse(course[field] as string) || [];
+//               const matches = courseSubjects.filter((subject: string) =>
+//                 requiredSubjects.includes(subject)
+//               ).length;
+//               return matches >= minSubjectMatch;
+//             } catch (e) {
+//               console.warn(`Failed to parse course ${field}:`, e);
+//               return false;
+//             }
+//           }
+//         }
+//         return false;
+//       })
+//       .map((course) => ({ id: course.id, title: course.title }))
+//       .slice(0, 5); // Limit to 5
+//   }
+
+//   // Step 2: If no courses match the category, find 3–5 courses from any category
+//   if (
+//     recommendedCourses.length === 0 &&
+//     userSubjects.length >= minSubjectMatch
+//   ) {
+//     const allCategories = await prisma.courseCategory.findMany({
+//       include: { courses: true },
+//     });
+//     const allCourses = allCategories.flatMap(
+//       (category) => category.courses || []
+//     );
+
+//     recommendedCourses = allCourses
+//       .filter((course) => {
+//         const subjectFields: CourseSubjectFields[] = [
+//           'ExamType1Subjects',
+//           'ExamType2Subjects',
+//           'ExamType3Subjects',
+//           'ExamType4Subjects',
+//           'ExamType5Subjects',
+//           'ExamType6Subjects',
+//           'ExamType7Subjects',
+//           'ExamType8Subjects',
+//           'ExamType9Subjects',
+//           'ExamType10Subjects',
+//         ];
+//         for (const field of subjectFields) {
+//           if (course[field]) {
+//             try {
+//               const courseSubjects = JSON.parse(course[field] as string) || [];
+//               const matches = courseSubjects.filter((subject: string) =>
+//                 requiredSubjects.includes(subject)
+//               ).length;
+//               return matches >= minSubjectMatch;
+//             } catch (e) {
+//               console.warn(`Failed to parse course ${field}:`, e);
+//               return false;
+//             }
+//           }
+//         }
+//         return false;
+//       })
+//       .map((course) => ({ id: course.id, title: course.title }))
+//       .slice(0, 5); // Limit to 5
+//   }
+
+//   // Ensure 3–5 courses
+//   return recommendedCourses.length < 3 && recommendedCourses.length > 0
+//     ? recommendedCourses
+//     : recommendedCourses.slice(0, 5).slice(-5); // Restrict to 3–5
+// }
+
+async function extractUserData(userId: string) {
+  const careerResult = await prisma.careerResult.findUnique({
+    where: { userId },
+    include: { user: { include: { academicRecords: true } } },
+  });
+
+  if (!careerResult) {
+    throw new Error('No career path found for this user');
+  }
+
+  const academicRecord = careerResult.user.academicRecords[0];
+  if (!academicRecord) {
+    throw new Error('No academic record found for this user');
+  }
+
+  console.log('academicRecord:', academicRecord);
+
+  let subjectData: { [key: string]: string[] } = {};
+  const subjectFields: AcademicRecordSubjectFields[] = [
+    'ExamType1Subjects',
+    'ExamType2Subjects',
+    'ExamType3Subjects',
+    'ExamType4Subjects',
+    'ExamType5Subjects',
+    'ExamType6Subjects',
+    'ExamType7Subjects',
+    'ExamType8Subjects',
+    'ExamType9Subjects',
+    'ExamType10Subjects',
+  ];
+  for (const field of subjectFields) {
+    const examTypeField = field.replace(
+      'Subjects',
+      ''
+    ) as `ExamType${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10}`;
+    if (academicRecord[field] && academicRecord[examTypeField]) {
+      try {
+        const subjects = JSON.parse(academicRecord[field] as string) || [];
+        const examType = academicRecord[examTypeField] as string;
+        subjectData[examType] = subjects;
+      } catch (e) {
+        console.warn(`Failed to parse ${field}:`, e);
+      }
+    }
+  }
+
+  const firstCareer = careerResult.recommendedCareers[0] || 'Undetermined';
+
+  return { careerResult, firstCareer, subjectData };
+}
+
+async function matchRecommendedCourses(
+  firstCareer: string,
+  subjectData: { [key: string]: string[] }
+): Promise<RecommendedCourse[]> {
+  const minSubjectMatchDefault = 5;
+  const minSubjectMatchJambUtme = 4;
+
+  let recommendedCourses: RecommendedCourse[] = [];
+
+  // Step 1: Find category matching the first career and loop through its courses
+  const matchingCategory = await prisma.courseCategory.findFirst({
+    where: { name: { contains: firstCareer, mode: 'insensitive' } },
+    include: { courses: true },
+  });
+
+  if (matchingCategory?.courses && matchingCategory.courses.length > 0) {
+    recommendedCourses = matchingCategory.courses
+      .filter((course) => {
+        const academicExamTypes = Object.entries(subjectData);
+        const courseExamTypes = getCourseExamTypes(course);
+        const matchedExamTypes = matchExamTypes(
+          academicExamTypes,
+          courseExamTypes
+        );
+
+        let totalMatches = 0;
+        for (const [academicType, academicSubjects] of matchedExamTypes) {
+          const courseField = courseExamTypes.find(
+            ([field]) => getExamTypeName(course, field) === academicType
+          )?.[0];
+          if (courseField && academicSubjects) {
+            const courseSubjects =
+              JSON.parse(course[courseField] as string) || [];
+            const isJambUtme = ['JAMB', 'UTME'].includes(
+              academicType.toUpperCase()
+            );
+            const minMatches = isJambUtme
+              ? minSubjectMatchJambUtme
+              : minSubjectMatchDefault;
+
+            const matches = courseSubjects.filter((subject: string) =>
+              academicSubjects.includes(subject)
+            ).length;
+            totalMatches += matches;
+
+            if (totalMatches >= minMatches) {
+              return true;
+            }
+          }
+        }
+        return totalMatches >= minSubjectMatchDefault; // Fallback
+      })
+      .map((course) => ({ id: course.id, title: course.title }))
+      .slice(0, 5); // Limit to 5
+  }
+
+  // Step 2: If no courses match the category, find 3–5 courses from any category
+  if (recommendedCourses.length === 0 && Object.keys(subjectData).length >= 1) {
+    const allCategories = await prisma.courseCategory.findMany({
+      include: { courses: true },
+    });
+    const allCourses = allCategories.flatMap(
+      (category) => category.courses || []
+    );
+
+    recommendedCourses = allCourses
+      .filter((course) => {
+        const academicExamTypes = Object.entries(subjectData);
+        const courseExamTypes = getCourseExamTypes(course);
+        const matchedExamTypes = matchExamTypes(
+          academicExamTypes,
+          courseExamTypes
+        );
+
+        let totalMatches = 0;
+        for (const [academicType, academicSubjects] of matchedExamTypes) {
+          const courseField = courseExamTypes.find(
+            ([field]) => getExamTypeName(course, field) === academicType
+          )?.[0];
+          if (courseField && academicSubjects) {
+            const courseSubjects =
+              JSON.parse(course[courseField] as string) || [];
+            const isJambUtme = ['JAMB', 'UTME'].includes(
+              academicType.toUpperCase()
+            );
+            const minMatches = isJambUtme
+              ? minSubjectMatchJambUtme
+              : minSubjectMatchDefault;
+
+            const matches = courseSubjects.filter((subject: string) =>
+              academicSubjects.includes(subject)
+            ).length;
+            totalMatches += matches;
+
+            if (totalMatches >= minMatches) {
+              return true;
+            }
+          }
+        }
+        return totalMatches >= minSubjectMatchDefault; // Fallback
+      })
+      .map((course) => ({ id: course.id, title: course.title }))
+      .slice(0, 5); // Limit to 5
+  }
+
+  // Ensure 3–5 courses
+  return recommendedCourses.length < 3 && recommendedCourses.length > 0
+    ? recommendedCourses
+    : recommendedCourses.slice(0, 5).slice(-5); // Restrict to 3–5
+
+  // Helper functions
+  function getCourseExamTypes(
+    course: any
+  ): [CourseSubjectFields | null, string | null][] {
+    const examTypes: [CourseSubjectFields | null, string | null][] = [];
+    const subjectFields: CourseSubjectFields[] = [
+      'ExamType1Subjects',
+      'ExamType2Subjects',
+      'ExamType3Subjects',
+      'ExamType4Subjects',
+      'ExamType5Subjects',
+      'ExamType6Subjects',
+      'ExamType7Subjects',
+      'ExamType8Subjects',
+      'ExamType9Subjects',
+      'ExamType10Subjects',
+    ];
+    for (const field of subjectFields) {
+      const examTypeField = field.replace(
+        'Subjects',
+        ''
+      ) as `ExamType${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10}`;
+      if (course[examTypeField]) {
+        examTypes.push([field, course[examTypeField] as string]);
+      }
+    }
+    return examTypes;
+  }
+
+  function getExamTypeName(
+    course: any,
+    field: CourseSubjectFields | null
+  ): string {
+    const examTypeField = field ? field.replace('Subjects', '') : null;
+    return examTypeField ? (course[examTypeField] as string) || '' : '';
+  }
+
+  function matchExamTypes(
+    academicExamTypes: [string, string[]][],
+    courseExamTypes: [CourseSubjectFields | null, string | null][]
+  ): [string, string[]][] {
+    const matched: [string, string[]][] = [];
+    for (const [academicType, academicSubjects] of academicExamTypes) {
+      for (const [courseField, courseType] of courseExamTypes) {
+        if (
+          courseType &&
+          academicType.toUpperCase() === courseType.toUpperCase()
+        ) {
+          matched.push([academicType, academicSubjects]);
+          break; // Match found, move to next academic type
+        }
+      }
+    }
+    return matched.length > 0 ? matched : academicExamTypes.slice(0, 1); // Fallback to first academic type
+  }
+}
+
+async function getRecommendedCoursesService(
+  userId: string
+): Promise<WetrocloudResponse> {
+  if (!userId) {
+    throw new Error('Invalid user ID');
+  }
+
+  try {
+    const { firstCareer, subjectData } = await extractUserData(userId);
+    const recommendedCourses = await matchRecommendedCourses(
+      firstCareer,
+      subjectData
+    );
+
+    // Update careerResult with recommended courses
+    if (recommendedCourses.length > 0) {
+      await prisma.careerResult.update({
+        where: { userId },
+        data: { recommendedCourses: recommendedCourses as any }, // Cast to Json
+      });
+    }
+
+    console.log('Recommended Courses:', recommendedCourses); // Diagnostic log
+    return {
+      ok: true,
+      status: 200,
+      message: 'Recommended courses retrieved successfully',
+      data: recommendedCourses,
+    };
+  } catch (error) {
+    console.error('Error retrieving career path:', error);
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'message' in error &&
+      typeof (error as any).message === 'string' &&
+      (error as any).message === 'No career path found for this user'
+    ) {
+      return {
+        ok: false,
+        status: 404,
+        message: 'No career path found for this user',
+        data: {
+          message: 'Please submit answers to get career recommendations',
+        },
+      };
+    }
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'message' in error &&
+      typeof (error as any).message === 'string' &&
+      (error as any).message === 'No academic record found for this user'
+    ) {
+      return {
+        ok: false,
+        status: 404,
+        message: 'No academic record found for this user',
+        data: {
+          message: 'Please submit your academic record to get recommendations',
+        },
+      };
+    }
+    throw new Error('Failed to retrieve career path');
+  }
+}
+
+// async function getRecommendedCoursesService(
+//   userId: string
+// ): Promise<WetrocloudResponse> {
+//   if (!userId) {
+//     throw new Error('Invalid user ID');
+//   }
+
+//   try {
+//     const { firstCareer, userSubjects } = await extractUserData(userId);
+//     const recommendedCourses = await matchRecommendedCourses(
+//       firstCareer,
+//       userSubjects
+//     );
+
+//     // Update careerResult with recommended courses
+//     if (recommendedCourses.length > 0) {
+//       await prisma.careerResult.update({
+//         where: { userId },
+//         data: { recommendedCourses: recommendedCourses as any }, // Cast to Json
+//       });
+//     }
+
+//     return {
+//       ok: true,
+//       status: 200,
+//       message: 'Recommended courses retrieved successfully',
+//       data: recommendedCourses,
+//     };
+//   } catch (error) {
+//     console.error('Error retrieving career path:', error);
+//     if (
+//       typeof error === 'object' &&
+//       error !== null &&
+//       'message' in error &&
+//       typeof (error as any).message === 'string' &&
+//       (error as any).message === 'No career path found for this user'
+//     ) {
+//       return {
+//         ok: false,
+//         status: 404,
+//         message: 'No career path found for this user',
+//         data: {
+//           message: 'Please submit answers to get career recommendations',
+//         },
+//       };
+//     }
+//     if (
+//       typeof error === 'object' &&
+//       error !== null &&
+//       'message' in error &&
+//       typeof (error as any).message === 'string' &&
+//       (error as any).message === 'No academic record found for this user'
+//     ) {
+//       return {
+//         ok: false,
+//         status: 404,
+//         message: 'No academic record found for this user',
+//         data: {
+//           message: 'Please submit your academic record to get recommendations',
+//         },
+//       };
+//     }
+//     throw new Error('Failed to retrieve career path');
+//   }
+// }
+
 export {
   submitAnswersService,
   submitAnswersServiceServer,
   getCareerPathService,
+  // recommended courses service
+  getRecommendedCoursesService,
 };

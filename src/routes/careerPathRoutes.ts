@@ -4,6 +4,7 @@ import {
   submitCareerAnswers,
   getCareerPath,
   submitServerCareerAnswers,
+  getRecommendedCourses,
 } from '../controllers/careerPathController';
 // import MessageResponse from '../types/messageResponse';
 interface WetrocloudResponse {
@@ -23,5 +24,12 @@ router.post<{}, WetrocloudResponse>(
 );
 
 router.get<{}, WetrocloudResponse>('/', loginRequired, getCareerPath);
+
+// recommended courses endpoint
+router.get<{}, WetrocloudResponse>(
+  '/recommended-courses',
+  loginRequired,
+  getRecommendedCourses
+);
 
 export default router;

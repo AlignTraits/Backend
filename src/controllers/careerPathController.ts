@@ -3,6 +3,7 @@ import MessageResponse from '../types/messageResponse';
 import ErrorResponse from '../types/errorResponse';
 import {
   getCareerPathService,
+  getRecommendedCoursesService,
   submitAnswersService,
   submitAnswersServiceServer,
   // getCareerPathService,
@@ -68,6 +69,24 @@ export const getCareerPath = async (
   try {
     const userId = (req.user as any)?.id ?? '';
     const result = await getCareerPathService(userId);
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Recommended courses are now included in the career path response
+export const getRecommendedCourses = async (
+  req: Request,
+  res: Response<WetrocloudResponse | ErrorResponse>,
+  next: NextFunction
+) => {
+  try {
+    const userId = (req.user as any)?.id ?? '';
+    const result = await getRecommendedCoursesService(userId);
+    if (!result.ok) {
+      return res.status(result.status).json(result);
+    }
     res.status(200).json(result);
   } catch (error) {
     next(error);
