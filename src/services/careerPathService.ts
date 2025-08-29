@@ -1137,22 +1137,17 @@ interface RecommendedCourse {
 //     : recommendedCourses.slice(0, 5).slice(-5); // Restrict to 3–5
 // }
 
-async function extractUserData(userId: string) {
+async function extractUserData(userId: string, academicRecord: any) {
   const careerResult = await prisma.careerResult.findUnique({
     where: { userId },
-    include: { user: { include: { academicRecords: true } } },
+    include: { user: true }, // No academicRecords needed
   });
 
   if (!careerResult) {
     throw new Error('No career path found for this user');
   }
 
-  const academicRecord = careerResult.user.academicRecords[0];
-  if (!academicRecord) {
-    throw new Error('No academic record found for this user');
-  }
-
-  console.log('academicRecord:', academicRecord);
+  console.log('academicRecord from request:', academicRecord); // Debug log
 
   let subjectData: { [key: string]: string[] } = {};
   const subjectFields: AcademicRecordSubjectFields[] = [
@@ -1174,9 +1169,11 @@ async function extractUserData(userId: string) {
     ) as `ExamType${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10}`;
     if (academicRecord[field] && academicRecord[examTypeField]) {
       try {
-        const subjects = JSON.parse(academicRecord[field] as string) || [];
+        const subjects =
+          JSON.parse(JSON.stringify(academicRecord[field])) || []; // Ensure proper parsing
         const examType = academicRecord[examTypeField] as string;
         subjectData[examType] = subjects;
+        console.log(`Parsed ${examType}:`, subjects); // Debug log
       } catch (e) {
         console.warn(`Failed to parse ${field}:`, e);
       }
@@ -1184,6 +1181,7 @@ async function extractUserData(userId: string) {
   }
 
   const firstCareer = careerResult.recommendedCareers[0] || 'Undetermined';
+  console.log('firstCareer:', firstCareer); // Debug log
 
   return { careerResult, firstCareer, subjectData };
 }
@@ -1197,7 +1195,7 @@ async function matchRecommendedCourses(
 
   let recommendedCourses: RecommendedCourse[] = [];
 
-  // Step 1: Find category matching the first career and loop through its courses
+  // Step 1: Find category matching the first career
   const matchingCategory = await prisma.courseCategory.findFirst({
     where: { name: { contains: firstCareer, mode: 'insensitive' } },
     include: { courses: true },
@@ -1212,6 +1210,7 @@ async function matchRecommendedCourses(
           academicExamTypes,
           courseExamTypes
         );
+        console.log('Matched Exam Types (Category):', matchedExamTypes); // Debug log
 
         let totalMatches = 0;
         for (const [academicType, academicSubjects] of matchedExamTypes) {
@@ -1232,19 +1231,17 @@ async function matchRecommendedCourses(
               academicSubjects.includes(subject)
             ).length;
             totalMatches += matches;
-
-            if (totalMatches >= minMatches) {
-              return true;
-            }
+            console.log(`Matches for ${academicType}:`, matches); // Debug log
           }
         }
-        return totalMatches >= minSubjectMatchDefault; // Fallback
+        console.log('Total Matches (Category):', totalMatches); // Debug log
+        return totalMatches >= minSubjectMatchDefault;
       })
       .map((course) => ({ id: course.id, title: course.title }))
-      .slice(0, 5); // Limit to 5
+      .slice(0, 5);
   }
 
-  // Step 2: If no courses match the category, find 3–5 courses from any category
+  // Step 2: Fallback to all categories
   if (recommendedCourses.length === 0 && Object.keys(subjectData).length >= 1) {
     const allCategories = await prisma.courseCategory.findMany({
       include: { courses: true },
@@ -1261,6 +1258,7 @@ async function matchRecommendedCourses(
           academicExamTypes,
           courseExamTypes
         );
+        console.log('Matched Exam Types (Fallback):', matchedExamTypes); // Debug log
 
         let totalMatches = 0;
         for (const [academicType, academicSubjects] of matchedExamTypes) {
@@ -1281,24 +1279,22 @@ async function matchRecommendedCourses(
               academicSubjects.includes(subject)
             ).length;
             totalMatches += matches;
-
-            if (totalMatches >= minMatches) {
-              return true;
-            }
+            console.log(`Matches for ${academicType}:`, matches); // Debug log
           }
         }
-        return totalMatches >= minSubjectMatchDefault; // Fallback
+        console.log('Total Matches (Fallback):', totalMatches); // Debug log
+        return totalMatches >= minSubjectMatchDefault;
       })
       .map((course) => ({ id: course.id, title: course.title }))
-      .slice(0, 5); // Limit to 5
+      .slice(0, 5);
   }
 
   // Ensure 3–5 courses
   return recommendedCourses.length < 3 && recommendedCourses.length > 0
     ? recommendedCourses
-    : recommendedCourses.slice(0, 5).slice(-5); // Restrict to 3–5
+    : recommendedCourses.slice(0, 5).slice(-5);
 
-  // Helper functions
+  // Helper functions (unchanged)
   function getCourseExamTypes(
     course: any
   ): [CourseSubjectFields | null, string | null][] {
@@ -1347,23 +1343,27 @@ async function matchRecommendedCourses(
           academicType.toUpperCase() === courseType.toUpperCase()
         ) {
           matched.push([academicType, academicSubjects]);
-          break; // Match found, move to next academic type
+          break;
         }
       }
     }
-    return matched.length > 0 ? matched : academicExamTypes.slice(0, 1); // Fallback to first academic type
+    return matched.length > 0 ? matched : academicExamTypes.slice(0, 1);
   }
 }
 
 async function getRecommendedCoursesService(
-  userId: string
+  userId: string,
+  academicRecord: any
 ): Promise<WetrocloudResponse> {
   if (!userId) {
     throw new Error('Invalid user ID');
   }
 
   try {
-    const { firstCareer, subjectData } = await extractUserData(userId);
+    const { firstCareer, subjectData } = await extractUserData(
+      userId,
+      academicRecord
+    );
     const recommendedCourses = await matchRecommendedCourses(
       firstCareer,
       subjectData

@@ -83,7 +83,18 @@ export const getRecommendedCourses = async (
 ) => {
   try {
     const userId = (req.user as any)?.id ?? '';
-    const result = await getRecommendedCoursesService(userId);
+    const academicRecord = req.body.academicRecord; // Expect academic record in request body
+    if (!academicRecord) {
+      return res.status(400).json({
+        ok: false,
+        status: 400,
+        message: 'No academic record provided',
+        data: {
+          message: 'Please include an academic record in the request body',
+        },
+      });
+    }
+    const result = await getRecommendedCoursesService(userId, academicRecord);
     if (!result.ok) {
       return res.status(result.status).json(result);
     }
