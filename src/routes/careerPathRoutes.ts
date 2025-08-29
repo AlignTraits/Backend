@@ -26,7 +26,7 @@ router.post<{}, WetrocloudResponse>(
 router.get<{}, WetrocloudResponse>('/', loginRequired, getCareerPath);
 
 // recommended courses endpoint
-router.get<{}, WetrocloudResponse>(
+router.post<{}, WetrocloudResponse>(
   '/recommended-courses',
   loginRequired,
   getRecommendedCourses
