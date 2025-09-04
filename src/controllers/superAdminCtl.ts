@@ -5,6 +5,8 @@ import {
   createAdminProfileService,
   deleteAdminProfileService,
   getAdminByIdService,
+  getUsersByAdminService,
+  getWaitListByAdminService,
   listAdminsService,
   updateAdminProfileService,
 } from '../services/superAdminServices';
@@ -97,10 +99,40 @@ const listAdmins = async (req: Request, res: Response, next: NextFunction) => {
   }
 };
 
+// get users and wait list by admin
+const getUsersByAdmin = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const result = await getUsersByAdminService();
+    res.status(result.status).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// get waitlist users by admin
+const getWaitListByAdmin = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const result = await getWaitListByAdminService();
+    res.status(result.status).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export = {
   createAdminProfile,
   updateAdminProfile,
   deleteAdminProfile,
   listAdmins,
   getAdminById,
+  getUsersByAdmin,
+  getWaitListByAdmin,
 };

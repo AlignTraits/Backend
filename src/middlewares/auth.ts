@@ -72,6 +72,7 @@ export const adminLoginRequired = async (
     return res.status(400).send('Invalid token');
   }
 };
+
 export const adminContCrtorLoginRequired = async (
   req: Request,
   res: Response,

@@ -11,13 +11,7 @@ import {
   updateUser,
   // getUsersByRoles,
 } from '../models/userModel';
-import {
-  getEmailVerificationTokenByEmail,
-  deleteEmailVerificationToken,
-  saveEmailVerificationToken,
-  getEmailVerificationTokenByToken,
-} from '../models/tokenModel';
-import { generateOTP } from '../lib/utils';
+
 import {
   sendAdminCreateEmail,
   sendAdminUpdateEmail,
@@ -311,9 +305,43 @@ export const listAdminsService = async () => {
   };
 };
 
-// Export all services (append these)
-// export {
-//   createAdminProfileService,
-//   updateAdminProfileService,
-//   deleteAdminProfileService,
-// };
+// get users and wait list by admin
+export const getUsersByAdminService = async () => {
+  const excludedRoles = ['ADMIN', 'SUPER_ADMIN', 'ANALYST', 'CONTENT_MANAGER'];
+
+  const users = await db.user.findMany({
+    where: {
+      role: {
+        notIn: excludedRoles as any, // Exclude the specified admin roles
+      },
+    },
+  });
+
+  return {
+    status: 200,
+    message: 'User list retrieved (excluding admin roles)',
+    data: users.map((user) => ({
+      id: user.id,
+      firstname: user.firstname,
+      lastname: user.lastname,
+      email: user.email,
+      gender: user.gender,
+      region: user.region,
+    })),
+  };
+};
+
+// get waitlist users by admin
+export const getWaitListByAdminService = async () => {
+  const waitList = await db.waitList.findMany(); // Fetch all waitlist entries
+
+  return {
+    status: 200,
+    message: 'Waitlist retrieved successfully',
+    data: waitList.map((entry) => ({
+      id: entry.id,
+      email: entry.email,
+      createdAt: entry.createdAt,
+    })),
+  };
+};

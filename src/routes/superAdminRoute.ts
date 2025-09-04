@@ -2,11 +2,13 @@ import express from 'express';
 import {
   adminLoginRequired,
   preventLoggedUser,
+  adminContCrtorLoginRequired,
   superAdminLoginRequired,
 } from '../middlewares/auth';
 import superAdminController from '../controllers/superAdminCtl';
 import MessageResponse from '../types/messageResponse';
 import { NextFunction, Request, Response } from 'express';
+import { use } from 'passport';
 
 const router = express.Router();
 
@@ -37,6 +39,20 @@ router.get<{}, MessageResponse>(
   '/admin/profiles',
   superAdminLoginRequired,
   superAdminController.listAdmins
+);
+
+// get users and wait list by admin
+router.get<{}, MessageResponse>(
+  '/admin/user-list-by-admin',
+  adminContCrtorLoginRequired,
+  superAdminController.getUsersByAdmin // Renamed from listAdmins
+);
+
+// get waitlist users by admin
+router.get<{}, MessageResponse>(
+  '/admin/waitlist',
+  adminContCrtorLoginRequired, // New endpoint for waitlist
+  superAdminController.getWaitListByAdmin // New controller method
 );
 
 export default router;
