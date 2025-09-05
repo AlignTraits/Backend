@@ -345,3 +345,27 @@ export const getWaitListByAdminService = async () => {
     })),
   };
 };
+
+export const getUserDetailsByAdminService = async () => {
+  const users = await db.user.findMany({
+    // Fetch all users with detailed fields
+  });
+
+  return {
+    status: 200,
+    message: 'User details retrieved successfully',
+    data: users.map((user) => ({
+      id: user.id,
+      firstname: user.firstname,
+      lastname: user.lastname,
+      email: user.email,
+      contactNumber: user.contactNumber,
+      image: user.image,
+      updatedAt: user.updatedAt,
+      createdAt: user.createdAt,
+      region: user.region,
+      bio: user.bio,
+      // Add more fields as needed based on your User model (e.g., payment_plan, createdAt, etc.)
+    })),
+  };
+};

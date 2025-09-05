@@ -5,6 +5,7 @@ import {
   createAdminProfileService,
   deleteAdminProfileService,
   getAdminByIdService,
+  getUserDetailsByAdminService,
   getUsersByAdminService,
   getWaitListByAdminService,
   listAdminsService,
@@ -127,6 +128,19 @@ const getWaitListByAdmin = async (
   }
 };
 
+const getUserDetailsByAdmin = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const result = await getUserDetailsByAdminService();
+    res.status(result.status).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export = {
   createAdminProfile,
   updateAdminProfile,
@@ -135,4 +149,5 @@ export = {
   getAdminById,
   getUsersByAdmin,
   getWaitListByAdmin,
+  getUserDetailsByAdmin,
 };

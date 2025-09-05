@@ -55,4 +55,10 @@ router.get<{}, MessageResponse>(
   superAdminController.getWaitListByAdmin // New controller method
 );
 
+router.get<{}, MessageResponse>(
+  '/admin/user-details',
+  adminContCrtorLoginRequired, // New endpoint for user details
+  superAdminController.getUserDetailsByAdmin // New controller method
+);
+
 export default router;
