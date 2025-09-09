@@ -270,173 +270,427 @@ export const updateCourseAdmissionService = async ({
 };
 
 // bulk admission logic update
+// export const updateBulkCourseAdmissionsService = async (
+//   admissions: UpdateCourseAdmissionData[],
+//   userId: string,
+//   fileName: string
+// ) => {
+//   try {
+//     const results = await Promise.allSettled(
+//       admissions.map(async (admission) => {
+//         try {
+//           if (!admission.id) {
+//             throw new Error('Missing course ID');
+//           }
+
+//           const existingCourse = await db.course.findUnique({
+//             where: { id: admission.id },
+//           });
+//           if (!existingCourse) {
+//             throw new Error(`Course with ID ${admission.id} not found`);
+//           }
+
+//           const stringifyIfArray = (value: any, fallback: any) => {
+//             return Array.isArray(value)
+//               ? JSON.stringify(value)
+//               : value !== undefined
+//                 ? value
+//                 : fallback;
+//           };
+
+//           const validateSubjectsAndGrades = (
+//             subjects: any,
+//             grades: any,
+//             examNumber: number
+//           ) => {
+//             const hasSubjects = subjects !== undefined;
+//             const hasGrades = grades !== undefined;
+
+//             if (hasSubjects !== hasGrades) {
+//               throw new Error(
+//                 `ExamType${examNumber}: Both subjects and grades must be provided together`
+//               );
+//             }
+
+//             if (hasSubjects && hasGrades) {
+//               const subjectsArray = Array.isArray(subjects)
+//                 ? subjects
+//                 : JSON.parse(subjects || '[]');
+//               const gradesArray = Array.isArray(grades)
+//                 ? grades
+//                 : JSON.parse(grades || '[]');
+
+//               if (subjectsArray.length !== gradesArray.length) {
+//                 throw new Error(
+//                   `ExamType${examNumber}: Number of subjects (${subjectsArray.length}) does not match number of grades (${gradesArray.length})`
+//                 );
+//               }
+//             }
+//           };
+
+//           for (let i = 1; i <= 10; i++) {
+//             validateSubjectsAndGrades(
+//               (admission as any)[`ExamType${i}Subjects`],
+//               (admission as any)[`ExamType${i}SubGrades`],
+//               i
+//             );
+//           }
+
+//           const updatedCourse = await db.course.update({
+//             where: { id: admission.id },
+//             data: {
+//               ...[...Array(10)].reduce((acc, _, i) => {
+//                 const n = i + 1;
+//                 return {
+//                   ...acc,
+//                   [`ExamCountry${n}`]:
+//                     (admission as any)[`ExamCountry${n}`] ??
+//                     (existingCourse as any)[`ExamCountry${n}`],
+//                   [`ExamType${n}`]:
+//                     (admission as any)[`ExamType${n}`] ??
+//                     (existingCourse as any)[`ExamType${n}`],
+//                   [`ExamType${n}Subjects`]: stringifyIfArray(
+//                     (admission as any)[`ExamType${n}Subjects`],
+//                     (existingCourse as any)[`ExamType${n}Subjects`]
+//                   ),
+//                   [`ExamType${n}SubGrades`]: stringifyIfArray(
+//                     (admission as any)[`ExamType${n}SubGrades`],
+//                     (existingCourse as any)[`ExamType${n}SubGrades`]
+//                   ),
+//                 };
+//               }, {}),
+//               Adminrule1: admission.Adminrule1 ?? existingCourse.Adminrule1,
+//               Adminrule2: admission.Adminrule2 ?? existingCourse.Adminrule2,
+//               Adminrule3: admission.Adminrule3 ?? existingCourse.Adminrule3,
+//               Adminrule4: admission.Adminrule4 ?? existingCourse.Adminrule4,
+//               Adminrule5: admission.Adminrule5 ?? existingCourse.Adminrule5,
+//             },
+//           });
+
+//           return {
+//             status: 'success',
+//             data: { id: updatedCourse.id, title: updatedCourse.title },
+//           };
+//         } catch (error: any) {
+//           console.error(
+//             `Error updating admission logic for course "${admission.id || 'unknown'}":`,
+//             error
+//           );
+//           return {
+//             status: 'failed',
+//             id: admission.id || 'unknown',
+//             title: 'Unknown',
+//             reason: error.message,
+//           };
+//         }
+//       })
+//     );
+
+//     const updatedAdmissions = results
+//       .filter(
+//         (
+//           result
+//         ): result is PromiseFulfilledResult<{
+//           status: 'success';
+//           data: { id: string; title: string };
+//         }> => result.status === 'fulfilled' && result.value.status === 'success'
+//       )
+//       .map((result) => result.value.data);
+
+//     const failedAdmissions = results
+//       .filter(
+//         (
+//           result
+//         ): result is PromiseFulfilledResult<{
+//           status: 'failed';
+//           id: string;
+//           title: string;
+//           ExamCountry1: string;
+//           ExamType1: string;
+//           ExamType1Subjects: string;
+//           ExamType1SubGrades: string;
+//           Adminrule1: string;
+//           reason: string;
+//         }> => result.status === 'fulfilled' && result.value.status === 'failed'
+//       )
+//       .map((result) => result.value);
+
+//     let userExists = false;
+//     if (userId) {
+//       const user = await db.user.findUnique({ where: { id: userId } });
+//       userExists = !!user;
+//     }
+
+//     if (userExists) {
+//       await db.actionHistory.create({
+//         data: {
+//           action: 'Bulk Update',
+//           entity: 'Course Admission Logic',
+//           entityIds: updatedAdmissions.map(({ id, title }) => ({
+//             id,
+//             title,
+//           })),
+//           userId: userId,
+//           metadata: {
+//             successCount: updatedAdmissions.length,
+//             failedCount: failedAdmissions.length,
+//             fileName: fileName,
+//             failedMessages: failedAdmissions.map((item) => item.reason),
+//             failedItems: failedAdmissions,
+//           },
+//         },
+//       });
+//     } else {
+//       console.warn(
+//         `Skipping ActionHistory creation: userId ${userId} does not exist`
+//       );
+//     }
+
+//     const allFailed = results.every(
+//       (result) =>
+//         result.status === 'fulfilled' && result.value.status === 'failed'
+//     );
+
+//     return {
+//       message: allFailed
+//         ? 'All course admission logic updates failed'
+//         : 'Bulk admission logic update process completed',
+//       data: results.map((result: any) => result.value),
+//     };
+//   } catch (error: any) {
+//     console.error('Error in updateBulkCourseAdmissionsService:', error);
+//     throw new Error(`Bulk admission logic update failed: ${error.message}`);
+//   }
+// };
+
 export const updateBulkCourseAdmissionsService = async (
   admissions: UpdateCourseAdmissionData[],
   userId: string,
   fileName: string
 ) => {
-  try {
-    const results = await Promise.allSettled(
-      admissions.map(async (admission) => {
-        try {
-          if (!admission.id) {
-            throw new Error('Missing course ID');
-          }
+  const BATCH_SIZE = 50;
+  const successfulUpdates: { id: string; title: string }[] = [];
+  const failedUpdates: any[] = [];
+  const skippedUpdates: any[] = [];
 
-          const existingCourse = await db.course.findUnique({
-            where: { id: admission.id },
-          });
-          if (!existingCourse) {
-            throw new Error(`Course with ID ${admission.id} not found`);
-          }
+  for (let i = 0; i < admissions.length; i += BATCH_SIZE) {
+    const batch = admissions.slice(i, i + BATCH_SIZE);
 
-          const stringifyIfArray = (value: any, fallback: any) => {
-            return Array.isArray(value)
-              ? JSON.stringify(value)
-              : value !== undefined
-                ? value
-                : fallback;
-          };
+    try {
+      // Use a SINGLE transaction for the entire batch
+      const result = await db.$transaction(
+        async (tx) => {
+          const batchSuccess: { id: string; title: string }[] = [];
+          const batchFailures: any[] = [];
+          const batchSkipped: any[] = [];
 
-          const validateSubjectsAndGrades = (
-            subjects: any,
-            grades: any,
-            examNumber: number
-          ) => {
-            const hasSubjects = subjects !== undefined;
-            const hasGrades = grades !== undefined;
+          for (const admission of batch) {
+            let existingCourse: any = null;
+            try {
+              if (!admission.id) {
+                throw new Error('Missing course ID');
+              }
 
-            if (hasSubjects !== hasGrades) {
-              throw new Error(
-                `ExamType${examNumber}: Both subjects and grades must be provided together`
-              );
-            }
+              existingCourse = await tx.course.findUnique({
+                where: { id: admission.id },
+              });
 
-            if (hasSubjects && hasGrades) {
-              const subjectsArray = Array.isArray(subjects)
-                ? subjects
-                : JSON.parse(subjects || '[]');
-              const gradesArray = Array.isArray(grades)
-                ? grades
-                : JSON.parse(grades || '[]');
+              if (!existingCourse) {
+                throw new Error(`Course with ID ${admission.id} not found`);
+              }
 
-              if (subjectsArray.length !== gradesArray.length) {
-                throw new Error(
-                  `ExamType${examNumber}: Number of subjects (${subjectsArray.length}) does not match number of grades (${gradesArray.length})`
+              const stringifyIfArray = (value: any, fallback: any) => {
+                return Array.isArray(value)
+                  ? JSON.stringify(value)
+                  : value !== undefined
+                    ? value
+                    : fallback;
+              };
+
+              // Validate subjects and grades for each exam type (removed grade range validation)
+              const validateSubjectsAndGrades = (
+                subjects: any,
+                grades: any,
+                examNumber: number
+              ) => {
+                const hasSubjects = subjects !== undefined;
+                const hasGrades = grades !== undefined;
+
+                if (hasSubjects !== hasGrades) {
+                  throw new Error(
+                    `ExamType${examNumber}: Both subjects and grades must be provided together`
+                  );
+                }
+
+                if (hasSubjects && hasGrades) {
+                  const subjectsArray = Array.isArray(subjects)
+                    ? subjects
+                    : JSON.parse(subjects || '[]');
+                  const gradesArray = Array.isArray(grades)
+                    ? grades
+                    : JSON.parse(grades || '[]');
+
+                  if (subjectsArray.length !== gradesArray.length) {
+                    throw new Error(
+                      `ExamType${examNumber}: Number of subjects (${subjectsArray.length}) does not match number of grades (${gradesArray.length})`
+                    );
+                  }
+                  // Removed grade range validation (0-100 check)
+                }
+              };
+
+              // Validate all exam types
+              let hasChanges = false;
+              const updateData: any = {};
+
+              for (let i = 1; i <= 10; i++) {
+                const examCountry = (admission as any)[`ExamCountry${i}`];
+                const examType = (admission as any)[`ExamType${i}`];
+                const examSubjects = (admission as any)[`ExamType${i}Subjects`];
+                const examGrades = (admission as any)[`ExamType${i}SubGrades`];
+
+                // Check if any admission data is provided for this exam type
+                if (
+                  examCountry !== undefined ||
+                  examType !== undefined ||
+                  examSubjects !== undefined ||
+                  examGrades !== undefined
+                ) {
+                  validateSubjectsAndGrades(examSubjects, examGrades, i);
+                  hasChanges = true;
+                }
+
+                updateData[`ExamCountry${i}`] =
+                  examCountry ?? (existingCourse as any)[`ExamCountry${i}`];
+                updateData[`ExamType${i}`] =
+                  examType ?? (existingCourse as any)[`ExamType${i}`];
+                updateData[`ExamType${i}Subjects`] = stringifyIfArray(
+                  examSubjects,
+                  (existingCourse as any)[`ExamType${i}Subjects`]
+                );
+                updateData[`ExamType${i}SubGrades`] = stringifyIfArray(
+                  examGrades,
+                  (existingCourse as any)[`ExamType${i}SubGrades`]
                 );
               }
-            }
-          };
 
-          for (let i = 1; i <= 10; i++) {
-            validateSubjectsAndGrades(
-              (admission as any)[`ExamType${i}Subjects`],
-              (admission as any)[`ExamType${i}SubGrades`],
-              i
-            );
+              // Check admin rules for changes
+              const adminRules = [
+                'Adminrule1',
+                'Adminrule2',
+                'Adminrule3',
+                'Adminrule4',
+                'Adminrule5',
+              ];
+              adminRules.forEach((rule) => {
+                if ((admission as any)[rule] !== undefined) {
+                  hasChanges = true;
+                  updateData[rule] =
+                    (admission as any)[rule] ?? (existingCourse as any)[rule];
+                }
+              });
+
+              // Check if there are actual changes
+              if (!hasChanges) {
+                batchSkipped.push({
+                  id: admission.id,
+                  title: existingCourse.title,
+                  message: `No admission logic changes for course with ID ${admission.id}`,
+                });
+                continue;
+              }
+
+              const updatedCourse = await tx.course.update({
+                where: { id: admission.id },
+                data: updateData,
+              });
+
+              batchSuccess.push({
+                id: updatedCourse.id,
+                title: updatedCourse.title,
+              });
+            } catch (error: any) {
+              const userFriendlyMessage = getFriendlyAdmissionErrorMessage(
+                error,
+                admission.id,
+                existingCourse?.title
+              );
+              batchFailures.push({
+                admission,
+                error: userFriendlyMessage,
+              });
+            }
           }
 
-          const updatedCourse = await db.course.update({
-            where: { id: admission.id },
-            data: {
-              ...[...Array(10)].reduce((acc, _, i) => {
-                const n = i + 1;
-                return {
-                  ...acc,
-                  [`ExamCountry${n}`]:
-                    (admission as any)[`ExamCountry${n}`] ??
-                    (existingCourse as any)[`ExamCountry${n}`],
-                  [`ExamType${n}`]:
-                    (admission as any)[`ExamType${n}`] ??
-                    (existingCourse as any)[`ExamType${n}`],
-                  [`ExamType${n}Subjects`]: stringifyIfArray(
-                    (admission as any)[`ExamType${n}Subjects`],
-                    (existingCourse as any)[`ExamType${n}Subjects`]
-                  ),
-                  [`ExamType${n}SubGrades`]: stringifyIfArray(
-                    (admission as any)[`ExamType${n}SubGrades`],
-                    (existingCourse as any)[`ExamType${n}SubGrades`]
-                  ),
-                };
-              }, {}),
-              Adminrule1: admission.Adminrule1 ?? existingCourse.Adminrule1,
-              Adminrule2: admission.Adminrule2 ?? existingCourse.Adminrule2,
-              Adminrule3: admission.Adminrule3 ?? existingCourse.Adminrule3,
-              Adminrule4: admission.Adminrule4 ?? existingCourse.Adminrule4,
-              Adminrule5: admission.Adminrule5 ?? existingCourse.Adminrule5,
-            },
-          });
-
-          return {
-            status: 'success',
-            data: { id: updatedCourse.id, title: updatedCourse.title },
-          };
-        } catch (error: any) {
-          console.error(
-            `Error updating admission logic for course "${admission.id || 'unknown'}":`,
-            error
-          );
-          return {
-            status: 'failed',
-            id: admission.id || 'unknown',
-            title: 'Unknown',
-            reason: error.message,
-          };
+          return { batchSuccess, batchFailures, batchSkipped };
+        },
+        {
+          timeout: 120000, // Increased to 120 seconds for larger batches or slow operations
+          maxWait: 120000,
         }
-      })
-    );
+      );
 
-    const updatedAdmissions = results
-      .filter(
-        (
-          result
-        ): result is PromiseFulfilledResult<{
-          status: 'success';
-          data: { id: string; title: string };
-        }> => result.status === 'fulfilled' && result.value.status === 'success'
-      )
-      .map((result) => result.value.data);
-
-    const failedAdmissions = results
-      .filter(
-        (
-          result
-        ): result is PromiseFulfilledResult<{
-          status: 'failed';
-          id: string;
-          title: string;
-          ExamCountry1: string;
-          ExamType1: string;
-          ExamType1Subjects: string;
-          ExamType1SubGrades: string;
-          Adminrule1: string;
-          reason: string;
-        }> => result.status === 'fulfilled' && result.value.status === 'failed'
-      )
-      .map((result) => result.value);
-
-    let userExists = false;
-    if (userId) {
-      const user = await db.user.findUnique({ where: { id: userId } });
-      userExists = !!user;
+      successfulUpdates.push(...result.batchSuccess);
+      failedUpdates.push(...result.batchFailures);
+      skippedUpdates.push(...result.batchSkipped);
+    } catch (batchError) {
+      // If the entire transaction fails, mark all admissions in batch as failed
+      for (const admission of batch) {
+        failedUpdates.push({
+          admission,
+          error:
+            'Batch processing failed - transaction timeout or database error',
+        });
+      }
     }
+
+    // Small delay between batches
+    if (i + BATCH_SIZE < admissions.length) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }
+
+  // Batch create failure logs
+  if (failedUpdates.length > 0) {
+    await db.bulkOperationFailure.createMany({
+      data: failedUpdates.map((failure) => ({
+        entity: 'Course Admission',
+        operation: 'Update',
+        itemData: failure.admission as any,
+        errorMessage: failure.error,
+      })),
+      skipDuplicates: false, // Removed skipDuplicates to log all failures
+    });
+  }
+
+  // Log action history
+  if (
+    successfulUpdates.length > 0 ||
+    failedUpdates.length > 0 ||
+    skippedUpdates.length > 0
+  ) {
+    const userExists = userId
+      ? !!(await db.user.findUnique({ where: { id: userId } }))
+      : false;
 
     if (userExists) {
       await db.actionHistory.create({
         data: {
           action: 'Bulk Update',
           entity: 'Course Admission Logic',
-          entityIds: updatedAdmissions.map(({ id, title }) => ({
+          entityIds: successfulUpdates.map(({ id, title }) => ({
             id,
-            title,
+            name: title,
           })),
           userId: userId,
           metadata: {
-            successCount: updatedAdmissions.length,
-            failedCount: failedAdmissions.length,
+            successCount: successfulUpdates.length,
+            failedCount: failedUpdates.length,
+            skippedCount: skippedUpdates.length,
             fileName: fileName,
-            failedMessages: failedAdmissions.map((item) => item.reason),
-            failedItems: failedAdmissions,
+            failedMessages: failedUpdates.map((f) => f.error),
+            failedItems: failedUpdates,
+            skippedItems: skippedUpdates,
           },
         },
       });
@@ -445,22 +699,69 @@ export const updateBulkCourseAdmissionsService = async (
         `Skipping ActionHistory creation: userId ${userId} does not exist`
       );
     }
-
-    const allFailed = results.every(
-      (result) =>
-        result.status === 'fulfilled' && result.value.status === 'failed'
-    );
-
-    return {
-      message: allFailed
-        ? 'All course admission logic updates failed'
-        : 'Bulk admission logic update process completed',
-      data: results.map((result: any) => result.value),
-    };
-  } catch (error: any) {
-    console.error('Error in updateBulkCourseAdmissionsService:', error);
-    throw new Error(`Bulk admission logic update failed: ${error.message}`);
   }
+
+  return {
+    message: 'Bulk admission logic update process completed',
+    data: {
+      updated: successfulUpdates,
+      failed: failedUpdates,
+      skipped: skippedUpdates,
+    },
+  };
+};
+
+// Admission-specific error message helper
+const getFriendlyAdmissionErrorMessage = (
+  error: any,
+  courseId: string,
+  courseTitle?: string
+): string => {
+  const courseName = courseTitle || `ID ${courseId}`;
+
+  if (error.message.includes('Missing course ID')) {
+    return 'Course ID is required to update admission logic';
+  }
+
+  if (error.message.includes('Course with ID')) {
+    const idMatch = error.message.match(/ID ([^ ]+)/);
+    const id = idMatch ? idMatch[1] : courseId;
+    return `Course with ID "${id}" not found. Cannot update admission logic.`;
+  }
+
+  if (
+    error.message.includes('ExamType') &&
+    error.message.includes('subjects and grades')
+  ) {
+    return `For ${courseName}: ${error.message}. Please provide both subjects and grades together.`;
+  }
+
+  if (error.message.includes('does not match number of grades')) {
+    return `For ${courseName}: ${error.message}. Each subject must have a corresponding grade.`;
+  }
+
+  if (error.message.includes('Invalid grade')) {
+    return `For ${courseName}: ${error.message}. Grades must be numeric values between 0 and 100.`;
+  }
+
+  if (error.message.includes('JSON')) {
+    return `For ${courseName}: Invalid format for subjects or grades. Please provide valid JSON arrays.`;
+  }
+
+  if (error.code === 'P2002') {
+    return `Admission logic update failed for ${courseName}. Duplicate entry detected.`;
+  }
+
+  if (error.code === 'P2003') {
+    return `Invalid reference data for ${courseName}. Please check exam types and countries.`;
+  }
+
+  if (error.message.includes('Batch processing failed')) {
+    return `Admission logic update for ${courseName} failed due to system timeout. Please try again.`;
+  }
+
+  // Default error message with course context
+  return `Failed to update admission logic for ${courseName}: ${error.message}`;
 };
 
 // users' Academic History
