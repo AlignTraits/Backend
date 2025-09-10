@@ -2,12 +2,12 @@ import { Request, Response } from 'express';
 
 import Papa from 'papaparse';
 import {
-  createBulkCoursesService,
-  createBulkSchoolsService2,
+  // createBulkCoursesService,
+  // createBulkSchoolsService2,
   deleteBulkCoursesService,
   deleteBulkSchoolsService,
-  updateBulkCoursesService,
-  updateBulkSchoolsService,
+  // updateBulkCoursesService,
+  // updateBulkSchoolsService,
   generateSchoolCourseReport,
   getBulkOperationFailuresService,
   clearOldBulkOperationFailuresService,
@@ -19,6 +19,12 @@ import {
   UpdateCsvCourseData,
   UpdateSchoolData,
 } from '../types/school-course-types';
+import {
+  createBulkCoursesService,
+  createBulkSchoolsService2,
+  updateBulkCoursesService,
+  updateBulkSchoolsService,
+} from '../services/bulk-test-split-code/bulk-test2';
 
 export const createBulkSchoolsController = async (
   req: Request,
