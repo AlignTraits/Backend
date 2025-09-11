@@ -204,7 +204,7 @@ export type CourseReportData = {
 // New type for updating only admission logic
 export interface UpdateCourseAdmissionData {
   id: string;
-
+  jambCutOffMark?: number;
   ExamCountry1?: string;
   ExamType1?: string;
   ExamType1Subjects?: string[]; // Accept array of strings

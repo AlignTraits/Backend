@@ -463,6 +463,8 @@ model Course {
   Adminrule3            String?         // e.g., "WAEC + NECO"
   Adminrule4            String?         // e.g., "WAEC + NECO | JAMB"
   Adminrule5            String?         // e.g., "WAEC + NECO | JAMB + GCE"
+  
+  jambCutOffMark        Float?        @default(0)
   // End of Admission Logic (Optional)
 
   createdAt              DateTime        @default(now())

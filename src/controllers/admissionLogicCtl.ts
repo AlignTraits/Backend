@@ -74,6 +74,9 @@ export const updateCourseAdmissionController = async (
     Adminrule3,
     Adminrule4,
     Adminrule5,
+
+    // jamb
+    jambCutOffMark,
   } = req.body;
 
   const result = await updateCourseAdmissionService({
@@ -123,6 +126,7 @@ export const updateCourseAdmissionController = async (
     Adminrule3,
     Adminrule4,
     Adminrule5,
+    jambCutOffMark,
     userId,
   });
 
