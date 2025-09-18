@@ -8,6 +8,7 @@ import {
   updateAcademicRecordService,
   deleteAcademicRecordService,
   getAcademicRecordService,
+  addUserRecordByEmailService,
 } from '../services/admissionLogicServices';
 import MessageResponse from '../types/messageResponse';
 import {
@@ -301,6 +302,34 @@ export const getAcademicRecordController = async (
   }
 
   const result = await getAcademicRecordService({ userId });
+  res.status(result.status).json({
+    message: result.message,
+    ...(result.data && { data: result.data }),
+    ...(result.errors && { errors: result.errors }),
+    ok: result.ok,
+  });
+};
+
+// New controller function for adding academic record by email
+export const addUserRecordByEmailController = async (
+  req: Request,
+  res: Response<MessageResponse>
+) => {
+  const { email, ...academicRecordData } = req.body;
+
+  if (!email || typeof email !== 'string') {
+    return res.status(400).json({
+      message: 'Email is required and must be a string',
+      ok: false,
+    });
+  }
+
+  const academicRecordDataByEmail: AcademicRecordData = {
+    email,
+    ...academicRecordData,
+  };
+
+  const result = await addUserRecordByEmailService(academicRecordDataByEmail);
   res.status(result.status).json({
     message: result.message,
     ...(result.data && { data: result.data }),

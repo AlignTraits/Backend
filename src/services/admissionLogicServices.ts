@@ -1539,3 +1539,122 @@ export const getAcademicRecordService = async ({
     };
   }
 };
+
+// New service function for adding academic record by email
+export const addUserRecordByEmailService = async (data: AcademicRecordData) => {
+  try {
+    // First find the user by email to get the userId
+    const user = await db.user.findUnique({ where: { email: data.email } });
+    if (!user) {
+      return {
+        ok: false,
+        status: 404,
+        message: 'User not found with the provided email',
+        errors: [{ message: 'No user exists with the given email' }],
+      };
+    }
+
+    // Preprocess data to handle arrays by converting them to JSON strings
+    const processedData = {
+      userId: user.id, // Set userId from the found user
+      ExamCountry1: data.ExamCountry1,
+      ExamType1: data.ExamType1,
+      ExamType1Subjects: Array.isArray(data.ExamType1Subjects)
+        ? JSON.stringify(data.ExamType1Subjects)
+        : data.ExamType1Subjects,
+      ExamType1SubGrades: Array.isArray(data.ExamType1SubGrades)
+        ? JSON.stringify(data.ExamType1SubGrades)
+        : data.ExamType1SubGrades,
+      ExamCountry2: data.ExamCountry2,
+      ExamType2: data.ExamType2,
+      ExamType2Subjects: Array.isArray(data.ExamType2Subjects)
+        ? JSON.stringify(data.ExamType2Subjects)
+        : data.ExamType2Subjects,
+      ExamType2SubGrades: Array.isArray(data.ExamType2SubGrades)
+        ? JSON.stringify(data.ExamType2SubGrades)
+        : data.ExamType2SubGrades,
+      ExamCountry3: data.ExamCountry3,
+      ExamType3: data.ExamType3,
+      ExamType3Subjects: Array.isArray(data.ExamType3Subjects)
+        ? JSON.stringify(data.ExamType3Subjects)
+        : data.ExamType3Subjects,
+      ExamType3SubGrades: Array.isArray(data.ExamType3SubGrades)
+        ? JSON.stringify(data.ExamType3SubGrades)
+        : data.ExamType3SubGrades,
+      ExamCountry4: data.ExamCountry4,
+      ExamType4: data.ExamType4,
+      ExamType4Subjects: Array.isArray(data.ExamType4Subjects)
+        ? JSON.stringify(data.ExamType4Subjects)
+        : data.ExamType4Subjects,
+      ExamType4SubGrades: Array.isArray(data.ExamType4SubGrades)
+        ? JSON.stringify(data.ExamType4SubGrades)
+        : data.ExamType4SubGrades,
+      ExamCountry5: data.ExamCountry5,
+      ExamType5: data.ExamType5,
+      ExamType5Subjects: Array.isArray(data.ExamType5Subjects)
+        ? JSON.stringify(data.ExamType5Subjects)
+        : data.ExamType5Subjects,
+      ExamType5SubGrades: Array.isArray(data.ExamType5SubGrades)
+        ? JSON.stringify(data.ExamType5SubGrades)
+        : data.ExamType5SubGrades,
+      ExamCountry6: data.ExamCountry6,
+      ExamType6: data.ExamType6,
+      ExamType6Subjects: Array.isArray(data.ExamType6Subjects)
+        ? JSON.stringify(data.ExamType6Subjects)
+        : data.ExamType6Subjects,
+      ExamType6SubGrades: Array.isArray(data.ExamType6SubGrades)
+        ? JSON.stringify(data.ExamType6SubGrades)
+        : data.ExamType6SubGrades,
+      ExamCountry7: data.ExamCountry7,
+      ExamType7: data.ExamType7,
+      ExamType7Subjects: Array.isArray(data.ExamType7Subjects)
+        ? JSON.stringify(data.ExamType7Subjects)
+        : data.ExamType7Subjects,
+      ExamType7SubGrades: Array.isArray(data.ExamType7SubGrades)
+        ? JSON.stringify(data.ExamType7SubGrades)
+        : data.ExamType7SubGrades,
+      ExamCountry8: data.ExamCountry8,
+      ExamType8: data.ExamType8,
+      ExamType8Subjects: Array.isArray(data.ExamType8Subjects)
+        ? JSON.stringify(data.ExamType8Subjects)
+        : data.ExamType8Subjects,
+      ExamType8SubGrades: Array.isArray(data.ExamType8SubGrades)
+        ? JSON.stringify(data.ExamType8SubGrades)
+        : data.ExamType8SubGrades,
+      ExamCountry9: data.ExamCountry9,
+      ExamType9: data.ExamType9,
+      ExamType9Subjects: Array.isArray(data.ExamType9Subjects)
+        ? JSON.stringify(data.ExamType9Subjects)
+        : data.ExamType9Subjects,
+      ExamType9SubGrades: Array.isArray(data.ExamType9SubGrades)
+        ? JSON.stringify(data.ExamType9SubGrades)
+        : data.ExamType9SubGrades,
+      ExamCountry10: data.ExamCountry10,
+      ExamType10: data.ExamType10,
+      ExamType10Subjects: Array.isArray(data.ExamType10Subjects)
+        ? JSON.stringify(data.ExamType10Subjects)
+        : data.ExamType10Subjects,
+      ExamType10SubGrades: Array.isArray(data.ExamType10SubGrades)
+        ? JSON.stringify(data.ExamType10SubGrades)
+        : data.ExamType10SubGrades,
+    };
+
+    const academicRecord = await db.academicRecord.create({
+      data: processedData,
+    });
+    return {
+      ok: true,
+      status: 201,
+      message: 'Academic record created successfully',
+      data: academicRecord,
+    };
+  } catch (error: any) {
+    console.error('Error creating academic record by email:', error);
+    return {
+      ok: false,
+      status: 500,
+      message: 'An error occurred while creating the academic record',
+      errors: [{ message: error.message }],
+    };
+  }
+};

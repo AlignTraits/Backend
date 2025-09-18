@@ -15,6 +15,7 @@ import {
   updateAcademicRecordController,
   deleteAcademicRecordController,
   getAcademicRecordController,
+  addUserRecordByEmailController,
 } from '../controllers/admissionLogicCtl';
 
 const router = express.Router();
@@ -55,5 +56,8 @@ router.delete(
 
 // Fetch academic record
 router.get('/academic-records', loginRequired, getAcademicRecordController);
+
+// Assuming router is defined elsewhere
+router.post('/academic-records-by-email', addUserRecordByEmailController);
 
 export default router;

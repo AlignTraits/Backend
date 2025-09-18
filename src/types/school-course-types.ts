@@ -266,6 +266,7 @@ export interface UpdateCourseAdmissionData {
 // types/academicRecordTypes.ts
 export interface AcademicRecordData {
   id?: string;
+  email?: string;
   userId: string;
   ExamCountry1?: string | null;
   ExamType1?: string | null;
