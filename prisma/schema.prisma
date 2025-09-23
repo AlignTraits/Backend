@@ -372,6 +372,12 @@ enum DurationPeriod {
   YEARS
   MONTHS
   WEEKS
+  Years
+  years
+  Weeks
+  weeks
+  Months
+  months
 }
 
 enum Currency {
@@ -402,8 +408,8 @@ model Course {
   currency               Currency        // Currency for Course Price
   acceptanceFee          Float           // Acceptance Fee
   acceptanceFeeCurrency  Currency        // Currency for Acceptance Fee
-  objectives             String          // Course Objectives
-  courseWebsiteUrl       String          // Course website url
+  objectives             String?          // Course Objectives
+  courseWebsiteUrl       String?          // Course website url
   loanInformation        String?          // Loan Information
   ratings                Float?          @default(0.0) // Optional ratings field with default
 
