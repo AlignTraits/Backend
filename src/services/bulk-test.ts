@@ -1358,11 +1358,21 @@ export const createBulkCoursesService = async (
   const successfulCourses: { id: string; title: string }[] = [];
   const failedCourses: (CreateCSVCourseData & { error: string })[] = [];
 
-  const schoolIds = [...new Set(courses.map((course) => course.schoolId))];
+  const schoolIds = [
+    ...new Set(courses.map((course) => course.schoolId)),
+  ].filter((id): id is string => id !== null && id !== undefined); // Filter out null and undefined
   const existingSchools = await db.school.findMany({
-    where: { id: { in: schoolIds } },
-    select: { id: true, name: true },
+    where: {
+      id: {
+        in: schoolIds,
+      },
+    },
+    select: {
+      id: true,
+      name: true,
+    },
   });
+
   const existingSchoolMap = new Map(existingSchools.map((s) => [s.id, s.name]));
 
   const categoryIds = [
@@ -1429,13 +1439,23 @@ export const createBulkCoursesService = async (
 
               const courseId = nanoid(10);
 
-              // Convert price string to Float with type safety
+              // Convert price string to Float, using second value if range exists, allow 0
               let normalizedPrice: number;
               if (course.price !== undefined && course.price !== null) {
-                // Ensure price is treated as string and convert to Float
                 const priceStr = String(course.price); // Convert to string if it's a number
                 const cleanPrice = priceStr.replace(/,/g, ''); // Remove commas
-                normalizedPrice = parseFloat(cleanPrice);
+                const [minPrice, maxPrice] = cleanPrice
+                  .split(' - ')
+                  .map(Number);
+                if (maxPrice) {
+                  normalizedPrice = maxPrice; // Use second value (max) if range exists
+                } else if (minPrice !== undefined) {
+                  normalizedPrice = minPrice; // Use single value, including 0
+                } else {
+                  throw new Error(
+                    `Invalid price value "${course.price}" for course "${course.title}"`
+                  );
+                }
                 if (isNaN(normalizedPrice)) {
                   throw new Error(
                     `Invalid price value "${course.price}" for course "${course.title}"`
@@ -1444,6 +1464,26 @@ export const createBulkCoursesService = async (
               } else {
                 throw new Error(
                   `Price is required for course "${course.title}"`
+                );
+              }
+
+              // Convert acceptanceFee string to Float, allow 0
+              let normalizedAcceptanceFee: number;
+              if (
+                course.acceptanceFee !== undefined &&
+                course.acceptanceFee !== null
+              ) {
+                const feeStr = String(course.acceptanceFee); // Convert to string if it's a number
+                const cleanFee = feeStr.replace(/,/g, ''); // Remove commas
+                normalizedAcceptanceFee = parseFloat(cleanFee);
+                if (isNaN(normalizedAcceptanceFee)) {
+                  throw new Error(
+                    `Invalid acceptanceFee value "${course.acceptanceFee}" for course "${course.title}"`
+                  );
+                }
+              } else {
+                throw new Error(
+                  `Acceptance fee is required for course "${course.title}"`
                 );
               }
 
@@ -1457,9 +1497,9 @@ export const createBulkCoursesService = async (
                   scholarshipInformation: course.scholarshipInformation,
                   duration: course.duration,
                   durationPeriod: course.durationPeriod, // Uses enum values directly
-                  price: normalizedPrice, // Use normalized price as Float
+                  price: normalizedPrice, // Use normalized price as Float (second value if range, allows 0)
                   currency: course.currency,
-                  acceptanceFee: course.acceptanceFee,
+                  acceptanceFee: normalizedAcceptanceFee, // Use normalized acceptanceFee as Float (allows 0)
                   acceptanceFeeCurrency: course.acceptanceFeeCurrency,
                   objectives: course.objectives ?? null,
                   courseWebsiteUrl: course.courseWebsiteUrl ?? null,
