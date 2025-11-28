@@ -205,6 +205,7 @@ model CareerResult {
   userId            String   @unique
   user              User     @relation(fields: [userId], references: [id])
   recommendedCareers String[]
+  richRecommendations String? @db.Text // ← New field to store full JSON
   recommendedCourses Json?   // Optional JSON array of { id: string, title: string }
   reasoning         String?
   createdAt         DateTime @default(now())

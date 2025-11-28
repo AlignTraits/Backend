@@ -5,6 +5,7 @@ import MessageResponse from '../types/messageResponse';
 import { createUser, getUserByEmail } from '../models/userModel';
 import { sendMail } from './mailServices';
 import { db } from '../config/db';
+import { CAREER_PERSONALITY_DATA } from '../types/careerPersonalityData';
 
 dotenv.config();
 
@@ -257,31 +258,51 @@ async function getCareerPathService(userId: string) {
       where: { userId },
     });
 
-    // if (careerResults.length === 0) {
-    //   return {
-    //     ok: false,
-    //     status: 404,
-    //     message: 'No career path found for this user',
-    //     errors: [
-    //       { message: 'Please submit answers to get career recommendations' },
-    //     ],
-    //   };
-    // }
+    if (!careerResults) {
+      return {
+        ok: false,
+        status: 404,
+        message: 'No career path found for this user',
+        data: null,
+      };
+    }
 
-    // Map all career results to include recommended career and reasoning
-    // const formattedResults = careerResults.map((result) => ({
-    //   recommendedCareer: result.recommendedCareers
-    //     ? [...result.recommendedCareers].reverse()
-    //     : [],
-    //   reasoning: result.reasoning || 'No reasoning provided.',
-    // }));
+    // Parse richRecommendations if it exists
+    let richCareers: any[] = [];
+
+    if (careerResults.richRecommendations) {
+      try {
+        richCareers = JSON.parse(careerResults.richRecommendations as string);
+      } catch (e) {
+        console.warn('Failed to parse richRecommendations:', e);
+        richCareers = [];
+      }
+    }
+
+    // Also parse recommendedCareers if it's a string (in case old data)
+    let simpleCareers: string[] = [];
+    if (typeof careerResults.recommendedCareers === 'string') {
+      try {
+        simpleCareers = JSON.parse(careerResults.recommendedCareers as string);
+      } catch {
+        simpleCareers = careerResults.recommendedCareers as string[];
+      }
+    } else {
+      simpleCareers = (careerResults.recommendedCareers as string[]) || [];
+    }
 
     return {
       ok: true,
       status: 200,
       message: 'Career paths retrieved successfully',
-      data: careerResults,
-      // data: formattedResults,
+      data: {
+        ...careerResults,
+
+        // Both are now proper JSON objects/arrays — no more strings!
+        recommendedCareers:
+          richCareers.length > 0 ? richCareers : simpleCareers,
+        richRecommendations: richCareers.length > 0 ? richCareers : null, // clean, real JSON
+      },
     };
   } catch (error) {
     console.error('Error retrieving career path:', error);
@@ -478,19 +499,15 @@ async function getCareerPathService(userId: string) {
 //   }
 // }
 
+/**
+ * i copied here for the server version with modifications to recommend top 4 careers
+ */
 async function calculateCareerPathFromMappingServer(
   userId: string,
   answers: { question: string; answer: string }[],
   mapping: Record<string, any>
 ): Promise<WetrocloudResponse> {
   try {
-    // console.log(
-    //   'Calculating career path for user:',
-    //   userId,
-    //   'with answers:',
-    //   answers
-    // );
-
     // Convert answers to a case-insensitive map for lookup
     const answerMap = new Map(
       answers.map(({ question, answer }) => [
@@ -683,17 +700,75 @@ async function calculateCareerPathFromMappingServer(
       )}, which require ${skillsList}. The recommendations are prioritized by your strongest matches, with ${recommendedCareers[0]} being the top fit.`;
     }
 
-    // console.log('Career recommendation:', { recommendedCareer, reasoning });
-
+    // ←←← old working code ←←←
     // Save to database
+    // try {
+    //   await prisma.careerResult.upsert({
+    //     where: { userId },
+    //     update: { recommendedCareers, reasoning },
+    //     create: {
+    //       userId,
+    //       recommendedCareers,
+    //       reasoning,
+    //       createdAt: new Date(),
+    //       updatedAt: new Date(),
+    //     },
+    //   });
+    // } catch (dbError) {
+    //   console.error('Database save failed:', dbError);
+    //   return {
+    //     ok: false,
+    //     message: 'Failed to save career results',
+    //   };
+    // }
+
+    // return {
+    //   ok: true,
+    //   message: 'Career path calculated successfully',
+    //   data: { recommendedCareers, reasoning },
+    // };
+    // ←←← old working code ←←←
+
+    // ←←← REPLACE FROM HERE TO THE END ←←←
+
+    // Build rich recommendations for frontend
+    const recommendationsWithDetails = recommendedCareers.map(
+      (career, index) => {
+        const detail = CAREER_PERSONALITY_DATA[career];
+        const matchScore = 98 - index * 4; // 98%, 94%, 90%, 86%
+
+        return {
+          career,
+          matchScore,
+          openness: detail?.openness ?? 0,
+          conscientiousness: detail?.conscientiousness ?? 0,
+          extraversion: detail?.extraversion ?? 0,
+          agreeableness: detail?.agreeableness ?? 0,
+          neuroticism: detail?.neuroticism ?? 0,
+          positiveTraits: detail?.positiveTraits ?? ['Details coming soon'],
+          negativeTraits: detail?.negativeTraits ?? ['Details coming soon'],
+          personalityNarrative:
+            detail?.personalityNarrative ??
+            'Full analysis will be available soon.',
+        };
+      }
+    );
+
+    // Save to DB – keep backward compatible
     try {
       await prisma.careerResult.upsert({
         where: { userId },
-        update: { recommendedCareers, reasoning },
+        update: {
+          recommendedCareers: recommendedCareers, // ← Keep simple names for DB
+          reasoning,
+          // Optional: Save rich version as JSON string (future-proof)
+          richRecommendations: JSON.stringify(recommendationsWithDetails),
+        },
         create: {
           userId,
-          recommendedCareers,
+          recommendedCareers: recommendedCareers, // ← Simple array of strings
           reasoning,
+          richRecommendations: JSON.stringify(recommendationsWithDetails), // ← Full data saved safely
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -709,7 +784,10 @@ async function calculateCareerPathFromMappingServer(
     return {
       ok: true,
       message: 'Career path calculated successfully',
-      data: { recommendedCareers, reasoning },
+      data: {
+        recommendedCareers: recommendationsWithDetails, // ← Frontend gets BEAUTIFUL rich data
+        reasoning,
+      },
     };
   } catch (error) {
     console.error('Career path calculation failed:', error);
