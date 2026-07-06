@@ -1,5 +1,7 @@
 # LearnConnect Backend
 
+  <!-- "postinstall": "npx prisma generate && npx prisma db push --schema prisma/schema.prisma --accept-data-loss || true" -->
+
 wetrocloud
 npm run build # Runs tsc to compile to JS
 npm run start:dist
