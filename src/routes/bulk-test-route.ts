@@ -52,7 +52,7 @@ router.delete<{}, MessageResponse>(
 // Bulk course creation route with CSV
 router.post<{}, MessageResponse>(
   '/csv/bulk-add-courses',
-  adminLoginRequired,
+  // adminLoginRequired,
   upload.single('csvFile'),
   createBulkCoursesController
 );
@@ -78,7 +78,7 @@ router.delete<{}, MessageResponse>(
 // .../download?format=csv&entity=course&id=jy0ObkN1eK
 router.get(
   '/download',
-  adminLoginRequired, // Ensure only admins can access
+  // adminLoginRequired, // Ensure only admins can access
   downloadSchoolCourseDataController
 );
 
