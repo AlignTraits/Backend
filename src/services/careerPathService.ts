@@ -1264,16 +1264,170 @@ async function extractUserData(userId: string, academicRecord: any) {
   return { careerResult, firstCareer, subjectData };
 }
 
+function matchExamTypes(
+  academicExamTypes: [string, string[]][],
+  courseExamTypes: [CourseSubjectFields, string][]
+): [string, string[]][] {
+  const matched: [string, string[]][] = [];
+  for (const [academicType, academicSubjects] of academicExamTypes) {
+    for (const [courseField, courseType] of courseExamTypes) {
+      if (
+        courseType &&
+        academicType.toUpperCase() === courseType.toUpperCase()
+      ) {
+        matched.push([academicType, academicSubjects]);
+        break;
+      }
+    }
+  }
+  return matched;
+}
+
+function getCourseExamTypes(course: any): [CourseSubjectFields, string][] {
+  const examTypes: [CourseSubjectFields, string][] = [];
+  const subjectFields: CourseSubjectFields[] = [
+    'ExamType1Subjects',
+    'ExamType2Subjects',
+    'ExamType3Subjects',
+    'ExamType4Subjects',
+    'ExamType5Subjects',
+    'ExamType6Subjects',
+    'ExamType7Subjects',
+    'ExamType8Subjects',
+    'ExamType9Subjects',
+    'ExamType10Subjects',
+  ];
+  for (const field of subjectFields) {
+    const examTypeField = field.replace(
+      'Subjects',
+      ''
+    ) as `ExamType${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10}`;
+    if (course[examTypeField]) {
+      examTypes.push([field, course[examTypeField] as string]);
+    }
+  }
+  return examTypes;
+}
+
+function getExamTypeName(course: any, field: CourseSubjectFields): string {
+  const examTypeField = field.replace('Subjects', '');
+  return (course[examTypeField] as string) || '';
+}
+
+// async function matchRecommendedCourses(
+//   firstCareer: string,
+//   subjectData: { [key: string]: string[] }
+// ): Promise<RecommendedCourse[]> {
+//   let recommendedCourses: RecommendedCourse[] = [];
+
+//   const courseMeetsRequirements = (course: any): boolean => {
+//     const academicExamTypes: [string, string[]][] = Object.entries(subjectData);
+//     const courseExamTypes: [CourseSubjectFields, string][] =
+//       getCourseExamTypes(course);
+//     const matchedExamTypes = matchExamTypes(academicExamTypes, courseExamTypes);
+
+//     if (matchedExamTypes.length === 0) return false;
+
+//     return matchedExamTypes.some(([academicType, academicSubjects]) => {
+//       const courseField = courseExamTypes.find(
+//         ([field]) => getExamTypeName(course, field) === academicType
+//       )?.[0];
+//       if (!courseField || !academicSubjects) return false;
+
+//       const courseSubjects = JSON.parse(course[courseField] as string) || [];
+//       if (courseSubjects.length === 0) return false;
+
+//       const overlap = courseSubjects.filter((subject: string) =>
+//         academicSubjects.includes(subject)
+//       ).length;
+
+//       const isJambUtme = ['JAMB', 'UTME'].includes(academicType.toUpperCase());
+
+//       const minMatches = isJambUtme
+//         ? Math.min(4, courseSubjects.length)
+//         : courseSubjects.length;
+
+//       console.log(
+//         `[match] examType=${academicType} course="${course.title}" overlap=${overlap}/${courseSubjects.length} needed=${minMatches}`
+//       );
+
+//       return overlap >= minMatches;
+//     });
+//   };
+
+//   const matchingCategory = await prisma.courseCategory.findFirst({
+//     where: { name: { contains: firstCareer, mode: 'insensitive' } },
+//     include: { courses: true },
+//   });
+
+//   if (matchingCategory?.courses && matchingCategory.courses.length > 0) {
+//     recommendedCourses = matchingCategory.courses
+//       .filter(courseMeetsRequirements)
+//       .map((course) => ({ id: course.id, title: course.title }))
+//       .slice(0, 5);
+//   }
+
+//   if (recommendedCourses.length === 0 && Object.keys(subjectData).length >= 1) {
+//     const allCategories = await prisma.courseCategory.findMany({
+//       include: { courses: true },
+//     });
+//     const allCourses = allCategories.flatMap(
+//       (category) => category.courses || []
+//     );
+
+//     recommendedCourses = allCourses
+//       .filter(courseMeetsRequirements)
+//       .map((course) => ({ id: course.id, title: course.title }))
+//       .slice(0, 5);
+//   }
+
+//   return recommendedCourses.length < 3 && recommendedCourses.length > 0
+//     ? recommendedCourses
+//     : recommendedCourses.slice(0, 5).slice(-5);
+// }
+
 async function matchRecommendedCourses(
   firstCareer: string,
   subjectData: { [key: string]: string[] }
 ): Promise<RecommendedCourse[]> {
-  const minSubjectMatchDefault = 5;
-  const minSubjectMatchJambUtme = 4;
-
   let recommendedCourses: RecommendedCourse[] = [];
 
-  // Step 1: Find category matching the first career
+  const courseMeetsRequirements = (course: any): boolean => {
+    const academicExamTypes: [string, string[]][] = Object.entries(subjectData);
+    const courseExamTypes: [CourseSubjectFields, string][] =
+      getCourseExamTypes(course);
+    const matchedExamTypes = matchExamTypes(academicExamTypes, courseExamTypes);
+
+    if (matchedExamTypes.length === 0) return false;
+
+    return matchedExamTypes.some(([academicType, academicSubjects]) => {
+      const courseField = courseExamTypes.find(
+        ([field]) => getExamTypeName(course, field) === academicType
+      )?.[0];
+      if (!courseField || !academicSubjects) return false;
+
+      const courseSubjects = JSON.parse(course[courseField] as string) || [];
+      if (courseSubjects.length === 0) return false;
+
+      const overlap = courseSubjects.filter((subject: string) =>
+        academicSubjects.includes(subject)
+      ).length;
+
+      // Since either/or subject groups are currently flattened into flat,
+      // individually-mandatory entries (temporary tradeoff), requiring
+      // 100% overlap is unrealistically strict. Use a flat "at least 4,
+      // capped at what the course actually requires" rule across all
+      // exam types.
+      const minMatches = Math.min(4, courseSubjects.length);
+
+      console.log(
+        `[match] examType=${academicType} course="${course.title}" overlap=${overlap}/${courseSubjects.length} needed=${minMatches}`
+      );
+
+      return overlap >= minMatches;
+    });
+  };
+
   const matchingCategory = await prisma.courseCategory.findFirst({
     where: { name: { contains: firstCareer, mode: 'insensitive' } },
     include: { courses: true },
@@ -1281,45 +1435,11 @@ async function matchRecommendedCourses(
 
   if (matchingCategory?.courses && matchingCategory.courses.length > 0) {
     recommendedCourses = matchingCategory.courses
-      .filter((course) => {
-        const academicExamTypes = Object.entries(subjectData);
-        const courseExamTypes = getCourseExamTypes(course);
-        const matchedExamTypes = matchExamTypes(
-          academicExamTypes,
-          courseExamTypes
-        );
-        console.log('Matched Exam Types (Category):', matchedExamTypes); // Debug log
-
-        let totalMatches = 0;
-        for (const [academicType, academicSubjects] of matchedExamTypes) {
-          const courseField = courseExamTypes.find(
-            ([field]) => getExamTypeName(course, field) === academicType
-          )?.[0];
-          if (courseField && academicSubjects) {
-            const courseSubjects =
-              JSON.parse(course[courseField] as string) || [];
-            const isJambUtme = ['JAMB', 'UTME'].includes(
-              academicType.toUpperCase()
-            );
-            const minMatches = isJambUtme
-              ? minSubjectMatchJambUtme
-              : minSubjectMatchDefault;
-
-            const matches = courseSubjects.filter((subject: string) =>
-              academicSubjects.includes(subject)
-            ).length;
-            totalMatches += matches;
-            console.log(`Matches for ${academicType}:`, matches); // Debug log
-          }
-        }
-        console.log('Total Matches (Category):', totalMatches); // Debug log
-        return totalMatches >= minSubjectMatchDefault;
-      })
+      .filter(courseMeetsRequirements)
       .map((course) => ({ id: course.id, title: course.title }))
       .slice(0, 5);
   }
 
-  // Step 2: Fallback to all categories
   if (recommendedCourses.length === 0 && Object.keys(subjectData).length >= 1) {
     const allCategories = await prisma.courseCategory.findMany({
       include: { courses: true },
@@ -1329,104 +1449,12 @@ async function matchRecommendedCourses(
     );
 
     recommendedCourses = allCourses
-      .filter((course) => {
-        const academicExamTypes = Object.entries(subjectData);
-        const courseExamTypes = getCourseExamTypes(course);
-        const matchedExamTypes = matchExamTypes(
-          academicExamTypes,
-          courseExamTypes
-        );
-        console.log('Matched Exam Types (Fallback):', matchedExamTypes); // Debug log
-
-        let totalMatches = 0;
-        for (const [academicType, academicSubjects] of matchedExamTypes) {
-          const courseField = courseExamTypes.find(
-            ([field]) => getExamTypeName(course, field) === academicType
-          )?.[0];
-          if (courseField && academicSubjects) {
-            const courseSubjects =
-              JSON.parse(course[courseField] as string) || [];
-            const isJambUtme = ['JAMB', 'UTME'].includes(
-              academicType.toUpperCase()
-            );
-            const minMatches = isJambUtme
-              ? minSubjectMatchJambUtme
-              : minSubjectMatchDefault;
-
-            const matches = courseSubjects.filter((subject: string) =>
-              academicSubjects.includes(subject)
-            ).length;
-            totalMatches += matches;
-            console.log(`Matches for ${academicType}:`, matches); // Debug log
-          }
-        }
-        console.log('Total Matches (Fallback):', totalMatches); // Debug log
-        return totalMatches >= minSubjectMatchDefault;
-      })
+      .filter(courseMeetsRequirements)
       .map((course) => ({ id: course.id, title: course.title }))
       .slice(0, 5);
   }
 
-  // Ensure 3–5 courses
-  return recommendedCourses.length < 3 && recommendedCourses.length > 0
-    ? recommendedCourses
-    : recommendedCourses.slice(0, 5).slice(-5);
-
-  // Helper functions (unchanged)
-  function getCourseExamTypes(
-    course: any
-  ): [CourseSubjectFields | null, string | null][] {
-    const examTypes: [CourseSubjectFields | null, string | null][] = [];
-    const subjectFields: CourseSubjectFields[] = [
-      'ExamType1Subjects',
-      'ExamType2Subjects',
-      'ExamType3Subjects',
-      'ExamType4Subjects',
-      'ExamType5Subjects',
-      'ExamType6Subjects',
-      'ExamType7Subjects',
-      'ExamType8Subjects',
-      'ExamType9Subjects',
-      'ExamType10Subjects',
-    ];
-    for (const field of subjectFields) {
-      const examTypeField = field.replace(
-        'Subjects',
-        ''
-      ) as `ExamType${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10}`;
-      if (course[examTypeField]) {
-        examTypes.push([field, course[examTypeField] as string]);
-      }
-    }
-    return examTypes;
-  }
-
-  function getExamTypeName(
-    course: any,
-    field: CourseSubjectFields | null
-  ): string {
-    const examTypeField = field ? field.replace('Subjects', '') : null;
-    return examTypeField ? (course[examTypeField] as string) || '' : '';
-  }
-
-  function matchExamTypes(
-    academicExamTypes: [string, string[]][],
-    courseExamTypes: [CourseSubjectFields | null, string | null][]
-  ): [string, string[]][] {
-    const matched: [string, string[]][] = [];
-    for (const [academicType, academicSubjects] of academicExamTypes) {
-      for (const [courseField, courseType] of courseExamTypes) {
-        if (
-          courseType &&
-          academicType.toUpperCase() === courseType.toUpperCase()
-        ) {
-          matched.push([academicType, academicSubjects]);
-          break;
-        }
-      }
-    }
-    return matched.length > 0 ? matched : academicExamTypes.slice(0, 1);
-  }
+  return recommendedCourses;
 }
 
 async function getRecommendedCoursesService(

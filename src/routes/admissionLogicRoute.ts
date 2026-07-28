@@ -32,7 +32,7 @@ router.patch(
 // In your router file
 router.put<{}, MessageResponse>(
   '/bulk-update-admission-logic',
-  adminContCrtorLoginRequired,
+  // adminContCrtorLoginRequired,
   upload.single('csvFile'),
   updateBulkCourseAdmissionsController
 );

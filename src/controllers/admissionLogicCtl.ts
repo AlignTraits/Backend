@@ -158,26 +158,54 @@ export const updateBulkCourseAdmissionsController = async (
       header: true,
       skipEmptyLines: true,
       dynamicTyping: true,
+
       // transform: (value, field) => {
       //   if (typeof field === 'string') {
       //     if (field.includes('Subjects') || field.includes('SubGrades')) {
-      //       return value && typeof value === 'string'
-      //         ? value.split(',').map((item) => item.trim())
-      //         : undefined;
+      //       if (typeof value === 'string') {
+      //         if (value.startsWith('[')) {
+      //           return JSON.parse(value); // Handle JSON array
+      //         }
+      //         return value.split(',').map((item) => item.trim()); // Handle comma-separated
+      //       }
+      //       return value; // Already an array, return as-is
       //     }
       //   }
       //   return value;
       // },
+
       transform: (value, field) => {
         if (typeof field === 'string') {
           if (field.includes('Subjects') || field.includes('SubGrades')) {
             if (typeof value === 'string') {
-              if (value.startsWith('[')) {
-                return JSON.parse(value); // Handle JSON array
+              let trimmed = value.trim();
+
+              if (trimmed.startsWith('[')) {
+                // TEMPORARY: flatten "X" / "Y" either-or groups into plain
+                // comma-separated entries, e.g. "Government" / "History"
+                // becomes "Government", "History". This loses the either-or
+                // semantics (both will be treated as required, not
+                // alternatives) — acceptable for now, but matching logic
+                // should be revisited to properly model OR-groups later
+                // (see conversation: Option B).
+                trimmed = trimmed.replace(/\s*\/\s*/g, ', ');
+
+                try {
+                  return JSON.parse(trimmed);
+                } catch {
+                  try {
+                    return JSON.parse(trimmed.replace(/'/g, '"'));
+                  } catch {
+                    console.warn(
+                      `Could not parse array for field "${field}": ${trimmed}`
+                    );
+                    return trimmed;
+                  }
+                }
               }
-              return value.split(',').map((item) => item.trim()); // Handle comma-separated
+              return value.split(',').map((item) => item.trim());
             }
-            return value; // Already an array, return as-is
+            return value;
           }
         }
         return value;
@@ -207,6 +235,110 @@ export const updateBulkCourseAdmissionsController = async (
     });
   }
 };
+
+// export const updateBulkCourseAdmissionsController = async (
+//   req: Request,
+//   res: Response
+// ) => {
+//   try {
+//     const file = req.file;
+
+//     if (!file) {
+//       return res.status(400).send({ error: 'CSV file is required' });
+//     }
+
+//     const fileName = file.originalname;
+//     const csvData = file.buffer.toString('utf-8');
+
+//     const parsedData = Papa.parse<UpdateCourseAdmissionData>(csvData, {
+//       header: true,
+//       skipEmptyLines: true,
+//       dynamicTyping: true,
+//       transform: (value, field) => {
+//         if (typeof field === 'string') {
+//           if (field.includes('Subjects') || field.includes('SubGrades')) {
+//             if (typeof value === 'string') {
+//               const trimmed = value.trim();
+//               if (trimmed.startsWith('[')) {
+//                 try {
+//                   return JSON.parse(trimmed);
+//                 } catch {
+//                   try {
+//                     return JSON.parse(trimmed.replace(/'/g, '"'));
+//                   } catch {
+//                     console.warn(
+//                       `Could not parse array for field "${field}": ${trimmed}`
+//                     );
+//                     return trimmed; // flagged as invalid below
+//                   }
+//                 }
+//               }
+//               return value.split(',').map((item) => item.trim());
+//             }
+//             return value;
+//           }
+//         }
+//         return value;
+//       },
+//     });
+
+//     if (parsedData.errors.length > 0) {
+//       return res.status(400).send({
+//         error: 'Invalid CSV data',
+//         details: parsedData.errors,
+//       });
+//     }
+
+//     // Catch rows where a Subjects/SubGrades field failed to parse into an
+//     // array (i.e. transform fell back to returning a raw string) — report
+//     // these instead of letting them silently corrupt stored data.
+//     const subjectFieldNames = Array.from({ length: 10 }, (_, i) => [
+//       `ExamType${i + 1}Subjects`,
+//       `ExamType${i + 1}SubGrades`,
+//     ]).flat();
+
+//     const rowErrors: { row: number; id?: string; field: string; value: any }[] =
+//       [];
+//     parsedData.data.forEach((row: any, index: number) => {
+//       subjectFieldNames.forEach((field) => {
+//         if (row[field] !== undefined && !Array.isArray(row[field])) {
+//           rowErrors.push({
+//             row: index + 2,
+//             id: row.id,
+//             field,
+//             value: row[field],
+//           }); // +2: header row + 0-index
+//         }
+//       });
+//     });
+
+//     if (rowErrors.length > 0) {
+//       return res.status(400).json({
+//         error:
+//           'Some rows contain invalid array data (check quote style — use double quotes, e.g. ["Biology","Math"])',
+//         rowErrors,
+//       });
+//     }
+
+//     const admissionsToUpdate = parsedData.data;
+//     const userId = (req as any)?.user?.id ?? '';
+//     const updatedAdmissions = await updateBulkCourseAdmissionsService(
+//       admissionsToUpdate,
+//       userId,
+//       fileName
+//     );
+
+//     res.status(200).json({
+//       message: 'Course admission logic updated successfully',
+//       data: updatedAdmissions,
+//     });
+//   } catch (error) {
+//     console.error('Error updating course admission logic:', error);
+//     res.status(500).send({
+//       error: 'An error occurred while updating the course admission logic',
+//     });
+//   }
+// };
 
 // Create academic record
 export const createAcademicRecordController = async (
