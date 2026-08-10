@@ -12,7 +12,7 @@ const resend = new Resend(
 );
 
 export const sendMail = async ({
-  from = 'Aligntraits <no-reply@aligntrait.com>',
+  from = 'Aligntraits <no-reply@aligntraits.com>',
   recipients,
   subject,
   templateName,
