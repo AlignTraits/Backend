@@ -27,8 +27,8 @@ const PRICES: Record<PaymentPlan, number> = {
 // actual aligntrait test paystack plan codes (NGN only)
 const PAYSTACK_PLAN_CODES: Record<PaymentPlan, string> = {
   BASIC_ONETIME: '', // Not needed for one-time payments
-  LOCAL_MONTHLY: 'PLN_z15232m740tyaxf',
-  GLOBAL_MONTHLY: 'PLN_ewzbny6yvxu4kin',
+  LOCAL_MONTHLY: 'PLN_ecyxncshvduhvce',
+  GLOBAL_MONTHLY: 'PLN_dl04vz6m7ro235e',
 };
 
 export const initializeBasicOneTimePayment = async (
