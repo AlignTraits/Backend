@@ -1,5 +1,6 @@
 // src/data/careerPersonalityData.ts
 // FULLY COMPLETE – 29 careers with human-written details (2025 ready)
+// Re-edited by Tosin to work on the narrative
 
 export interface CareerPersonalityDetail {
   openness: number;
@@ -31,7 +32,7 @@ export const CAREER_PERSONALITY_DATA: Record<string, CareerPersonalityDetail> =
         'You may tend to overlook emotional aspects in favor of logical reasoning.',
       ],
       personalityNarrative:
-        'Individuals suited for law careers often exhibit moderate extraversion and conscientiousness, enabling them to excel in courtroom advocacy, legal research, and client negotiations. They thrive in high-stakes environments where logical reasoning and articulate communication are essential.',
+        'Individuals suited for law careers often exhibit moderate extraversion and conscientiousness, giving them the confidence to speak persuasively and the discipline to prepare meticulously. They combine strong analytical thinking with assertive communication, and lower agreeableness makes them comfortable challenging opposing views rather than seeking consensus for its own sake. Moderate neuroticism keeps them alert to risk and consequence without becoming overwhelmed, while a naturally competitive streak drives them to advocate forcefully for outcomes they believe are just. This trait profile favors objective reasoning over emotional appeal, and it produces people who are resilient under scrutiny, comfortable with conflict, and driven by principle as much as by winning.\nThis personality mix translates directly into strength across litigation, corporate law, and policy advising, where logical reasoning and articulate argument carry the day. Assertiveness and competitiveness are assets in negotiation and courtroom advocacy, though they can create friction in collaborative team settings. Moderate neuroticism sharpens focus under pressure but can generate stress around ethical dilemmas or uncertain case outcomes. Overall, these traits suit roles demanding intellectual rigor and ethical steadfastness, and law professionals shaped this way often become influential in setting legal precedent. Their analytical skill drives thorough case preparation, while extraversion builds the professional networks that sustain a practice across specialties from criminal defense to international law.',
     },
     Finance: {
       openness: 10,
