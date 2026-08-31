@@ -41,7 +41,7 @@ export const initializeBasicOneTimePayment = async (
 ) => {
   const currency = 'NGN';
   const amount = PRICES[paymentPlan];
-  const callbackUrl = `https://www.aligntrait.com/payment/callback`;
+  const callbackUrl = `https://www.aligntraits.com/payment/callback`;
 
   let user = await getUserByEmail(email);
   if (!user) {
@@ -131,7 +131,7 @@ export const initializeMonthlySubscription = async (
   try {
     const currency = 'NGN';
     const amount = PRICES[paymentPlan];
-    const callbackUrl = `https://www.aligntrait.com/payment/callback`;
+    const callbackUrl = `https://www.aligntraits.com/payment/callback`;
 
     let user = await getUserByEmail(email);
     if (!user) {
@@ -578,7 +578,7 @@ export const addCardToSubscription = async (
     }
 
     const reference = `addcard_${userId}_${Date.now()}`;
-    const callbackUrl = `https://www.aligntrait.com/payment/callback`;
+    const callbackUrl = `https://www.aligntraits.com/payment/callback`;
 
     // Determine currency and amount based on IP
     const region = getCountryByIp(ip);
@@ -935,7 +935,7 @@ export const addDirectDebitToSubscription = async (
     console.log('5: User verified with email:', user.email);
 
     const reference = `adddebit_${userId}_${Date.now()}`;
-    const callbackUrl = `https://www.aligntrait.com/payment/callback`;
+    const callbackUrl = `https://www.aligntraits.com/payment/callback`;
 
     // Determine currency (Direct Debit currently supports NGN only)
     const region = getCountryByIp(ip);
