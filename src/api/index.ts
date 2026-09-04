@@ -18,6 +18,7 @@ import WetrocloudEligibilityRoutes from '../routes/eligibiltyRoutes';
 import ServerEligibilityRoutes from '../routes/eligibility/serverEligibilityRoute';
 import CourseCategoriesRoutes from '../routes/courseCategoriesRoutes';
 import PaymentRoutes from '../routes/paymentRoutes';
+import FeedbackRoutes from '../routes/feedbackRoutes';
 // for testing monthly payment
 import MonthlyPaymentRoutes from '../routes/monthlyPaymentRoutes';
 import BulkImageuploadRoutes from '../routes/bulkImageuploadRoute';
@@ -48,6 +49,7 @@ router.use('/server/eligible', ServerEligibilityRoutes);
 router.use('/wetrocloud/eligible', WetrocloudEligibilityRoutes);
 router.use('/categories/course', CourseCategoriesRoutes);
 router.use('/payment', PaymentRoutes);
+router.use('/feedback', FeedbackRoutes);
 // for testing monthly payment
 router.use('/monthly/payment', MonthlyPaymentRoutes);
 router.use('/images', BulkImageuploadRoutes);
