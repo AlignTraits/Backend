@@ -40,6 +40,18 @@ enum TransactionStatus {
 }
 
 
+// Added a feedback model
+model Feedback {
+  id           Int      @id @default(autoincrement())
+  isSatisfied  Boolean
+  suggestion   String?
+  emailAddress String?
+  date         DateTime @default(now()) @db.Date
+
+  @@map("feedback")
+}
+
+
 model AcademicRecord {
   id                     String   @id @default(cuid())
   userId                 String
