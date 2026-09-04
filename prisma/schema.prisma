@@ -39,13 +39,11 @@ enum TransactionStatus {
   FAILED
 }
 
-
-// Added a feedback model
 model Feedback {
   id           Int      @id @default(autoincrement())
-  isSatisfied  Boolean
+  isSatisfied  Boolean  @map("issatisfied")
   suggestion   String?
-  emailAddress String?
+  emailAddress String?  @map("emailaddress")
   date         DateTime @default(now()) @db.Date
 
   @@map("feedback")
