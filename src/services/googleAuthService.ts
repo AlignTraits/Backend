@@ -60,7 +60,7 @@ const googleAuthCallbackService = async (user: any) => {
     const token = jwt.sign(
       { userId: user.id },
       process.env.JWT_SECRET as string,
-      { expiresIn: '1h' }
+      { expiresIn: '30d' }
     );
     return {
       ok: true,
