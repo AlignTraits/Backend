@@ -6,6 +6,7 @@ import {
   uploadUserPicture,
   updateUserPassword,
   getUserByEmailData,
+  getUserActivity,
 } from '../controllers/userController';
 import MessageResponse from '../types/messageResponse';
 import { upload } from '../services/uploadServices';
@@ -13,6 +14,8 @@ import { upload } from '../services/uploadServices';
 const router = express.Router();
 
 router.get<{}, MessageResponse>('/', loginRequired, getUserData);
+
+router.get<{}, MessageResponse>('/activity', loginRequired, getUserActivity);
 
 router.get<{ email: string }, MessageResponse>(
   '/email/:email',
