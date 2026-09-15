@@ -8,6 +8,7 @@ import {
   getUserDataService,
   updateUserProfileService,
   getUserByEmailService,
+  getUserActivityHistory,
 } from '../services/userServices';
 import { uploadProfilePicService } from '../services/uploadServices';
 
@@ -20,6 +21,19 @@ export const getUserData = async (
 ) => {
   try {
     const result = await getUserDataService((req.user as any)?.id ?? '');
+    res.status(result.status).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getUserActivity = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const result = await getUserActivityHistory((req.user as any)?.id ?? '');
     res.status(result.status).json(result);
   } catch (error) {
     next(error);
