@@ -590,3 +590,12 @@ export const updateUserProfileService = async (
     throw e;
   }
 };
+
+export const getUserActivityHistory = async (userId: string) => {
+  const activity = await db.actionHistory.findMany({
+    where: { userId },
+    orderBy: { timestamp: 'desc' },
+    take: 10,
+  });
+  return { ok: true, status: 200, data: activity };
+};
