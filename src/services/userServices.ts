@@ -93,6 +93,9 @@ export const getUserDataService = async (
     subscription_code: string | null;
     email_token: string | null;
     default_authorization: string | null;
+    createdAt: Date;
+    lastLoginAt: Date | null;
+    passwordChangedAt: Date | null;
     eligibilityResults: EligibilityResult[];
     careerResults: CareerResult | null;
     transactions: Transaction[];
@@ -161,6 +164,9 @@ export const getUserDataService = async (
         subscription_code: user.subscription_code,
         email_token: user.email_token,
         default_authorization: user.default_authorization,
+        createdAt: user.createdAt,
+        lastLoginAt: user.lastLoginAt,
+        passwordChangedAt: user.passwordChangedAt,
         eligibilityResults: user.eligibilityResults,
         careerResults: user.careerResults,
         transactions: user.transactions,
@@ -306,7 +312,7 @@ export const updatePasswordService = async (
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     console.log('Hashing new password, updating user:', userId);
-    const updatedUser = await updateUser(userId, { password: hashedPassword });
+    const updatedUser = await updateUser(userId, { password: hashedPassword, passwordChangedAt: new Date() });
 
     if (!updatedUser) {
       console.log('Update failed for user:', userId);
