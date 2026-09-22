@@ -256,6 +256,7 @@ const loginService = async ({
       process.env.JWT_SECRET as string,
       { expiresIn: '30d' }
     );
+    await updateUser(user.id, { lastLoginAt: new Date() });
     return {
       ok: true,
       status: 200,
