@@ -118,6 +118,8 @@ model User {
   emailVerified           DateTime?
   password                String
   role                    Roles               @default(USER)
+  lastLoginAt             DateTime?
+  passwordChangedAt       DateTime?
   contactNumber           String?
   createdAt               DateTime            @default(now())
   gender                  Gender?
