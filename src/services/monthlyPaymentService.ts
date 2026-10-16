@@ -19,9 +19,9 @@ const paystack = Paystack(process.env.PAYSTACK_SECRET_KEY || '');
 
 // Amounts in kobo (₦1 = 100 kobo) — must match frontend PaywallModal
 const PRICES: Record<PaymentPlan, number> = {
-  BASIC_ONETIME: 35000, // ₦350
-  LOCAL_MONTHLY: 110000, // ₦1,100
-  GLOBAL_MONTHLY: 370000, // ₦3,700
+  BASIC_ONETIME: 110000, // ₦350
+  LOCAL_MONTHLY: 370000, // ₦1,100
+  GLOBAL_MONTHLY: 550000, // ₦3,700
 };
 
 // actual aligntrait test paystack plan codes (NGN only)
