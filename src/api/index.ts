@@ -22,6 +22,7 @@ import FeedbackRoutes from '../routes/feedbackRoutes';
 // for testing monthly payment
 import MonthlyPaymentRoutes from '../routes/monthlyPaymentRoutes';
 import BulkImageuploadRoutes from '../routes/bulkImageuploadRoute';
+import FormsRoutes from '../routes/formsRoutes';
 
 const router = express.Router();
 
@@ -53,5 +54,7 @@ router.use('/feedback', FeedbackRoutes);
 // for testing monthly payment
 router.use('/monthly/payment', MonthlyPaymentRoutes);
 router.use('/images', BulkImageuploadRoutes);
+// Website forms: ambassador applications and pilot requests
+router.use('/forms', FormsRoutes);
 
 export default router;

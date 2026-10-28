@@ -502,3 +502,53 @@ model BulkOperationFailure {
   createdAt    DateTime @default(now())
 }
 
+
+// ---------------------------------------------------------------------------------------------
+// Website forms (aligntraits.com). Both tables are also created on start-up if missing, by
+// src/services/formsTables.ts, so they exist even when `prisma db push` has not been run.
+// Keep the two in step: if you change a model here, change the SQL there too.
+// ---------------------------------------------------------------------------------------------
+
+// Community > Become an ambassador (aligntraits.com/community/ambassadors)
+model AmbassadorApplication {
+  id            String   @id @default(uuid())
+  fullName      String
+  ageGroup      String // "18_or_older" | "under_18" (no exact age is stored)
+  guardianName  String? // required when ageGroup is "under_18"
+  guardianPhone String? // +234..., required when ageGroup is "under_18"
+  school        String
+  classLevel    String // "SS1" | "SS2" | "SS3" | "Finished"
+  state         String
+  whatsapp      String // +234...
+  reason        String
+  confirmed     Boolean  @default(false)
+  status        String   @default("new") // new | contacted | consent_received | accepted | declined
+  createdAt     DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("ambassador_applications")
+}
+
+// Institutions > Request a pilot (aligntraits.com/institutions/request-a-pilot)
+model PilotRequest {
+  id              String   @id @default(uuid())
+  institutionType String // "secondary_school" | "tutorial_centre" | "university" | "other"
+  institutionName String
+  state           String
+  fullName        String
+  role            String
+  workEmail       String
+  whatsapp        String // +234...
+  participants    String[] // e.g. ["SS2", "SS3"] or ["JAMB candidates"]
+  programmes      String? // universities: the programmes in the pilot
+  studentRange    String // "under_50" | "50_to_200" | "over_200"
+  startWhen       String // "this_term" | "next_term" | "exploring"
+  note            String?
+  authorised      Boolean  @default(false)
+  source          String? // the page the request came from
+  status          String   @default("new") // new | contacted | scheduled | running | closed
+  createdAt       DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("pilot_requests")
+}
