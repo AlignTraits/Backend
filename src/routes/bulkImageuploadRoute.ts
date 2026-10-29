@@ -1,5 +1,5 @@
 import express from 'express';
-import multer from 'multer';
+import { imageUploads } from '../middlewares/uploads';
 import MessageResponse from '../types/messageResponse';
 import {
   bulkUploadCourseImagesController,
@@ -12,25 +12,20 @@ import {
 
 const router = express.Router();
 
-const storage = multer.memoryStorage();
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB per image
-});
 
 // Bulk Course Images Upload
 router.post<{}, MessageResponse>(
   '/bulk-upload-course-images',
   adminContCrtorLoginRequired,
-  upload.array('images', 50), // Max 50 images
+  imageUploads('images', 50), // PNG, JPG or WEBP, 5MB each, at most 50
   bulkUploadCourseImagesController
 );
 
 // Bulk School Images Upload
 router.post<{}, MessageResponse>(
   '/bulk-upload-school-images',
-  // adminContCrtorLoginRequired, // ← Uncommented for security
-  upload.array('images', 50),
+  adminContCrtorLoginRequired,
+  imageUploads('images', 50),
   bulkUploadSchoolImagesController
 );
 

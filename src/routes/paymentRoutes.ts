@@ -7,6 +7,7 @@ import {
   // handlePaymentCallback,
 } from '../controllers/paymentController';
 import MessageResponse from '../types/messageResponse';
+import { adminLoginRequired } from '../middlewares/auth';
 
 const router = express.Router();
 
@@ -17,7 +18,7 @@ const router = express.Router();
 // );
 // // Webhook
 // router.post('/webhook', verifyPaymentWebhook);
-// Callback
-router.get('/fetch/transaction', getTransactionRecords);
+// Every payment ever made, with emails and references: admins only.
+router.get('/fetch/transaction', adminLoginRequired, getTransactionRecords);
 
 export default router;

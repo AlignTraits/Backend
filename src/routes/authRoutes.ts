@@ -3,6 +3,7 @@ import {
   adminContCrtorLoginRequired,
   adminLoginRequired,
   preventLoggedUser,
+  superAdminLoginRequired,
 } from '../middlewares/auth';
 import authController from '../controllers/authController';
 import MessageResponse from '../types/messageResponse';
@@ -30,9 +31,19 @@ router.post<{}, MessageResponse>(
   authController.requestReset
 );
 
+// Visitors who did the quiz, a check or a payment before they had a password.
+// Step 1: email them a link that proves they own the inbox.
+router.post<{}, MessageResponse>(
+  '/send-setup-link',
+  preventLoggedUser,
+  authController.sendSetupLink
+);
+
+// Step 2: the link's code plus the new password. Refused without a valid code,
+// and refused for any account that already has a password.
 router.post<{}, MessageResponse>(
   '/add-password-after-eligibility',
-  preventLoggedUser, // Assuming this middleware prevents logged-in users from accessing
+  preventLoggedUser,
   authController.addPasswordAfterEligibilty
 );
 
@@ -55,9 +66,11 @@ router.post<{}, MessageResponse>(
   authController.loginAdmin
 );
 
+// Super admins only. Super admins can also create admins from
+// /super-admin/admin/profiles, which emails the new admin their details.
 router.post<{}, MessageResponse>(
   '/admin/register',
-  preventLoggedUser,
+  superAdminLoginRequired,
   authController.registerAdmin
 );
 
@@ -67,8 +80,10 @@ router.get<{}, MessageResponse>(
   authController.getAdmindetails
 );
 
+// Super admins only, and only for admin panel accounts (never students).
 router.patch<{}, MessageResponse>(
   '/admin/add-password',
+  superAdminLoginRequired,
   authController.AddAdminPassword
 );
 

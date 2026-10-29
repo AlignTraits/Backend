@@ -26,9 +26,8 @@ const getUserByEmail = async (email: string) => {
   const maxRetries = 3;
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const a = await db.user.findUnique({ where: { email } });
-      console.log(a);
-      return a;
+      // Do not log this record: it holds the password hash and payment fields.
+      return await db.user.findUnique({ where: { email } });
     } catch (error) {
       if (
         attempt === maxRetries ||

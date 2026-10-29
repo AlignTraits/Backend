@@ -13,9 +13,10 @@ interface WetrocloudResponse {
 
 const router = express.Router();
 
+// The paid check runs only for the logged in person, on their own plan.
 router.post<{}, WetrocloudResponse>(
   '/answers',
-  // loginRequired,
+  loginRequired,
   submitServerEligibilityAnswers
 );
 

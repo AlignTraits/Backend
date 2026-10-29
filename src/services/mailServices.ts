@@ -7,9 +7,22 @@ import { Resend } from 'resend';
 
 dotenv.config();
 
-const resend = new Resend(
-  process.env.RESEND_API_KEY || 're_L8ceAt8f_Au5p9J1y5uRULvF9BkPqAdo5'
-);
+// The Resend key comes only from the RESEND_API_KEY environment variable.
+// If it is missing, emails are not sent (and the server says so in the logs),
+// but nothing else breaks. Never write a key into the code: anyone who can read
+// the repository could send email as aligntraits.com.
+let resendClient: Resend | null = null;
+const getResend = (): Resend | null => {
+  if (resendClient) return resendClient;
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return null;
+  resendClient = new Resend(key);
+  return resendClient;
+};
+
+if (!process.env.RESEND_API_KEY) {
+  console.error('RESEND_API_KEY is not set. Emails will not be sent.');
+}
 
 export const sendMail = async ({
   from = 'Aligntraits <no-reply@aligntraits.com>',
@@ -25,11 +38,14 @@ export const sendMail = async ({
   recipients: [string];
 }) => {
   try {
-    console.log('Sending email to:', recipients);
-    console.log(
-      'Using Resend API Key:',
-      process.env.RESEND_API_KEY ? 'Set' : 'Not set, using fallback'
-    );
+    const resend = getResend();
+    if (!resend) {
+      return {
+        ok: false,
+        status: 500,
+        message: 'Email is not configured (RESEND_API_KEY is missing)',
+      };
+    }
     const template = fs.readFileSync(
       path.join('src', 'views', 'email', `${templateName}.ejs`),
       'utf8'
@@ -53,7 +69,6 @@ export const sendMail = async ({
       };
     }
 
-    console.log('Email sent successfully:', data);
     return {
       ok: true,
       status: 200,
@@ -178,6 +193,34 @@ export const sendResetPasswordEmail = async ({
   } catch (e) {
     throw e;
   }
+};
+
+// For visitors who used the quiz, a check or a payment before they had a password.
+export const sendSetPasswordEmail = async ({
+  name,
+  email,
+  token,
+}: {
+  name: string;
+  email: string;
+  token: string;
+}) => {
+  const url = new URL('/setup-password', process.env.WEBSITE_URL);
+  url.searchParams.append('email', email);
+  url.searchParams.append('token', token);
+
+  return sendMail({
+    recipients: [email],
+    subject: `${token} is your AlignTraits code`,
+    templateName: 'setPasswordEmail',
+    templateInfo: {
+      name,
+      email,
+      code: token,
+      url: url.toString(),
+      host: process.env.BACKEND_URL || 'http://localhost:3000',
+    },
+  });
 };
 
 // new mails services

@@ -53,6 +53,14 @@ export const getEmailVerificationTokenByEmail = async (email: string) => {
   });
 };
 
+// How many codes were created for this email since a given time. Used to cap
+// reset and set-password emails at a few per hour, per address.
+export const countRecentTokens = async (email: string, since: Date) => {
+  return db.emailVerificationToken.count({
+    where: { email, createdAt: { gt: since } },
+  });
+};
+
 export const deleteEmailVerificationToken = async (email: string) => {
   // try {
   return db.emailVerificationToken.deleteMany({ where: { email } });

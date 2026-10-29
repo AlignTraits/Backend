@@ -23,6 +23,9 @@ router.get(
   googleController.googleAuthCallback
 );
 
+// The site swaps the one time code from the Google redirect for a login token.
+router.post('/exchange', googleController.exchangeGoogleLoginCode);
+
 export default router;
 // http://localhost:3000/api/v1/google-auth/google/callback
 // http://localhost:3000/api/v1/google-auth/google

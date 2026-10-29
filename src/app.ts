@@ -7,7 +7,6 @@ import cors from 'cors';
 import * as middlewares from './middlewares';
 import api from './api';
 import MessageResponse from './types/messageResponse';
-import path from 'path';
 import { scheduleClearBulkOperationFailuresJob } from './jobs/clearBulkOperationFailuresJob';
 
 require('dotenv').config();
@@ -22,8 +21,8 @@ app.use(cors());
 app.use(express.json());
 app.use(passport.initialize()); // Initialize Passport
 
-// Serve static files from the downloads directory
-app.use('/downloads', express.static(path.join(__dirname, '../downloads')));
+// The public /downloads folder was removed. Reports are now sent straight to
+// the admin who asked for them (see GET /api/v1/bulk/download).
 
 app.get<{}, MessageResponse>('/', (req, res) => {
   res.status(200).json({

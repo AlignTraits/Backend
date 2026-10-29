@@ -7,6 +7,7 @@ import {
   updateUserPassword,
   getUserByEmailData,
   getUserActivity,
+  lookupAccount,
 } from '../controllers/userController';
 import MessageResponse from '../types/messageResponse';
 import { upload } from '../services/uploadServices';
@@ -17,6 +18,11 @@ router.get<{}, MessageResponse>('/', loginRequired, getUserData);
 
 router.get<{}, MessageResponse>('/activity', loginRequired, getUserActivity);
 
+// For visitors: does this email have an account? Yes or no, nothing else.
+router.post<{}, MessageResponse>('/lookup', lookupAccount);
+
+// Old address kept only while the frontend update rolls out. It gives the same
+// yes or no answer. Remove it after the new frontend is live.
 router.get<{ email: string }, MessageResponse>(
   '/email/:email',
   getUserByEmailData

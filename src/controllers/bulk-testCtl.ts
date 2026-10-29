@@ -304,7 +304,6 @@ export const downloadSchoolCourseDataController = async (
       schoolId,
     } = req.query;
 
-    console.log('Raw query:', req.query);
 
     if (!['csv', 'excel'].includes(format as string)) {
       return res
@@ -320,7 +319,7 @@ export const downloadSchoolCourseDataController = async (
 
     const userId = (req as any)?.user?.id ?? '';
 
-    const fileUrl = await generateSchoolCourseReport(
+    const report = await generateSchoolCourseReport(
       entity as string,
       format as string,
       startDate as string,
@@ -334,7 +333,13 @@ export const downloadSchoolCourseDataController = async (
       userId as string
     );
 
-    return res.json({ message: 'Download ready', fileUrl });
+    res.setHeader('Content-Type', report.contentType);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${report.fileName}"`
+    );
+    res.setHeader('Cache-Control', 'no-store');
+    return res.send(report.content);
   } catch (error) {
     console.error('Download error:', error);
     return res.status(500).json({

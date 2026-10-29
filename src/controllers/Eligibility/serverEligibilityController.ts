@@ -38,7 +38,9 @@ export const submitServerEligibilityAnswers = async (
 ) => {
   try {
     // const userId = (req.user as any)?.id ?? '';
-    const { email } = req.body as any;
+    // Always the logged in person's email. An email in the body is ignored, so
+    // nobody can run checks on someone else's paid plan.
+    const email = (req.user as any)?.email as string;
 
     const body = req.body as ServerQualificationInput;
     const { courseId, exams, preferences } = body;

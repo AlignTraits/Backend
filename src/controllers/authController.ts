@@ -13,6 +13,7 @@ import {
   updateAdminPasswordService,
   updateAdminProfileService,
   addPasswordAfterEligibiltyService,
+  sendSetupLinkService,
 } from '../services/authService';
 import {
   getAdminDataService,
@@ -109,7 +110,6 @@ const requestReset = async (
 ) => {
   try {
     const { email } = req.body;
-    console.log(email);
     const result = await requestResetService(email);
     res.status(result.status).json(result);
   } catch (error) {
@@ -170,8 +170,25 @@ const addPasswordAfterEligibilty = async (
   next: NextFunction
 ) => {
   try {
-    const { email, password } = req.body;
-    const result = await addPasswordAfterEligibiltyService({ email, password });
+    const { email, password, token } = req.body;
+    const result = await addPasswordAfterEligibiltyService({
+      email,
+      password,
+      token,
+    });
+    return res.status(result.status).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const sendSetupLink = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const result = await sendSetupLinkService(req.body?.email);
     return res.status(result.status).json(result);
   } catch (error) {
     next(error);
@@ -185,6 +202,7 @@ export = {
   requestReset,
   resetPassword,
   addPasswordAfterEligibilty,
+  sendSetupLink,
   // admin auth controller
   loginAdmin,
   registerAdmin,

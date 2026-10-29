@@ -1,6 +1,6 @@
 // routes/admissionRoutes.ts
 import express from 'express';
-import multer from 'multer';
+import { csvUpload } from '../middlewares/uploads';
 import {
   adminContCrtorLoginRequired,
   adminLoginRequired,
@@ -15,12 +15,9 @@ import {
   updateAcademicRecordController,
   deleteAcademicRecordController,
   getAcademicRecordController,
-  addUserRecordByEmailController,
 } from '../controllers/admissionLogicCtl';
 
 const router = express.Router();
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
 
 // Route for updating course admission logic
 router.patch(
@@ -30,10 +27,12 @@ router.patch(
 );
 
 // In your router file
+// Admins and content managers only. This changes the entry rules and cut off
+// marks for every course in the file, so it must never be open to the public.
 router.put<{}, MessageResponse>(
   '/bulk-update-admission-logic',
-  // adminContCrtorLoginRequired,
-  upload.single('csvFile'),
+  adminContCrtorLoginRequired,
+  csvUpload('csvFile'),
   updateBulkCourseAdmissionsController
 );
 
@@ -57,7 +56,8 @@ router.delete(
 // Fetch academic record
 router.get('/academic-records', loginRequired, getAcademicRecordController);
 
-// Assuming router is defined elsewhere
-router.post('/academic-records-by-email', addUserRecordByEmailController);
+// The old /academic-records-by-email route was removed: it let anyone overwrite
+// any student's exam records by typing their email. Students save records with
+// POST /academic-records while logged in.
 
 export default router;

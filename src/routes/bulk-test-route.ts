@@ -2,8 +2,9 @@ import express from 'express';
 import {
   adminContCrtorLoginRequired,
   adminLoginRequired,
+  staffLoginRequired,
 } from '../middlewares/auth';
-import multer from 'multer';
+import { csvUpload } from '../middlewares/uploads';
 import MessageResponse from '../types/messageResponse';
 import {
   createBulkSchoolsController,
@@ -19,8 +20,6 @@ import {
 
 const router = express.Router();
 
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
 
 // Bulk school creation route with CSV and images
 // save img as url like this for google drive images
@@ -31,14 +30,14 @@ const upload = multer({ storage });
 router.post<{}, MessageResponse>(
   '/bulk-add-schools',
   adminLoginRequired,
-  upload.single('csvFile'),
+  csvUpload('csvFile'),
   createBulkSchoolsController
 );
 // Bulk school update route with CSV
 router.put<{}, MessageResponse>(
   '/bulk-update-schools',
   adminContCrtorLoginRequired,
-  upload.single('csvFile'),
+  csvUpload('csvFile'),
   updateBulkSchoolsController
 );
 
@@ -50,10 +49,11 @@ router.delete<{}, MessageResponse>(
 );
 
 // Bulk course creation route with CSV
+// Admins and content managers only (it was open to anyone).
 router.post<{}, MessageResponse>(
   '/csv/bulk-add-courses',
-  // adminLoginRequired,
-  upload.single('csvFile'),
+  adminContCrtorLoginRequired,
+  csvUpload('csvFile'),
   createBulkCoursesController
 );
 
@@ -61,7 +61,7 @@ router.post<{}, MessageResponse>(
 router.put<{}, MessageResponse>(
   '/bulk-update-courses',
   adminContCrtorLoginRequired,
-  upload.single('csvFile'),
+  csvUpload('csvFile'),
   updateBulkCoursesController
 );
 
@@ -76,11 +76,9 @@ router.delete<{}, MessageResponse>(
 // ../download?format=csv&entity=course&id=xyz789&title=Coding&schoolId=fN1rh8QWg1
 // ../api/v1/bulk/download?format=csv&entity=school&id=MlGKz-0RHG
 // .../download?format=csv&entity=course&id=jy0ObkN1eK
-router.get(
-  '/download',
-  // adminLoginRequired, // Ensure only admins can access
-  downloadSchoolCourseDataController
-);
+// Admin panel staff only. The file is sent straight back to the admin and is
+// never saved in a public folder.
+router.get('/download', staffLoginRequired, downloadSchoolCourseDataController);
 
 // New route to get bulk operation failures
 router.get(

@@ -906,6 +906,12 @@ type SchoolReportData = {
 
 //
 
+export type ReportFile = {
+  fileName: string;
+  content: Buffer;
+  contentType: string;
+};
+
 export const generateSchoolCourseReport = async (
   entity: string,
   format: string,
@@ -918,20 +924,18 @@ export const generateSchoolCourseReport = async (
   region?: string,
   schoolId?: string,
   userId?: string
-): Promise<string> => {
+): Promise<ReportFile> => {
   try {
     const start = startDate ? new Date(startDate) : undefined;
     if (start) start.setUTCHours(0, 0, 0, 0);
     const end = endDate ? new Date(endDate) : undefined;
     if (end) end.setUTCHours(23, 59, 59, 999);
 
-    const downloadsDir = path.join(__dirname, '../../downloads');
-    if (!fs.existsSync(downloadsDir))
-      fs.mkdirSync(downloadsDir, { recursive: true });
-
+    // The report is built in memory and sent straight to the admin who asked
+    // for it. It is never written to a public folder on the server.
     const timestamp = Date.now();
-    const fileName = `${entity}_report_${timestamp}.${format}`;
-    const filePath = path.join(downloadsDir, fileName);
+    const fileName = `${entity}_report_${timestamp}.${format === 'excel' ? 'xlsx' : 'csv'}`;
+    let content: Buffer = Buffer.alloc(0);
 
     if (entity === 'school') {
       const where: Prisma.SchoolWhereInput = {};
@@ -970,13 +974,12 @@ export const generateSchoolCourseReport = async (
         throw new Error('No data available for the given filters.');
 
       if (format === 'csv') {
-        const csv = await parseAsync(schoolData);
-        fs.writeFileSync(filePath, csv);
+        content = Buffer.from(await parseAsync(schoolData), 'utf8');
       } else if (format === 'excel') {
         const ws = XLSX.utils.json_to_sheet(schoolData);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Schools');
-        XLSX.writeFile(wb, filePath);
+        content = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
       } else {
         throw new Error('Unsupported format');
       }
@@ -1059,13 +1062,12 @@ export const generateSchoolCourseReport = async (
         throw new Error('No data available for the given filters.');
 
       if (format === 'csv') {
-        const csv = await parseAsync(courseData);
-        fs.writeFileSync(filePath, csv);
+        content = Buffer.from(await parseAsync(courseData), 'utf8');
       } else if (format === 'excel') {
         const ws = XLSX.utils.json_to_sheet(courseData);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Courses');
-        XLSX.writeFile(wb, filePath);
+        content = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
       } else {
         throw new Error('Unsupported format');
       }
@@ -1096,7 +1098,14 @@ export const generateSchoolCourseReport = async (
       throw new Error('Invalid entity type');
     }
 
-    return `/downloads/${fileName}`;
+    return {
+      fileName,
+      content,
+      contentType:
+        format === 'excel'
+          ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          : 'text/csv; charset=utf-8',
+    };
   } catch (error) {
     console.error('Error generating report:', error);
     throw error;

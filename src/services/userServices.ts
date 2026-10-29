@@ -184,81 +184,9 @@ export const getUserDataService = async (
     throw e;
   }
 };
-// services/userServices.ts (updated getUserDataService)
-
-export const getUserByEmailService = async (
-  email: string
-): Promise<MessageResponse> => {
-  try {
-    console.log('Searching for user with email:', email);
-    const user = (await db.user.findUnique({
-      where: { email },
-      include: {
-        eligibilityResults: true,
-        careerResults: true,
-        transactions: true,
-        userCards: true,
-        userDirectDebits: true,
-        actionHistories: true,
-        ResultDocument: true,
-        UserResponse: true,
-      },
-    })) as any; // Replace 'any' with UserWithRelations if defined
-
-    console.log('User found:', !!user);
-    if (!user) {
-      return {
-        ok: false,
-        // status: 404,
-        message: 'User not found',
-      };
-    }
-
-    const currentDate = new Date();
-    const expiresAt = user.payment_plan_expires_at;
-    const subscriptionPlanStatus =
-      expiresAt !== null && new Date(expiresAt) > currentDate;
-
-    return {
-      ok: true,
-      // status: 200,
-      message: 'User found',
-      data: {
-        id: user.id,
-        firstname: user.firstname,
-        lastname: user.lastname,
-        username: user.username,
-        email: user.email,
-        image: user.image,
-        role: user.role,
-        gender: user.gender,
-        dob: user.dob,
-        ageRange: user.ageRange,
-        region: user.region,
-        bio: user.bio,
-        payment_plan: user.payment_plan,
-        payment_plan_expires_at: user.payment_plan_expires_at,
-        subscription_code: user.subscription_code,
-        email_token: user.email_token,
-        default_authorization: user.default_authorization,
-        eligibilityResults: user.eligibilityResults,
-        careerResults: user.careerResults,
-        transactions: user.transactions,
-        userCards: user.userCards,
-        userDirectDebits: user.userDirectDebits,
-        actionHistories: user.actionHistories,
-        ResultDocument: user.ResultDocument,
-        UserResponse: user.UserResponse,
-        interests: user.interests,
-        skills: user.skills,
-        subscriptionPlanStatus,
-      },
-    };
-  } catch (e) {
-    console.error('Error in getUserByEmailService:', e);
-    throw e;
-  }
-};
+// getUserByEmailService was removed: it returned a whole customer record
+// (cards, payments, results) to anyone who typed an email. Visitors now use
+// lookupAccount in userController, which answers only yes or no.
 
 export const updatePasswordService = async (
   userId: string,

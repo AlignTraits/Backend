@@ -1,5 +1,6 @@
 // import { sendAdminSetupEmail } from './mailService'; // Import your email service
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import dotenv from 'dotenv';
 import { z } from 'zod';
 import jwt from 'jsonwebtoken';
@@ -14,11 +15,33 @@ import {
   deleteEmailVerificationToken,
   saveEmailVerificationToken,
   getEmailVerificationTokenByToken,
+  countRecentTokens,
 } from '../models/tokenModel';
 import { generateOTP } from '../lib/utils';
-import { sendConfirmationEmail, sendResetPasswordEmail } from './mailServices';
+import {
+  sendConfirmationEmail,
+  sendResetPasswordEmail,
+  sendSetPasswordEmail,
+} from './mailServices';
 
 dotenv.config();
+
+// Reset and set-password emails: at most this many per address per hour, so
+// nobody can flood a student's inbox or guess codes at scale.
+const EMAILS_PER_HOUR = 5;
+
+const STAFF_ROLES = ['ADMIN', 'SUPER_ADMIN', 'CONTENT_MANAGER', 'ANALYST'];
+
+// Emails are stored exactly as people typed them, so only trim spaces here.
+const normaliseEmail = (value: unknown) =>
+  typeof value === 'string' ? value.trim() : '';
+
+const looksLikeEmail = (value: string) =>
+  value.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
+const tooManyRecentEmails = async (email: string) =>
+  (await countRecentTokens(email, new Date(Date.now() - 60 * 60 * 1000))) >=
+  EMAILS_PER_HOUR;
 
 const loginAdminService = async ({
   email,
@@ -105,14 +128,22 @@ const registerAdminService = async ({
       };
     }
 
-    // Set a secure default password from environment variable
-    const defaultPassword = process.env.JWT_SECRET;
-    if (!defaultPassword) {
-      throw new Error('Environment variable JWT_SECRET is not set');
+    if (!looksLikeEmail(normaliseEmail(email))) {
+      return {
+        status: 400,
+        message: 'Registration failed',
+        errors: [{ message: 'Enter a valid email address' }],
+      };
     }
 
-    // Hash the default password
-    const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+    // A random password nobody knows. The new admin sets their own with
+    // "Forgot password" on the admin login page, which emails them a link.
+    // (This used to be the JWT secret, which made every new admin share one
+    // guessable password and exposed the secret that signs every login.)
+    const hashedPassword = await bcrypt.hash(
+      crypto.randomBytes(32).toString('hex'),
+      10
+    );
 
     const newUser = await createUser({
       data: {
@@ -131,7 +162,7 @@ const registerAdminService = async ({
     return {
       status: 201,
       message:
-        'Admin created successfully. An email has been sent to set up the password.',
+        'Admin created. Ask them to use "Forgot password" on the admin login page to set their password.',
       data: {
         id: newUser.id,
         username: newUser.username,
@@ -155,18 +186,30 @@ const addAdminPasswordService = async ({
   newPassword: string;
 }) => {
   try {
-    const user = await getUserByEmail(email);
-    if (!user) {
+    if (typeof newPassword !== 'string' || newPassword.length < 8) {
+      return {
+        status: 400,
+        message: 'Failed To Add Admin Password',
+        errors: [{ message: 'Password must be at least 8 characters' }],
+      };
+    }
+
+    const user = await getUserByEmail(normaliseEmail(email));
+    // Only admin panel accounts. Student passwords are never set this way.
+    if (!user || !STAFF_ROLES.includes(user.role)) {
       return {
         status: 404,
         message: 'Failed To Add Admin Password',
-        errors: [{ message: 'User not found' }],
+        errors: [{ message: 'Admin not found' }],
       };
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     const [updatedData] = await Promise.all([
-      updateUser(user.id, { password: hashedPassword }),
+      updateUser(user.id, {
+        password: hashedPassword,
+        passwordChangedAt: new Date(),
+      }),
     ]);
 
     if (!updatedData) {
@@ -217,6 +260,18 @@ const loginService = async ({
       };
     }
 
+    // Accounts made by the quiz, a check or a payment have no password yet.
+    // The site sends them to the set-password page (a code is emailed there).
+    if (!user.password) {
+      return {
+        ok: false,
+        status: 400,
+        code: 'PASSWORD_NOT_SET',
+        message: 'Login failed',
+        errors: [{ message: 'Password not set. Please set your password.' }],
+      };
+    }
+
     if (!user.emailVerified) {
       await emailVerificationService(user.email); // Resend the verification email
       return {
@@ -229,15 +284,6 @@ const loginService = async ({
               "Email has not been verified. We've send a new one to your email",
           },
         ],
-      };
-    }
-
-    if (!user.password) {
-      return {
-        ok: false,
-        status: 400,
-        message: 'Login failed',
-        errors: [{ message: 'Password not set. Please set your password.' }],
       };
     }
 
@@ -384,59 +430,52 @@ const validateTokenService = async ({
   }
 };
 
-const requestResetService = async (email: string) => {
+// The reset code goes to the inbox only. The reply is the same whether or not
+// the email has an account, so this cannot be used to find out who is a customer,
+// and it never contains the code (it used to, which let anyone reset any password).
+const requestResetService = async (rawEmail: string) => {
+  const generic = {
+    ok: true,
+    status: 200,
+    message:
+      'If this email has an AlignTraits account, we have sent a link to reset the password. Check your inbox and spam folder.',
+  };
   try {
-    const user = await getUserByEmail(email);
-    if (!user) {
+    const email = normaliseEmail(rawEmail);
+    if (!looksLikeEmail(email)) {
       return {
-        status: 404,
-        message: 'This email is not registered',
-        errors: [{ message: 'This email is not registered' }],
+        ok: false,
+        status: 400,
+        message: 'Enter a valid email address',
+        errors: [{ message: 'Enter a valid email address' }],
       };
     }
-    // Generate and hash the OTP
-    const otp = generateOTP(12);
-    const expirationTime = new Date(Date.now() + 7 * 60 * 1000); // 7 minutes from creation
 
+    const user = await getUserByEmail(email);
+    if (!user) return generic;
+    if (await tooManyRecentEmails(email)) return generic;
+
+    const otp = generateOTP(12);
+    const expirationTime = new Date(Date.now() + 7 * 60 * 1000); // 7 minutes
     const encryptedToken = await bcrypt.hash(otp, 10);
 
-    const savedToken = await saveEmailVerificationToken({
+    await saveEmailVerificationToken({
       id: '',
       otp: encryptedToken,
       email,
       expirationTime,
     });
 
-    if (!user.firstname) {
-      return {
-        status: 400,
-        message: 'Change Password Request failed',
-        errors: [{ message: 'Unknown User' }],
-      };
-    }
-
     const emailRes = await sendResetPasswordEmail({
-      name: user.firstname,
+      name: user.firstname || 'there',
       email,
       token: otp,
     });
     if (!emailRes.ok) {
-      return {
-        status: 500,
-        message: 'Change Password Request failed',
-        errors: [{ message: 'Server failed to send email' }],
-      };
+      console.error('Reset email could not be sent:', emailRes.message);
     }
 
-    return {
-      status: 201,
-      message: 'Password Reset Mail sent successfully',
-      data: {
-        token: otp,
-        createdAt: savedToken.createdAt,
-        expiresAt: savedToken.expiresAt,
-      },
-    };
+    return generic;
   } catch (e) {
     throw e;
   }
@@ -507,10 +546,17 @@ const resetPasswordService = async ({
   newPassword: string;
 }) => {
   try {
+    if (!email || !token || typeof newPassword !== 'string' || newPassword.length < 8) {
+      return {
+        ok: false,
+        status: 400,
+        message: 'Validation failed',
+        errors: [{ message: 'Use the link we emailed you and a password of at least 8 characters' }],
+      };
+    }
     // const otpRecord = await getEmailVerificationTokenByToken(token);
     const tokenRecord = await getEmailVerificationTokenByEmail(email);
 
-    console.log('OTP Record:', tokenRecord); // Debugging
     if (!tokenRecord) {
       return {
         ok: false,
@@ -549,7 +595,12 @@ const resetPasswordService = async ({
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     const [updatedData] = await Promise.all([
-      updateUser(user.id, { password: hashedPassword }),
+      updateUser(user.id, {
+        password: hashedPassword,
+        passwordChangedAt: new Date(),
+        // The link was opened from their inbox, so the email is proven.
+        ...(user.emailVerified ? {} : { emailVerified: new Date() }),
+      }),
       deleteEmailVerificationToken(email),
     ]);
 
@@ -594,8 +645,7 @@ const emailVerificationService = async (email: string) => {
       expirationTime,
     });
 
-    // console.log('start confirm send email');
-    console.log('Sending confirmation email with OTP:', otp);
+    // Never log the code itself: anyone who can read the logs could use it.
     const emailRes = await sendConfirmationEmail({
       name: existingUser.firstname,
       email: existingUser.email,
@@ -813,70 +863,180 @@ const updateAdminPasswordService = async (adminId: string, data: any) => {
   }
 };
 
+// Wrong set-password codes per email. After 5, the code is cancelled and the
+// student asks for a new one, so a 6 digit code cannot be guessed.
+// (Kept in memory: it resets if the server restarts, which only gives a few
+// more tries, never access.)
+const MAX_SETUP_TRIES = 5;
+const setupFailures = new Map<string, number>();
+
+// Step 1 for visitors who used the quiz, a check or a payment before they had
+// a password: email a 6 digit code, plus a link to /setup-password that
+// carries the same code. Typing the code keeps them in the same browser tab,
+// so their results can load straight after.
+// The reply is the same for every email, so it reveals nothing about accounts.
+const sendSetupLinkService = async (rawEmail: string) => {
+  const generic = {
+    ok: true,
+    status: 200,
+    message:
+      'If this email needs a password, we have sent a link to set one. Check your inbox and spam folder.',
+  };
+  const email = normaliseEmail(rawEmail);
+  if (!looksLikeEmail(email)) {
+    return {
+      ok: false,
+      status: 400,
+      message: 'Enter a valid email address',
+      errors: [{ message: 'Enter a valid email address' }],
+    };
+  }
+
+  const user = await getUserByEmail(email);
+  // Accounts that already have a password use "Forgot password" instead.
+  if (!user || user.password) return generic;
+  if (await tooManyRecentEmails(email)) return generic;
+
+  const code = crypto.randomInt(0, 1_000_000).toString().padStart(6, '0');
+  setupFailures.delete(email);
+  await saveEmailVerificationToken({
+    id: '',
+    otp: await bcrypt.hash(code, 10),
+    email,
+    expirationTime: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes
+  });
+
+  const emailRes = await sendSetPasswordEmail({
+    name: user.firstname || 'there',
+    email,
+    token: code,
+  });
+  if (!emailRes.ok) {
+    console.error('Set password email could not be sent:', emailRes.message);
+  }
+  return generic;
+};
+
+// Step 2: the code from the emailed link plus the new password.
+// Refused without a valid code, and refused for any account that already has a
+// password, so it can no longer be used to take over someone else's account.
 const addPasswordAfterEligibiltyService = async ({
-  email,
+  email: rawEmail,
   password,
+  token,
 }: {
   email: string;
   password: string;
+  token?: string;
 }) => {
   try {
-    if (!email || !password) {
+    const email = normaliseEmail(rawEmail);
+    const invalidLink = {
+      ok: false,
+      status: 400,
+      message: 'Password addition failed',
+      errors: [
+        {
+          message:
+            'This code is invalid or has expired. Ask for a new code.',
+        },
+      ],
+    };
+
+    if (!email || typeof password !== 'string' || password.length < 8) {
       return {
+        ok: false,
         status: 400,
         message: 'Password addition failed',
-        errors: [{ message: 'Email and password are required' }],
+        errors: [
+          { message: 'Enter your email and a password of at least 8 characters' },
+        ],
+      };
+    }
+    if (!token || typeof token !== 'string') {
+      return {
+        ok: false,
+        status: 400,
+        message: 'Password addition failed',
+        errors: [
+          { message: 'Enter the 6 digit code we emailed you.' },
+        ],
       };
     }
 
     const user = await getUserByEmail(email);
-    if (!user) {
+    if (!user) return invalidLink;
+
+    if (user.password) {
       return {
         ok: false,
-        status: 404,
+        status: 409,
         message: 'Password addition failed',
-        errors: [{ message: 'User does not exist' }],
-      };
-    }
-
-    // if (user.password) {
-    //   return {
-    //     ok: false,
-    //     status: 400,
-    //     message: 'Password addition failed',
-    //     errors: [{ message: 'Password already set' }],
-    //   };
-    // }
-
-    // Hash the new password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Update the user with the new password
-    await updateUser(user.id, {
-      password: hashedPassword,
-    });
-
-    // Check email verification status and resend if not verified
-    if (!user.emailVerified) {
-      await emailVerificationService(user.email);
-      return {
-        ok: false,
-        status: 403,
-        message: 'Password updated, but email not verified',
         errors: [
           {
             message:
-              "Email has not been verified. We've sent a new verification email",
+              'This account already has a password. Use "Forgot password" to change it.',
           },
         ],
       };
     }
 
+    const tokenRecord = await getEmailVerificationTokenByEmail(email);
+    if (!tokenRecord) return invalidLink;
+    if (!(await bcrypt.compare(token.trim(), tokenRecord.otp))) {
+      const tries = (setupFailures.get(email) ?? 0) + 1;
+      if (tries >= MAX_SETUP_TRIES) {
+        setupFailures.delete(email);
+        await deleteEmailVerificationToken(email);
+        return {
+          ok: false,
+          status: 400,
+          message: 'Password addition failed',
+          errors: [
+            {
+              message:
+                'Too many wrong codes, so that code has been cancelled. Ask for a new code.',
+            },
+          ],
+        };
+      }
+      setupFailures.set(email, tries);
+      return {
+        ok: false,
+        status: 400,
+        message: 'Password addition failed',
+        errors: [
+          {
+            message: `That code is not right. ${MAX_SETUP_TRIES - tries} tries left.`,
+          },
+        ],
+      };
+    }
+    setupFailures.delete(email);
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const now = new Date();
+    await updateUser(user.id, {
+      password: hashedPassword,
+      passwordChangedAt: now,
+      lastLoginAt: now,
+      // Opening the link proves they own this inbox.
+      ...(user.emailVerified ? {} : { emailVerified: now }),
+    });
+    await deleteEmailVerificationToken(email);
+
+    // Log them straight in, so they land on their results without a second step.
+    const loginToken = jwt.sign(
+      { userId: user.id },
+      process.env.JWT_SECRET as string,
+      { expiresIn: '30d' }
+    );
+
     return {
       ok: true,
       status: 200,
-      message:
-        'Password added successfully and We have sent a verification email',
+      message: 'Password set. You are now logged in.',
+      data: { token: loginToken },
     };
   } catch (e) {
     throw e;
@@ -897,4 +1057,5 @@ export {
   updateAdminPasswordService,
   updateAdminProfileService,
   addPasswordAfterEligibiltyService,
+  sendSetupLinkService,
 };
